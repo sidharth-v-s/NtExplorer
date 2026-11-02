@@ -1,0 +1,479 @@
+{
+  "schema_version": 1,
+  "structures": [
+    {
+      "id": "win32.startupinfow",
+      "name": "STARTUPINFOW",
+      "summary": "Specifies the window station, desktop, standard handles, and startup appearance for a new process.",
+      "definition": "typedef struct _STARTUPINFOW {\n  DWORD  cb;\n  LPWSTR lpReserved;\n  LPWSTR lpDesktop;\n  LPWSTR lpTitle;\n  DWORD  dwX;\n  DWORD  dwY;\n  DWORD  dwXSize;\n  DWORD  dwYSize;\n  DWORD  dwXCountChars;\n  DWORD  dwYCountChars;\n  DWORD  dwFillAttribute;\n  DWORD  dwFlags;\n  WORD   wShowWindow;\n  WORD   cbReserved2;\n  LPBYTE lpReserved2;\n  HANDLE hStdInput;\n  HANDLE hStdOutput;\n  HANDLE hStdError;\n} STARTUPINFOW, *LPSTARTUPINFOW;",
+      "members": [
+        {
+          "name": "cb",
+          "type": "DWORD",
+          "description": "Size of the structure, in bytes. Set it to sizeof(STARTUPINFOW) before passing the structure to CreateProcessW."
+        },
+        {
+          "name": "lpReserved",
+          "type": "LPWSTR",
+          "description": "Reserved; set to NULL."
+        },
+        {
+          "name": "lpDesktop",
+          "type": "LPWSTR",
+          "description": "Name of the desktop, or of both the window station and desktop, for the process. A backslash separates the two names."
+        },
+        {
+          "name": "lpTitle",
+          "type": "LPWSTR",
+          "description": "Title for a new console window. If NULL, the executable file name is used. Must be NULL when no new console window is created."
+        },
+        {
+          "name": "dwX",
+          "type": "DWORD",
+          "description": "Horizontal offset of the upper-left corner of a new window, in pixels, when dwFlags includes STARTF_USEPOSITION. Otherwise ignored."
+        },
+        {
+          "name": "dwY",
+          "type": "DWORD",
+          "description": "Vertical offset of the upper-left corner of a new window, in pixels, when dwFlags includes STARTF_USEPOSITION. Otherwise ignored."
+        },
+        {
+          "name": "dwXSize",
+          "type": "DWORD",
+          "description": "Width of a new window, in pixels, when dwFlags includes STARTF_USESIZE. Otherwise ignored."
+        },
+        {
+          "name": "dwYSize",
+          "type": "DWORD",
+          "description": "Height of a new window, in pixels, when dwFlags includes STARTF_USESIZE. Otherwise ignored."
+        },
+        {
+          "name": "dwXCountChars",
+          "type": "DWORD",
+          "description": "Screen buffer width, in character columns, for a new console window when dwFlags includes STARTF_USECOUNTCHARS. Otherwise ignored."
+        },
+        {
+          "name": "dwYCountChars",
+          "type": "DWORD",
+          "description": "Screen buffer height, in character rows, for a new console window when dwFlags includes STARTF_USECOUNTCHARS. Otherwise ignored."
+        },
+        {
+          "name": "dwFillAttribute",
+          "type": "DWORD",
+          "description": "Initial text and background colors for a new console window when dwFlags includes STARTF_USEFILLATTRIBUTE. Otherwise ignored."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Bitfield that selects which optional STARTUPINFOW members are used and how the new process starts. Common flags include STARTF_USESTDHANDLES, STARTF_USESHOWWINDOW, STARTF_USEPOSITION, STARTF_USESIZE, and STARTF_USECOUNTCHARS."
+        },
+        {
+          "name": "wShowWindow",
+          "type": "WORD",
+          "description": "Initial show state for a new window when dwFlags includes STARTF_USESHOWWINDOW. Accepts the nCmdShow values documented for ShowWindow, except SW_SHOWDEFAULT."
+        },
+        {
+          "name": "cbReserved2",
+          "type": "WORD",
+          "description": "Reserved for use by the C runtime; must be zero."
+        },
+        {
+          "name": "lpReserved2",
+          "type": "LPBYTE",
+          "description": "Reserved for use by the C runtime; must be NULL."
+        },
+        {
+          "name": "hStdInput",
+          "type": "HANDLE",
+          "description": "Standard input handle for the new process when dwFlags includes STARTF_USESTDHANDLES. Otherwise the process receives the documented default, normally the keyboard buffer."
+        },
+        {
+          "name": "hStdOutput",
+          "type": "HANDLE",
+          "description": "Standard output handle for the new process when dwFlags includes STARTF_USESTDHANDLES. Otherwise the process receives the documented default, normally the console buffer."
+        },
+        {
+          "name": "hStdError",
+          "type": "HANDLE",
+          "description": "Standard error handle for the new process when dwFlags includes STARTF_USESTDHANDLES. Otherwise the process receives the documented default, normally the console buffer."
+        }
+      ],
+      "notes": "Set cb before use. STARTUPINFOW is the Unicode form; the encoding-neutral STARTUPINFO name resolves to STARTUPINFOW or STARTUPINFOA at compile time based on UNICODE. STARTUPINFOEXW adds a process-thread attribute list to these settings. The structure does not create a process by itself; it carries startup settings for APIs such as CreateProcessW.",
+      "tags": ["process-creation", "execution-flow", "analysis-relevant"],
+      "references": [
+        {
+          "title": "STARTUPINFOW structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-startupinfow",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.startupinfoexw",
+      "name": "STARTUPINFOEXW",
+      "summary": "Extends STARTUPINFOW with an attribute list for extended process creation.",
+      "definition": "typedef struct _STARTUPINFOEXW {\n  STARTUPINFOW                 StartupInfo;\n  LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList;\n} STARTUPINFOEXW, *LPSTARTUPINFOEXW;",
+      "members": [
+        {
+          "name": "StartupInfo",
+          "type": "STARTUPINFOW",
+          "description": "A STARTUPINFOW that supplies the standard startup settings, including the cb size field and optional standard handles."
+        },
+        {
+          "name": "lpAttributeList",
+          "type": "LPPROC_THREAD_ATTRIBUTE_LIST",
+          "description": "An attribute list created with InitializeProcThreadAttributeList and populated with UpdateProcThreadAttribute. The caller owns the backing buffer and frees the list with DeleteProcThreadAttributeList."
+        }
+      ],
+      "notes": "STARTUPINFOEXW extends STARTUPINFOW so a caller can pass process and thread attributes, such as a handle list or mitigation policies, during process creation. Use it with CreateProcessW and the EXTENDED_STARTUPINFO_PRESENT creation flag; without that flag the attribute list is ignored. Initialize cb and the attribute list before the call, keep the attribute-list buffer valid for the duration of the call, and delete the list afterwards. STARTUPINFOEXW is available starting with Windows Vista.",
+      "tags": ["process-creation", "execution-flow", "analysis-relevant"],
+      "references": [
+        {
+          "title": "STARTUPINFOEXW structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-startupinfoexw",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_information",
+      "name": "PROCESS_INFORMATION",
+      "summary": "Receives handles and identifiers for a newly created process and its primary thread.",
+      "definition": "typedef struct _PROCESS_INFORMATION {\n  HANDLE hProcess;\n  HANDLE hThread;\n  DWORD  dwProcessId;\n  DWORD  dwThreadId;\n} PROCESS_INFORMATION, *PPROCESS_INFORMATION, *LPPROCESS_INFORMATION;",
+      "members": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "Handle to the newly created process. Close it with CloseHandle when it is no longer needed."
+        },
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "Handle to the primary thread of the newly created process. Close it with CloseHandle when it is no longer needed."
+        },
+        {
+          "name": "dwProcessId",
+          "type": "DWORD",
+          "description": "Identifier for the new process. It remains valid until the process object is freed and its handles are closed, after which the value can be reused."
+        },
+        {
+          "name": "dwThreadId",
+          "type": "DWORD",
+          "description": "Identifier for the new process's primary thread. It remains valid until the thread object is freed and its handles are closed, after which the value can be reused."
+        }
+      ],
+      "notes": "CreateProcessW fills this structure on success. Close both handles; closing a handle does not terminate the process or thread. If CreateProcessW fails, do not treat the output as valid. Process and thread identifiers are not stable identities because they can be reused, so correlate them with handles or creation times when identity matters.",
+      "tags": ["process-creation", "process-enumeration", "analysis-relevant"],
+      "references": [
+        {
+          "title": "PROCESS_INFORMATION structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-process_information",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.security_attributes",
+      "name": "SECURITY_ATTRIBUTES",
+      "summary": "Specifies a security descriptor and handle-inheritance setting for a newly created object.",
+      "definition": "typedef struct _SECURITY_ATTRIBUTES {\n  DWORD  nLength;\n  LPVOID lpSecurityDescriptor;\n  BOOL   bInheritHandle;\n} SECURITY_ATTRIBUTES, *PSECURITY_ATTRIBUTES, *LPSECURITY_ATTRIBUTES;",
+      "members": [
+        {
+          "name": "nLength",
+          "type": "DWORD",
+          "description": "Size of the structure, in bytes. Set it to sizeof(SECURITY_ATTRIBUTES)."
+        },
+        {
+          "name": "lpSecurityDescriptor",
+          "type": "LPVOID",
+          "description": "Pointer to a SECURITY_DESCRIPTOR that controls access to the object. NULL applies the default descriptor associated with the caller's access token; it does not grant access to everyone."
+        },
+        {
+          "name": "bInheritHandle",
+          "type": "BOOL",
+          "description": "If TRUE, a handle created with this structure can be inherited by a new process."
+        }
+      ],
+      "notes": "SECURITY_ATTRIBUTES is used by many object-creation APIs, including CreateProcessW, CreateThread, CreateFileW, CreateEventW, CreateMutexW, CreateSemaphoreW, and RegCreateKeyExW. nLength is required; the descriptor pointer is optional. Inheritance also depends on the creating call and on whether the new process is created with handle inheritance enabled.",
+      "tags": ["process-creation", "file-access", "synchronization", "analysis-relevant"],
+      "references": [
+        {
+          "title": "SECURITY_ATTRIBUTES structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wtypesbase/ns-wtypesbase-security_attributes",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.memory_basic_information",
+      "name": "MEMORY_BASIC_INFORMATION",
+      "summary": "Describes the state, protection, type, and allocation context of a range of virtual-memory pages.",
+      "definition": "typedef struct _MEMORY_BASIC_INFORMATION {\n  PVOID  BaseAddress;\n  PVOID  AllocationBase;\n  DWORD  AllocationProtect;\n  WORD   PartitionId;\n  SIZE_T RegionSize;\n  DWORD  State;\n  DWORD  Protect;\n  DWORD  Type;\n} MEMORY_BASIC_INFORMATION, *PMEMORY_BASIC_INFORMATION;",
+      "members": [
+        {
+          "name": "BaseAddress",
+          "type": "PVOID",
+          "description": "Pointer to the base address of the region of pages."
+        },
+        {
+          "name": "AllocationBase",
+          "type": "PVOID",
+          "description": "Base address of the range of pages allocated by VirtualAlloc that contains the page at BaseAddress."
+        },
+        {
+          "name": "AllocationProtect",
+          "type": "DWORD",
+          "description": "Memory protection option in effect when the region was initially allocated, or 0 if the caller does not have access. Uses the PAGE_* protection constants."
+        },
+        {
+          "name": "PartitionId",
+          "type": "WORD"
+        },
+        {
+          "name": "RegionSize",
+          "type": "SIZE_T",
+          "description": "Size, in bytes, of the region beginning at BaseAddress in which all pages have identical attributes."
+        },
+        {
+          "name": "State",
+          "type": "DWORD",
+          "description": "State of the pages in the region: MEM_COMMIT, MEM_FREE, or MEM_RESERVE."
+        },
+        {
+          "name": "Protect",
+          "type": "DWORD",
+          "description": "Current access protection of the pages in the region. Uses the PAGE_* protection constants."
+        },
+        {
+          "name": "Type",
+          "type": "DWORD",
+          "description": "Type of pages in the region: MEM_IMAGE, MEM_MAPPED, or MEM_PRIVATE."
+        }
+      ],
+      "notes": "VirtualQuery and VirtualQueryEx fill this structure. To walk an address space, add RegionSize to the queried address after each successful call. For free pages, AllocationBase, AllocationProtect, Protect, and Type are undefined. State and Type use MEM_* values, while Protect and AllocationProtect use PAGE_* values. The member set follows the current Windows SDK definition; older headers may omit PartitionId.",
+      "tags": ["memory-management", "memory-protection", "analysis-relevant"],
+      "references": [
+        {
+          "title": "MEMORY_BASIC_INFORMATION structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.system_info",
+      "name": "SYSTEM_INFO",
+      "summary": "Receives processor architecture, page size, processor count, address limits, and allocation granularity for the system.",
+      "definition": "typedef struct _SYSTEM_INFO {\n  union {\n    DWORD dwOemId;\n    struct {\n      WORD wProcessorArchitecture;\n      WORD wReserved;\n    } DUMMYSTRUCTNAME;\n  } DUMMYUNIONNAME;\n  DWORD     dwPageSize;\n  LPVOID    lpMinimumApplicationAddress;\n  LPVOID    lpMaximumApplicationAddress;\n  DWORD_PTR dwActiveProcessorMask;\n  DWORD     dwNumberOfProcessors;\n  DWORD     dwProcessorType;\n  DWORD     dwAllocationGranularity;\n  WORD      wProcessorLevel;\n  WORD      wProcessorRevision;\n} SYSTEM_INFO, *LPSYSTEM_INFO;",
+      "members": [
+        {
+          "name": "wProcessorArchitecture",
+          "type": "WORD",
+          "description": "Processor architecture of the installed operating system, expressed as a PROCESSOR_ARCHITECTURE_* value such as PROCESSOR_ARCHITECTURE_AMD64 or PROCESSOR_ARCHITECTURE_INTEL."
+        },
+        {
+          "name": "wReserved",
+          "type": "WORD",
+          "description": "Reserved for future use."
+        },
+        {
+          "name": "dwOemId",
+          "type": "DWORD",
+          "description": "Obsolete member retained for compatibility. It overlaps the wProcessorArchitecture and wReserved fields in the union; use wProcessorArchitecture instead."
+        },
+        {
+          "name": "dwPageSize",
+          "type": "DWORD",
+          "description": "Page size, and the granularity of page protection and commitment, in bytes. This is the page size used by VirtualAlloc."
+        },
+        {
+          "name": "lpMinimumApplicationAddress",
+          "type": "LPVOID",
+          "description": "Lowest memory address accessible to applications and dynamic-link libraries."
+        },
+        {
+          "name": "lpMaximumApplicationAddress",
+          "type": "LPVOID",
+          "description": "Highest memory address accessible to applications and dynamic-link libraries."
+        },
+        {
+          "name": "dwActiveProcessorMask",
+          "type": "DWORD_PTR",
+          "description": "Mask representing the processors configured into the system. Bit 0 represents processor 0."
+        },
+        {
+          "name": "dwNumberOfProcessors",
+          "type": "DWORD",
+          "description": "Number of logical processors in the current processor group. It is not necessarily the total number of logical processors on a system with multiple groups."
+        },
+        {
+          "name": "dwProcessorType",
+          "type": "DWORD",
+          "description": "Obsolete member retained for compatibility. Use wProcessorArchitecture, wProcessorLevel, and wProcessorRevision instead."
+        },
+        {
+          "name": "dwAllocationGranularity",
+          "type": "DWORD",
+          "description": "Granularity, in bytes, for the starting address at which virtual memory can be allocated."
+        },
+        {
+          "name": "wProcessorLevel",
+          "type": "WORD",
+          "description": "Architecture-dependent processor level. Intended for display; use IsProcessorFeaturePresent to test processor features."
+        },
+        {
+          "name": "wProcessorRevision",
+          "type": "WORD",
+          "description": "Architecture-dependent processor revision. Its encoding depends on the processor architecture and is intended mainly for display."
+        }
+      ],
+      "notes": "GetSystemInfo fills this structure for the calling process's view of the system; a WOW64 process can call GetNativeSystemInfo to obtain the native architecture and address limits. The first fields form a union, so dwOemId overlaps wProcessorArchitecture and wReserved. dwPageSize and dwAllocationGranularity are distinct values and should not be used interchangeably when planning virtual-memory reservations or commits.",
+      "tags": ["environment-discovery", "memory-management", "analysis-relevant"],
+      "references": [
+        {
+          "title": "SYSTEM_INFO structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-system_info",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.overlapped",
+      "name": "OVERLAPPED",
+      "summary": "Supplies an explicit file offset and a completion event for asynchronous I/O.",
+      "definition": "typedef struct _OVERLAPPED {\n  ULONG_PTR Internal;\n  ULONG_PTR InternalHigh;\n  union {\n    struct {\n      DWORD Offset;\n      DWORD OffsetHigh;\n    } DUMMYSTRUCTNAME;\n    PVOID Pointer;\n  } DUMMYUNIONNAME;\n  HANDLE    hEvent;\n} OVERLAPPED, *LPOVERLAPPED;",
+      "members": [
+        {
+          "name": "Internal",
+          "type": "ULONG_PTR",
+          "description": "Status code for the I/O request. The system sets it to STATUS_PENDING when the request is issued and to the completion status afterwards. Originally reserved for system use."
+        },
+        {
+          "name": "InternalHigh",
+          "type": "ULONG_PTR",
+          "description": "Number of bytes transferred for the I/O request when it completes without error. Originally reserved for system use."
+        },
+        {
+          "name": "Offset",
+          "type": "DWORD",
+          "description": "Low-order portion of the 64-bit file position at which to start the I/O request. Nonzero only for seeking devices that support an offset."
+        },
+        {
+          "name": "OffsetHigh",
+          "type": "DWORD",
+          "description": "High-order portion of the 64-bit file position at which to start the I/O request. Nonzero only for seeking devices that support an offset."
+        },
+        {
+          "name": "Pointer",
+          "type": "PVOID",
+          "description": "Reserved for system use. Do not set it after zero-initializing the structure."
+        },
+        {
+          "name": "hEvent",
+          "type": "HANDLE",
+          "description": "Handle to an event that the system signals when the operation completes. Initialize it to NULL or to a valid event handle created with CreateEventW before passing the structure to an overlapped function."
+        }
+      ],
+      "notes": "OVERLAPPED supplies an explicit offset and completion event for asynchronous I/O. Zero-initialize the structure and set hEvent to NULL or a valid event before passing it to ReadFile or WriteFile on a handle opened with FILE_FLAG_OVERLAPPED. Do not reuse the structure for another operation until the first operation completes. For files, set Offset and OffsetHigh; for devices that do not support offsets, leave them zero. GetOverlappedResult reports completion and the transfer count.",
+      "tags": ["file-access", "synchronization", "analysis-relevant"],
+      "references": [
+        {
+          "title": "OVERLAPPED structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-overlapped",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.large_integer",
+      "name": "LARGE_INTEGER",
+      "summary": "Represents a signed 64-bit integer through a union of 32-bit parts and a 64-bit member.",
+      "definition": "typedef union _LARGE_INTEGER {\n  struct {\n    DWORD LowPart;\n    LONG  HighPart;\n  } DUMMYSTRUCTNAME;\n  struct {\n    DWORD LowPart;\n    LONG  HighPart;\n  } u;\n  LONGLONG QuadPart;\n} LARGE_INTEGER;",
+      "members": [
+        {
+          "name": "LowPart",
+          "type": "DWORD",
+          "description": "Low-order 32 bits of the 64-bit value."
+        },
+        {
+          "name": "HighPart",
+          "type": "LONG",
+          "description": "High-order 32 bits of the 64-bit value, interpreted as signed."
+        },
+        {
+          "name": "QuadPart",
+          "type": "LONGLONG",
+          "description": "The complete signed 64-bit integer."
+        }
+      ],
+      "notes": "LARGE_INTEGER is a union. If the compiler supports 64-bit integers, use QuadPart to store or read the value; otherwise use LowPart and HighPart. SetFilePointerEx and GetFileSizeEx use this type for signed distances and sizes. The low and high parts are ordered from least significant to most significant.",
+      "tags": ["file-access", "analysis-relevant"],
+      "references": [
+        {
+          "title": "LARGE_INTEGER union",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-large_integer-r1",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.ularge_integer",
+      "name": "ULARGE_INTEGER",
+      "summary": "Represents an unsigned 64-bit integer through a union of 32-bit parts and a 64-bit member.",
+      "definition": "typedef union _ULARGE_INTEGER {\n  struct {\n    DWORD LowPart;\n    DWORD HighPart;\n  } DUMMYSTRUCTNAME;\n  struct {\n    DWORD LowPart;\n    DWORD HighPart;\n  } u;\n  ULONGLONG QuadPart;\n} ULARGE_INTEGER;",
+      "members": [
+        {
+          "name": "LowPart",
+          "type": "DWORD",
+          "description": "Low-order 32 bits of the 64-bit value."
+        },
+        {
+          "name": "HighPart",
+          "type": "DWORD",
+          "description": "High-order 32 bits of the 64-bit value, interpreted as unsigned."
+        },
+        {
+          "name": "QuadPart",
+          "type": "ULONGLONG",
+          "description": "The complete unsigned 64-bit integer."
+        }
+      ],
+      "notes": "ULARGE_INTEGER is the unsigned counterpart of LARGE_INTEGER. Use QuadPart when 64-bit integer support is available, or combine HighPart and LowPart otherwise. It is used for sizes and offsets that are not signed, while LARGE_INTEGER is used where a signed distance is required.",
+      "tags": ["file-access", "analysis-relevant"],
+      "references": [
+        {
+          "title": "ULARGE_INTEGER union",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-ularge_integer-r1",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.filetime",
+      "name": "FILETIME",
+      "summary": "Represents an absolute time as a 64-bit count of 100-nanosecond intervals since 1 January 1601 UTC.",
+      "definition": "typedef struct _FILETIME {\n  DWORD dwLowDateTime;\n  DWORD dwHighDateTime;\n} FILETIME, *PFILETIME, *LPFILETIME;",
+      "members": [
+        {
+          "name": "dwLowDateTime",
+          "type": "DWORD",
+          "description": "Low-order 32 bits of the 64-bit time value."
+        },
+        {
+          "name": "dwHighDateTime",
+          "type": "DWORD",
+          "description": "High-order 32 bits of the 64-bit time value."
+        }
+      ],
+      "notes": "Combine the two parts as (dwHighDateTime << 32) | dwLowDateTime to obtain the full 64-bit value. Each tick represents 100 nanoseconds since 1 January 1601 UTC. A FILETIME is an absolute time, not a duration; convert it with FileTimeToSystemTime or compare the combined 64-bit values. APIs such as RegEnumKeyExW write last-write times into this structure.",
+      "tags": ["file-access", "registry-access", "analysis-relevant"],
+      "references": [
+        {
+          "title": "FILETIME structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime",
+          "source_type": "official-documentation"
+        }
+      ]
+    }
+  ]
+}

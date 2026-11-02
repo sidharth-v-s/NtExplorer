@@ -1,0 +1,1406 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.bcryptgenrandom",
+      "name": "BCryptGenRandom",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Bcrypt.dll",
+      "library": "Bcrypt.lib",
+      "header": "bcrypt.h",
+      "minimum_windows": "Windows Vista",
+      "summary": "Fills a buffer with cryptographically secure random bytes.",
+      "description": "BCryptGenRandom generates random data using either a CNG random-number algorithm provider or the system-preferred random number generator. When BCRYPT_USE_SYSTEM_PREFERRED_RNG is specified, hAlgorithm must be NULL and the system selects the generator. Otherwise hAlgorithm must be a handle to an RNG algorithm provider opened with BCryptOpenAlgorithmProvider. The function writes the requested number of bytes and returns an NTSTATUS value; callers should test it with BCRYPT_SUCCESS or NT_SUCCESS rather than GetLastError.",
+      "prototype": "NTSTATUS BCryptGenRandom(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer, ULONG cbBuffer, ULONG dwFlags);",
+      "parameters": [
+        {
+          "name": "hAlgorithm",
+          "type": "BCRYPT_ALG_HANDLE",
+          "description": "A handle to an RNG algorithm provider. This parameter must be NULL when BCRYPT_USE_SYSTEM_PREFERRED_RNG is set; otherwise it must be a provider handle opened for an RNG algorithm."
+        },
+        {
+          "name": "pbBuffer",
+          "type": "PUCHAR",
+          "description": "A pointer to the buffer that receives the random bytes. The buffer must be at least cbBuffer bytes long."
+        },
+        {
+          "name": "cbBuffer",
+          "type": "ULONG",
+          "description": "The number of random bytes to write to pbBuffer."
+        },
+        {
+          "name": "dwFlags",
+          "type": "ULONG",
+          "description": "Flags that modify the operation. BCRYPT_USE_SYSTEM_PREFERRED_RNG selects the system-preferred generator and requires hAlgorithm to be NULL. BCRYPT_RNG_USE_ENTROPY_IN_BUFFER is also defined but is ignored on Windows 8 and later. Pass zero when using a provider handle.",
+          "constants": [
+            "BCRYPT_USE_SYSTEM_PREFERRED_RNG"
+          ]
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "STATUS_SUCCESS; the buffer contains cbBuffer random bytes.",
+        "failure": "Another NTSTATUS value, such as STATUS_INVALID_PARAMETER or STATUS_INVALID_HANDLE. Test with BCRYPT_SUCCESS or NT_SUCCESS; do not use GetLastError to interpret the result."
+      },
+      "tags": [
+        "cryptography",
+        "random-number-generation",
+        "analysis-relevant",
+        "maldev-relevant"
+      ],
+      "related_apis": [
+        "win32.bcryptopenalgorithmprovider",
+        "win32.bcryptclosealgorithmprovider",
+        "win32.cryptacquirecontextw"
+      ],
+      "related_constants": [
+        "win32.bcrypt_use_system_preferred_rng"
+      ],
+      "remarks": "The bytes are suitable for cryptographic use, but the call does not manage their confidentiality: callers should clear buffers that hold sensitive material when they are no longer needed. The system-preferred RNG avoids maintaining a provider handle and is convenient for one-off requests; BCRYPT_USE_SYSTEM_PREFERRED_RNG is not supported on Windows Vista without Service Pack 2. For key generation, use the key-generation interfaces appropriate to the algorithm rather than treating arbitrary random bytes as a ready-made key.",
+      "maldev_notes": "Cryptographic randomness is used for keys, nonces, initialization vectors, session identifiers, and randomized object names. It is ordinary in both benign and malicious software. In analysis, the relevant context is what the random data is used for, not the generation call by itself.",
+      "defensive_notes": "Random generation is ubiquitous in cryptography, networking, and application initialization. Large or repeated requests may be worth noting during cryptographic review, but randomness alone is not an indicator of malicious behavior.",
+      "example": {
+        "language": "cpp",
+        "title": "Generate random bytes with the system-preferred RNG",
+        "code": "#include <windows.h>\n#include <bcrypt.h>\n\n#pragma comment(lib, \"bcrypt.lib\")\n\nint main() {\n    unsigned char bytes[32]{};\n    NTSTATUS status = BCryptGenRandom(nullptr, bytes, sizeof(bytes),\n                                      BCRYPT_USE_SYSTEM_PREFERRED_RNG);\n    if (!BCRYPT_SUCCESS(status)) {\n        return 1;\n    }\n\n    // Use the bytes as random data, then clear the buffer when finished.\n    SecureZeroMemory(bytes, sizeof(bytes));\n    return 0;\n}\n",
+        "notes": "The example uses the system-preferred generator, so no provider handle is opened. It checks the NTSTATUS value and clears the buffer. It is illustrative only and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "BCryptGenRandom function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, NTSTATUS convention, and the NULL-handle requirement for BCRYPT_USE_SYSTEM_PREFERRED_RNG checked against Microsoft Learn (bcrypt.h)."
+    },
+    {
+      "id": "win32.bcryptopenalgorithmprovider",
+      "name": "BCryptOpenAlgorithmProvider",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Bcrypt.dll",
+      "library": "Bcrypt.lib",
+      "header": "bcrypt.h",
+      "minimum_windows": "Windows Vista",
+      "summary": "Opens a CNG algorithm provider and returns a handle for use with other BCrypt functions.",
+      "description": "BCryptOpenAlgorithmProvider opens a cryptographic algorithm provider and returns a handle in phAlgorithm. The algorithm identifier selects the operation, for example BCRYPT_RNG_ALGORITHM for random generation, BCRYPT_SHA256_ALGORITHM for hashing, or BCRYPT_AES_ALGORITHM for symmetric encryption. The implementation parameter selects a specific provider or NULL for the default, and flags adjust provider behavior for the selected algorithm. The handle must be released with BCryptCloseAlgorithmProvider; it must not be passed to CloseHandle.",
+      "prototype": "NTSTATUS BCryptOpenAlgorithmProvider(BCRYPT_ALG_HANDLE *phAlgorithm, LPCWSTR pszAlgId, LPCWSTR pszImplementation, ULONG dwFlags);",
+      "parameters": [
+        {
+          "name": "phAlgorithm",
+          "type": "BCRYPT_ALG_HANDLE *",
+          "description": "Receives a handle to the opened algorithm provider. On success, close it with BCryptCloseAlgorithmProvider when it is no longer needed."
+        },
+        {
+          "name": "pszAlgId",
+          "type": "LPCWSTR",
+          "description": "A null-terminated Unicode algorithm identifier, such as BCRYPT_RNG_ALGORITHM, BCRYPT_SHA256_ALGORITHM, or BCRYPT_AES_ALGORITHM. The identifiers are defined in bcrypt.h."
+        },
+        {
+          "name": "pszImplementation",
+          "type": "LPCWSTR",
+          "description": "The name of a specific algorithm implementation, or NULL to use the default provider for the algorithm."
+        },
+        {
+          "name": "dwFlags",
+          "type": "ULONG",
+          "description": "Flags that modify provider behavior, such as BCRYPT_PROV_DISPATCH (kernel-mode only), BCRYPT_ALG_HANDLE_HMAC_FLAG, or BCRYPT_HASH_REUSABLE_FLAG. The applicable flags depend on the algorithm; pass zero for the default behavior."
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "STATUS_SUCCESS; phAlgorithm contains a valid provider handle.",
+        "failure": "Another NTSTATUS value, such as STATUS_NOT_FOUND for an unknown algorithm or STATUS_INVALID_PARAMETER. Test with BCRYPT_SUCCESS or NT_SUCCESS."
+      },
+      "tags": [
+        "cryptography",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.bcryptgenrandom",
+        "win32.bcryptclosealgorithmprovider"
+      ],
+      "related_constants": [],
+      "remarks": "Provider handles have their own lifetime and must be closed with BCryptCloseAlgorithmProvider, including when they are used only for one operation. The algorithm identifier and flags determine which subsequent BCrypt operations are valid. Implementations are selected by name; passing NULL requests the default implementation.",
+      "maldev_notes": "CNG provider usage is standard for hashing, encryption, and random generation in modern Windows software. Security products and malware alike can use the same providers. The chosen algorithm and the operations that follow are more informative than the open call itself.",
+      "defensive_notes": "Provider and algorithm handles may appear in API telemetry. Unusual algorithm choices deserve context, but opening a provider is routine and is not proof of malicious intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Open an RNG provider, generate bytes, and close it",
+        "code": "#include <windows.h>\n#include <bcrypt.h>\n\n#pragma comment(lib, \"bcrypt.lib\")\n\nint main() {\n    BCRYPT_ALG_HANDLE algorithm = nullptr;\n    NTSTATUS status = BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_RNG_ALGORITHM,\n                                                  nullptr, 0);\n    if (!BCRYPT_SUCCESS(status)) {\n        return 1;\n    }\n\n    unsigned char bytes[32]{};\n    status = BCryptGenRandom(algorithm, bytes, static_cast<ULONG>(sizeof(bytes)), 0);\n    if (BCRYPT_SUCCESS(status)) {\n        // Use the bytes as random data.\n        SecureZeroMemory(bytes, sizeof(bytes));\n    }\n\n    BCryptCloseAlgorithmProvider(algorithm, 0);\n    return BCRYPT_SUCCESS(status) ? 0 : 1;\n}\n",
+        "notes": "The example demonstrates the provider lifetime: open, use, close. It checks each NTSTATUS value, clears the output buffer, and closes the provider on the normal path. It is illustrative only."
+      },
+      "references": [
+        {
+          "title": "BCryptOpenAlgorithmProvider function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptopenalgorithmprovider",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, handle-lifetime rules, and NTSTATUS return convention checked against Microsoft Learn (bcrypt.h)."
+    },
+    {
+      "id": "win32.bcryptclosealgorithmprovider",
+      "name": "BCryptCloseAlgorithmProvider",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Bcrypt.dll",
+      "library": "Bcrypt.lib",
+      "header": "bcrypt.h",
+      "minimum_windows": "Windows Vista",
+      "summary": "Closes a CNG algorithm provider handle.",
+      "description": "BCryptCloseAlgorithmProvider releases the resources associated with a provider handle returned by BCryptOpenAlgorithmProvider. No flags are defined for dwFlags; pass zero. After a successful close the handle is no longer valid and must not be used with other BCrypt functions. The function returns an NTSTATUS value; callers should not assume that every close succeeds.",
+      "prototype": "NTSTATUS BCryptCloseAlgorithmProvider(BCRYPT_ALG_HANDLE hAlgorithm, ULONG dwFlags);",
+      "parameters": [
+        {
+          "name": "hAlgorithm",
+          "type": "BCRYPT_ALG_HANDLE",
+          "description": "The provider handle to close. It must have been returned by BCryptOpenAlgorithmProvider and must not already have been closed."
+        },
+        {
+          "name": "dwFlags",
+          "type": "ULONG",
+          "description": "No flags are defined for this function. Pass zero."
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "STATUS_SUCCESS; the provider handle has been closed.",
+        "failure": "Another NTSTATUS value, such as STATUS_INVALID_HANDLE if the handle is not valid. Test with BCRYPT_SUCCESS or NT_SUCCESS."
+      },
+      "tags": [
+        "cryptography",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.bcryptopenalgorithmprovider",
+        "win32.bcryptgenrandom"
+      ],
+      "related_constants": [],
+      "remarks": "Pass the exact handle returned by BCryptOpenAlgorithmProvider and do not use CloseHandle for CNG provider handles. Closing a provider does not change the contents of buffers produced by earlier operations.",
+      "maldev_notes": "Closing a provider is a routine resource-management step in software that uses CNG. Its presence in analysis mainly helps establish the lifetime of cryptographic operations and is not a behavioral indicator.",
+      "defensive_notes": "Provider lifetimes can help correlate cryptographic activity, but ordinary applications open and close providers frequently. The close call is rarely distinctive on its own.",
+      "references": [
+        {
+          "title": "BCryptCloseAlgorithmProvider function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptclosealgorithmprovider",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, reserved-flags requirement, and NTSTATUS return convention checked against Microsoft Learn (bcrypt.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Open and close an RNG provider",
+        "code": "#include <windows.h>\n#include <bcrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"bcrypt.lib\")\n\nint main() {\n    BCRYPT_ALG_HANDLE algorithm = nullptr;\n    if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&algorithm,\n            BCRYPT_RNG_ALGORITHM, nullptr, 0))) {\n        return 1;\n    }\n\n    BCryptCloseAlgorithmProvider(algorithm, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.cryptacquirecontextw",
+      "name": "CryptAcquireContextW",
+      "aliases": [
+        "CryptAcquireContext"
+      ],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "summary": "Acquires a handle to a cryptographic service provider and its key container.",
+      "description": "CryptAcquireContextW obtains an HCRYPTPROV handle for a CryptoAPI cryptographic service provider. The caller selects a provider type and may name a specific provider and key container. Flags control whether the function uses persistent keys, the machine key store, or a context without a key container. With CRYPT_VERIFYCONTEXT, the provider does not access persistent key storage, which is appropriate for hashing and random generation. The handle is released with CryptReleaseContext. Microsoft marks this API as deprecated and recommends CNG for new and existing software.",
+      "prototype": "BOOL CryptAcquireContextW(HCRYPTPROV *phProv, LPCWSTR szContainer, LPCWSTR szProvider, DWORD dwProvType, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "phProv",
+          "type": "HCRYPTPROV *",
+          "description": "Receives the provider handle on success. Release it with CryptReleaseContext when it is no longer needed."
+        },
+        {
+          "name": "szContainer",
+          "type": "LPCWSTR",
+          "description": "The name of the key container, or NULL to use the default container. When CRYPT_VERIFYCONTEXT is specified, this parameter must be NULL for file-based CSPs; hardware-based CSPs may permit a container name to access publicly available information."
+        },
+        {
+          "name": "szProvider",
+          "type": "LPCWSTR",
+          "description": "The name of the cryptographic service provider, or NULL to use the default provider for the requested provider type."
+        },
+        {
+          "name": "dwProvType",
+          "type": "DWORD",
+          "description": "The provider type, which determines the supported algorithms. PROV_RSA_AES selects a provider supporting RSA and AES.",
+          "constants": [
+            "PROV_RSA_AES"
+          ]
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Flags that control the context. CRYPT_VERIFYCONTEXT requests a context without access to persistent key containers; CRYPT_MACHINE_KEYSET selects the machine key store, and CRYPT_NEWKEYSET or CRYPT_DELETEKEYSET manage containers.",
+          "constants": [
+            "CRYPT_VERIFYCONTEXT"
+          ]
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; phProv contains a valid provider handle.",
+        "failure": "Zero. Call GetLastError, which may return a CSP-specific NTE_* code such as NTE_BAD_KEYSET or NTE_KEYSET_NOT_DEF, or a standard error such as ERROR_INVALID_PARAMETER."
+      },
+      "tags": [
+        "cryptography",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.bcryptgenrandom",
+        "win32.bcryptopenalgorithmprovider",
+        "win32.bcryptclosealgorithmprovider"
+      ],
+      "related_constants": [
+        "win32.prov_rsa_aes",
+        "win32.crypt_verifycontext"
+      ],
+      "remarks": "Microsoft marks this API as deprecated and recommends CNG (BCrypt) for new and existing software. Use CRYPT_VERIFYCONTEXT for operations that do not need persistent keys; use the key-container flags deliberately when managing persisted keys. The provider handle must be released with CryptReleaseContext, not CloseHandle. For private key operations that use a persisted container, the documented pattern is to try opening the container first and create it with CRYPT_NEWKEYSET if the call fails with NTE_BAD_KEYSET.",
+      "maldev_notes": "CryptoAPI contexts are used for hashing, encryption, and random generation in older and current software. Analysis may note the provider type, key container, and flags because they describe cryptographic configuration, but the call does not establish intent.",
+      "defensive_notes": "Persistent key containers can be relevant when investigating cryptographic state on a host. CRYPT_VERIFYCONTEXT indicates that no persistent container is being accessed, which is common for ephemeral hashing and random operations.",
+      "example": {
+        "language": "cpp",
+        "title": "Acquire a verification context and release it",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    if (!CryptAcquireContextW(&provider, nullptr, nullptr, PROV_RSA_AES,\n                              CRYPT_VERIFYCONTEXT)) {\n        return static_cast<int>(GetLastError());\n    }\n\n    // The context is usable for operations that do not require a key container.\n\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "The example requests a context without a persistent key container, which is suitable for hashing or random generation, and releases it with CryptReleaseContext. It is illustrative only."
+      },
+      "references": [
+        {
+          "title": "CryptAcquireContextW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptacquirecontextw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, CRYPT_VERIFYCONTEXT requirements, key-container flags, and NTE_* error reporting checked against Microsoft Learn (wincrypt.h)."
+    },
+    {
+      "id": "win32.cryptacquirecontexta",
+      "name": "CryptAcquireContextA",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Used to acquire a handle to a particular key container within a particular cryptographic service provider (CSP).",
+      "description": "> This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptAcquireContext function is used to acquire a handle to a particular key container within a particular cryptographic service provider (CSP). This returned handle is used in calls to CryptoAPI functions that use the selected CSP. This function first attempts to find a CSP with the characteristics described in the *dwProvType* and *szProvider* parameters. If the CSP is found, the function attempts to find a key container within the CSP that matches the name specified by the *szContainer* parameter. To acquire the context and the key container of a private key associated with the public key of a certificate, use CryptAcquireCertificatePrivateKey. With the appropriate setting of *dwFlags*, this function can also create and destroy key containers and can provide access to a CSP with a temporary key container if access to a private key is not required.",
+      "prototype": "BOOL CryptAcquireContextA(HCRYPTPROV* phProv, LPCSTR szContainer, LPCSTR szProvider, DWORD dwProvType, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "phProv",
+          "type": "HCRYPTPROV*",
+          "description": "A pointer to a handle of a CSP. When you have finished using the CSP, release the handle by calling the CryptReleaseContext function."
+        },
+        {
+          "name": "szContainer",
+          "type": "LPCSTR",
+          "description": "The key container name. This is a null-terminated string that identifies the key container to the CSP. This name is independent of the method used to store the keys. Some CSPs store their key containers internally (in hardware), some use the system registry, and others use the file system. In most cases, when *dwFlags* is set to CRYPT_VERIFYCONTEXT, *szContainer* must be set to NULL. However, for hardware-based CSPs, such as a smart card CSP, can be access publicly available information in the specified container. For more information about the usage of the *szContainer* parameter, see Remarks."
+        },
+        {
+          "name": "szProvider",
+          "type": "LPCSTR",
+          "description": "A null-terminated string that contains the name of the CSP to be used. If this parameter is NULL, the user default provider is used. For more information, see Cryptographic Service Provider Contexts. For a list of available cryptographic providers, see Cryptographic Provider Names. An application can obtain the name of the CSP in use by using the CryptGetProvParam function to read the PP_NAME CSP value in the *dwParam* parameter. The default CSP can change between operating system releases. To ensure interoperability on different operating system platforms, the CSP should be explicitly set by using this parameter instead of using the default CSP."
+        },
+        {
+          "name": "dwProvType",
+          "type": "DWORD",
+          "description": "Specifies the type of provider to acquire. Defined provider types are discussed in Cryptographic Provider Types."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Flag values. This parameter is usually set to zero, but some applications set one or more of the following flags. Value Meaning CRYPT_VERIFYCONTEXT This option is intended for applications that are using ephemeral keys, or applications that do not require access to persisted private keys, such as applications that perform only hashing, encryption, and digital signature verification. Only applications that create signatures or decrypt messages need access to a private key. In most cases, this flag should be set. For file-based CSPs, when this flag is set, the szContainer parameter must be set to NULL. The application has no access to the persisted private keys of public/private key pairs. When this flag is set, temporary public/private key pairs can be created, but they are not persisted. For hardware-based CSPs, such as a smart card CSP, if the szContainer parameter is NULL or blank, thi"
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero (TRUE). The error codes prefaced by NTE are generated by the particular CSP being used. Some possible error codes defined in Winerror.h follow. Return code/value Description ERROR_BUSY 107L Some CSPs set this error if the CRYPT_DELETEKEYSET flag value is set and another thread or process is using this key container. ERROR_FILE_NOT_FOUND 2L The profile of the user is not loaded and cannot be found. This happens when the application impersonates a user, for example, the IUSR_ComputerName account. ERROR_INVALID_PARAMETER 87L One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. ERROR_NOT_ENOUGH_MEMORY 8L The operating system ran out of memory during the operation. NTE_BAD_FLAGS 0x80090009L The dwFlags parameter has a value that is not valid. NTE_BAD_KEY_STATE 0x8009000BL The user passw",
+        "failure": "If the function fails, it returns zero (FALSE). For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "The *szContainer* parameter specifies the name of the container that is used to hold the key. Each container can contain one key. If you specify the name of an existing container when creating keys, the new key will overwrite a previous one. The combination of the CSP name and the key container name uniquely identifies a single key on the system. If one application tries to modify a key container while another application is using it, unpredictable behavior may result. If you set the *szContainer* parameter to NULL, the default key container name is used. When the Microsoft software CSPs are called in this manner, a new container is created each time the CryptAcquireContext function is called. However, different CSPs may behave differently in this regard. In particular, a CSP may have a single default container that is shared by all applications accessing the CSP. Therefore, applications must not use the default key container to store private keys. Instead, either prevent key storage by passing the CRYPT_VERIFYCONTEXT flag in the *dwFlags* parameter, or use an application-specific container that is unlikely to be used by another application. An application can obtain the name of the key container in use by using the CryptGetProvParam function to read the PP_CONTAINER value. For performance reasons, we recommend that you set the *szContainer* parameter to NULL and the *dwFlags* ",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Acquire and release a verification context",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    if (!CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n            CRYPT_VERIFYCONTEXT)) {\n        printf(\"CryptAcquireContextA failed: 0x%08lx\\n\", GetLastError());\n        return 1;\n    }\n\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptAcquireContextA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptacquirecontexta",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptAcquireContextA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptacquirecontexta.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptbinarytostring",
+      "name": "CryptBinaryToString",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Crypt32.dll",
+      "library": "Crypt32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Converts an array of bytes into a formatted string.",
+      "description": "The CryptBinaryToString function converts an array of bytes into a formatted string.",
+      "prototype": "BOOL CryptBinaryToStringA(CONST BYTE* pbBinary, DWORD cbBinary, DWORD dwFlags, LPSTR pszString, DWORD* pcchString);",
+      "parameters": [
+        {
+          "name": "pbBinary",
+          "type": "CONST BYTE*",
+          "description": "A pointer to the array of bytes to be converted into a string."
+        },
+        {
+          "name": "cbBinary",
+          "type": "DWORD",
+          "description": "The number of elements in the pbBinary array."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Specifies the format of the resulting formatted string. This parameter can be one of the following values. Value Meaning CRYPT_STRING_BASE64HEADER 0x00000000 Base64, with certificate beginning and ending headers. CRYPT_STRING_BASE64 0x00000001 Base64, without headers. CRYPT_STRING_BINARY 0x00000002 Pure binary copy. CRYPT_STRING_BASE64REQUESTHEADER 0x00000003 Base64, with request beginning and ending headers. CRYPT_STRING_HEX 0x00000004 Hexadecimal only. CRYPT_STRING_HEXASCII 0x00000005 Hexadecimal, with ASCII character display. CRYPT_STRING_BASE64X509CRLHEADER 0x00000009 Base64, with X.509 CRL beginning and ending headers. CRYPT_STRING_HEXADDR 0x0000000a Hexadecimal, with address display. CRYPT_STRING_HEXASCIIADDR 0x0000000b Hexadecimal, with ASCII character and address display. CRYPT_STRING_HEXRAW 0x0000000c A raw hexadecimal string. Windows Server 2003 and Windows XP: This value is no"
+        },
+        {
+          "name": "pszString",
+          "type": "LPSTR",
+          "description": "A pointer to a buffer that receives the converted string. To calculate the number of characters that must be allocated to hold the returned string, set this parameter to NULL. The function will place the required number of characters, including the terminating NULL character, in the value pointed to by pcchString."
+        },
+        {
+          "name": "pcchString",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD variable that contains the size, in TCHARs, of the pszString buffer. If pszString is NULL, the function calculates the length of the return string (including the terminating null character) in TCHARs and returns it in this parameter. If pszString is not NULL and big enough, the function converts the binary data into a specified string format including the terminating null character, but pcchString receives the length in TCHARs, not including the terminating null character."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero (TRUE).",
+        "failure": "If the function fails, it returns zero (FALSE)."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "With the exception of when CRYPT_STRING_BINARY encoding is used, all strings are appended with a new line sequence. By default, the new line sequence is a CR/LF pair (0x0D/0x0A). If the dwFlags parameter contains the CRYPT_STRING_NOCR flag, then the new line sequence is a LF character (0x0A). If the dwFlags parameter contains the CRYPT_STRING_NOCRLF flag, then no new line sequence is appended to the string. > > The wincrypt.h header defines CryptBinaryToString as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Encode bytes as Base64",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"crypt32.lib\")\n\nint main() {\n    const BYTE data[] = { 'e', 'x', 'a', 'm', 'p', 'l', 'e' };\n    DWORD length = 0;\n    CryptBinaryToStringA(data, sizeof(data),\n        CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, nullptr, &length);\n\n    auto text = static_cast<LPSTR>(LocalAlloc(LPTR, length));\n    if (text != nullptr &&\n        CryptBinaryToStringA(data, sizeof(data),\n            CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, text, &length)) {\n        printf(\"Base64: %s\\n\", text);\n    }\n\n    LocalFree(text);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptBinaryToString function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptbinarytostringw",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptBinaryToString - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptbinarytostringw.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptcreatehash",
+      "name": "CryptCreateHash",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Initiates the hashing of a stream of data.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptCreateHash function initiates the hashing of a stream of data. It creates and returns to the calling application a handle to a cryptographic service provider (CSP) hash object. This handle is used in subsequent calls to CryptHashData and CryptHashSessionKey to hash session keys and other streams of data.",
+      "prototype": "BOOL CryptCreateHash(HCRYPTPROV hProv, ALG_ID Algid, HCRYPTKEY hKey, DWORD dwFlags, HCRYPTHASH* phHash);",
+      "parameters": [
+        {
+          "name": "hProv",
+          "type": "HCRYPTPROV",
+          "description": "A handle to a CSP created by a call to CryptAcquireContext."
+        },
+        {
+          "name": "Algid",
+          "type": "ALG_ID",
+          "description": "An ALG_ID value that identifies the hash algorithm to use. Valid values for this parameter vary, depending on the CSP that is used. For a list of default algorithms, see Remarks."
+        },
+        {
+          "name": "hKey",
+          "type": "HCRYPTKEY",
+          "description": "If the type of hash algorithm is a keyed hash, such as the Hash-Based Message Authentication Code (HMAC) or Message Authentication Code (MAC) algorithm, the key for the hash is passed in this parameter. For nonkeyed algorithms, this parameter must be set to zero. For keyed algorithms, the key must be to a block cipher key, such as RC2, that has a cipher mode of Cipher Block Chaining (CBC)."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The following flag value is defined. Value Meaning CRYPT_SECRETDIGEST 0x00000001 This flag is not used."
+        },
+        {
+          "name": "phHash",
+          "type": "HCRYPTHASH*",
+          "description": "The address to which the function copies a handle to the new hash object. When you have finished using the hash object, release the handle by calling the CryptDestroyHash function."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns TRUE. The error codes prefaced by NTE are generated by the particular CSP you are using. The following table shows some of the possible error codes. Return code Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. ERROR_NOT_ENOUGH_MEMORY The operating system ran out of memory during the operation. NTE_BAD_ALGID The Algid parameter specifies an algorithm that this CSP does not support. NTE_BAD_FLAGS The dwFlags parameter is nonzero. NTE_BAD_KEY A keyed hash algorithm, such as CALG_MAC, is specified by Algid, and the hKey parameter is either zero or it specifies a key handle that is not valid. This error code is also returned if the key is to a stream cipher or if the cipher m",
+        "failure": "If the function fails, it returns FALSE. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography",
+        "cryptographic-hashing"
+      ],
+      "remarks": "For a list of Microsoft service providers and the algorithms they implement, see Microsoft Cryptographic Service Providers. The computation of the actual hash is done with the CryptHashData and CryptHashSessionKey functions. These require a handle to the hash object. After all the data has been added to the hash object, any of the following operations can be performed: The hash value can be retrieved by using CryptGetHashParam. A session key can be derived by using CryptDeriveKey. The hash can be signed by using CryptSignHash. A signature can be verified by using CryptVerifySignature. After one of the functions from this list has been called, CryptHashData and CryptHashSessionKey cannot be called. #### Examples The following example shows initiating the hashing of a stream of data. It creates and returns to the calling application a handle to a hash object. This handle is used in subsequent calls to CryptHashData and CryptHashSessionKey to hash any stream of data. For an example that includes the complete context for this example, see Example C Program: Creating and Hashing a Session Key. For another example that uses this function, see Example C Program: Signing a Hash and Verifying the Hash Signature. cpp //-------------------------------------------------------------------- // Declare variables. HCRYPTPROV hCryptProv; HCRYPTHASH hHash; //-------------------------------------",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a SHA-256 hash object",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    if (!CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n            CRYPT_VERIFYCONTEXT)) {\n        return 1;\n    }\n\n    if (CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash)) {\n        const char text[] = \"example\";\n        CryptHashData(hash, reinterpret_cast<const BYTE*>(text),\n            sizeof(text) - 1, 0);\n        CryptDestroyHash(hash);\n    }\n\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptCreateHash function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptcreatehash",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptCreateHash - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptcreatehash.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptdecrypt",
+      "name": "CryptDecrypt",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Decrypts data previously encrypted by using the CryptEncrypt function.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptDecrypt function decrypts data previously encrypted by using the CryptEncrypt function. Important changes to support Secure/Multipurpose Internet Mail Extensions (S/MIME) email interoperability have been made to CryptoAPI that affect the handling of enveloped messages. For more information, see the Remarks section of CryptMsgOpenToEncode.",
+      "prototype": "BOOL CryptDecrypt(HCRYPTKEY hKey, HCRYPTHASH hHash, BOOL Final, DWORD dwFlags, BYTE* pbData, DWORD* pdwDataLen);",
+      "parameters": [
+        {
+          "name": "hKey",
+          "type": "HCRYPTKEY",
+          "description": "A handle to the key to use for the decryption. An application obtains this handle by using either the CryptGenKey or CryptImportKey function. This key specifies the decryption algorithm to be used."
+        },
+        {
+          "name": "hHash",
+          "type": "HCRYPTHASH",
+          "description": "A handle to a hash object. If data is to be decrypted and hashed simultaneously, a handle to a hash object is passed in this parameter. The hash value is updated with the decrypted plaintext. This option is useful when simultaneously decrypting and verifying a signature. Before calling CryptDecrypt, the application must obtain a handle to the hash object by calling the CryptCreateHash function. After the decryption is complete, the hash value can be obtained by using the CryptGetHashParam function, it can also be signed by using the CryptSignHash function, or it can be used to verify a digital signature by using the CryptVerifySignature function. If no hash is to be done, this parameter must be zero."
+        },
+        {
+          "name": "Final",
+          "type": "BOOL",
+          "description": "A Boolean value that specifies whether this is the last section in a series being decrypted. This value is TRUE if this is the last or only block. If this is not the last block, this value is FALSE. For more information, see Remarks."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The following flag values are defined. Value Meaning CRYPT_OAEP 0x00000040 Use Optimal Asymmetric Encryption Padding (OAEP) (PKCS #1 version 2). This flag is only supported by the Microsoft Enhanced Cryptographic Provider with RSA encryption/decryption. This flag cannot be combined with the CRYPT_DECRYPT_RSA_NO_PADDING_CHECK flag. CRYPT_DECRYPT_RSA_NO_PADDING_CHECK 0x00000020 Perform the decryption on the BLOB without checking the padding. This flag is only supported by the Microsoft Enhanced Cryptographic Provider with RSA encryption/decryption. This flag cannot be combined with the CRYPT_OAEP flag."
+        },
+        {
+          "name": "pbData",
+          "type": "BYTE*",
+          "description": "A pointer to a buffer that contains the data to be decrypted. After the decryption has been performed, the plaintext is placed back into this same buffer. The number of encrypted bytes in this buffer is specified by pdwDataLen."
+        },
+        {
+          "name": "pdwDataLen",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD value that indicates the length of the pbData buffer. Before calling this function, the calling application sets the DWORD value to the number of bytes to be decrypted. Upon return, the DWORD value contains the number of bytes of the decrypted plaintext. When a block cipher is used, this data length must be a multiple of the block size unless this is the final section of data to be decrypted and the Final parameter is TRUE."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero (TRUE). The error codes prefaced by NTE are generated by the particular CSP being used. Some possible error codes follow. Value Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_ALGID The hKey session key specifies an algorithm that this CSP does not support. NTE_BAD_DATA The data to be decrypted is not valid. For example, when a block cipher is used and the Final flag is FALSE, the value specified by pdwDataLen must be a multiple of the block size. This error can also be returned when the padding is found to be not valid. NTE_BAD_FLAGS The dwFlags parameter is nonzero. NTE_BAD_HASH The hHash parameter contains a handle that is not valid. NTE_BAD_KEY The h",
+        "failure": "If the function fails, it returns zero (FALSE). For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "If a large amount of data is to be decrypted, it can be done in sections by calling CryptDecrypt repeatedly. The Final parameter must be set to TRUE only on the last call to CryptDecrypt, so that the decryption engine can properly finish the decryption process. The following extra actions are performed when Final is TRUE: If the key is a block cipher key, the data is padded to a multiple of the block size of the cipher. To find the block size of a cipher, use CryptGetKeyParam to get the KP_BLOCKLEN value of the key. If the cipher is operating in a chaining mode, the next CryptDecrypt operation resets the cipher's feedback register to the KP_IV value of the key. If the cipher is a stream cipher, the next CryptDecrypt call resets the cipher to its initial state. There is no way to set the cipher's feedback register to the KP_IV value of the key without setting the Final parameter to TRUE. If this is necessary, as in the case where you do not want to add an additional padding block or change the size of each block, you can simulate this by creating a duplicate of the original key by using the CryptDuplicateKey function, and passing the duplicate key to the CryptDecrypt function. This causes the KP_IV of the original key to be placed in the duplicate key. After you create or import the original key, you cannot use the original key for encryption because the feedback register of the",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Encrypt and then decrypt a short buffer",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    HCRYPTKEY key = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char password[] = \"example password\";\n    CryptHashData(hash, reinterpret_cast<const BYTE*>(password),\n        sizeof(password) - 1, 0);\n    CryptDeriveKey(provider, CALG_AES_128, hash, 0, &key);\n\n    BYTE data[64] = \"example\";\n    DWORD length = 7;\n    if (CryptEncrypt(key, 0, TRUE, 0, data, &length, sizeof(data))) {\n        if (CryptDecrypt(key, 0, TRUE, 0, data, &length)) {\n            printf(\"Decrypted %lu bytes.\\n\", length);\n        }\n    }\n\n    CryptDestroyKey(key);\n    CryptDestroyHash(hash);\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptDecrypt function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptdecrypt",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptDecrypt - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptdecrypt.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptderivekey",
+      "name": "CryptDeriveKey",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Generates cryptographic session keys derived from a base data value.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptDeriveKey function generates cryptographic session keys derived from a base data value. This function guarantees that when the same cryptographic service provider (CSP) and algorithms are used, the keys generated from the same base data are identical. The base data can be a password or any other user data. This function is the same as CryptGenKey, except that the generated session keys are derived from base data instead of being random. CryptDeriveKey can only be used to generate session keys. It cannot generate public/private key pairs. A handle to the session key is returned in the phKey parameter. This handle can be used with any CryptoAPI function that requires a key handle.",
+      "prototype": "BOOL CryptDeriveKey(HCRYPTPROV hProv, ALG_ID Algid, HCRYPTHASH hBaseData, DWORD dwFlags, HCRYPTKEY* phKey);",
+      "parameters": [
+        {
+          "name": "hProv",
+          "type": "HCRYPTPROV",
+          "description": "A HCRYPTPROV handle of a CSP created by a call to CryptAcquireContext."
+        },
+        {
+          "name": "Algid",
+          "type": "ALG_ID",
+          "description": "An ALG_ID structure that identifies the symmetric encryption algorithm for which the key is to be generated. The algorithms available will most likely be different for each CSP. For more information about which algorithm identifier is used by the different providers for the key specs AT_KEYEXCHANGE and AT_SIGNATURE, see ALG_ID. For more information about ALG_ID values to use with the Microsoft Base Cryptographic Provider, see Base Provider Algorithms. For more information about ALG_ID values to use with the Microsoft Strong Cryptographic Provider or the Microsoft Enhanced Cryptographic Provider, see Enhanced Provider Algorithms."
+        },
+        {
+          "name": "hBaseData",
+          "type": "HCRYPTHASH",
+          "description": "A handle to a hash object that has been fed the exact base data. To obtain this handle, an application must first create a hash object with CryptCreateHash and then add the base data to the hash object with CryptHashData. This process is described in detail in Hashes and Digital Signatures."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Specifies the type of key generated. The sizes of a session key can be set when the key is generated. The key size, representing the length of the key modulus in bits, is set with the upper 16 bits of this parameter. Thus, if a 128-bit RC4 session key is to be generated, the value 0x00800000 is combined with any other dwFlags predefined value with a bitwise-OR operation. Due to changing export control restrictions, the default CSP and default key length may change between operating system releases. It is important that both the encryption and decryption use the same CSP and that the key length be explicitly set using the dwFlags parameter to ensure interoperability on different operating system platforms. The lower 16 bits of this parameter can be zero or you can specify one or more of the following flags by using the bitwise-OR operator to combine them. Value Meaning CRYPT_CREATE_SALT T"
+        },
+        {
+          "name": "phKey",
+          "type": "HCRYPTKEY*",
+          "description": "A pointer to a HCRYPTKEY variable to receive the address of the handle of the newly generated key. When you have finished using the key, release the handle by calling the CryptDestroyKey function."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero (TRUE). The error codes prefaced by \"NTE\" are generated by the particular CSP being used. Some possible error codes are listed in the following table. Return code Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_ALGID The Algid parameter specifies an algorithm that this CSP does not support. NTE_BAD_FLAGS The dwFlags parameter contains a value that is not valid. NTE_BAD_HASH The hBaseData parameter does not contain a valid handle to a hash object. NTE_BAD_HASH_STATE An attempt was made to add data to a hash object that is already marked \"finished.\" NTE_BAD_UID The hProv parameter does not contain a valid context handle. NTE_FAIL The function failed in som",
+        "failure": "If the function fails, it returns zero (FALSE). For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "When keys are generated for symmetric block ciphers, the key by default is set up in cipher block chaining (CBC) mode with an initialization vector of zero. This cipher mode provides a good default method for bulk-encrypting data. To change these parameters, use the CryptSetKeyParam function. The CryptDeriveKey function completes the hash. After CryptDeriveKey has been called, no more data can be added to the hash. Additional calls to CryptHashData or CryptHashSessionKey fail. After the application is done with the hash, CryptDestroyHash must be called to destroy the hash object. To choose an appropriate key length, the following methods are recommended. To enumerate the algorithms that the CSP supports and to get maximum and minimum key lengths for each algorithm, call CryptGetProvParam with PP_ENUMALGS_EX. Use the minimum and maximum lengths to choose an appropriate key length. It is not always advisable to choose the maximum length because this can lead to performance issues. After the desired key length has been chosen, use the upper 16 bits of the dwFlags parameter to specify the key length. Let n be the required derived key length, in bytes. The derived key is the first n bytes of the hash value after the hash computation has been completed by CryptDeriveKey. If the hash is not a member of the SHA-2 family and the required key is for either 3DES or AES, the key is derived",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Derive an AES key from a password hash",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    HCRYPTKEY key = 0;\n\n    if (!CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n            CRYPT_VERIFYCONTEXT)) {\n        return 1;\n    }\n\n    const char password[] = \"example password\";\n    if (CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash) &&\n        CryptHashData(hash, reinterpret_cast<const BYTE*>(password),\n            sizeof(password) - 1, 0) &&\n        CryptDeriveKey(provider, CALG_AES_128, hash, 0, &key)) {\n        printf(\"AES key derived.\\n\");\n    }\n\n    if (key != 0) {\n        CryptDestroyKey(key);\n    }\n    if (hash != 0) {\n        CryptDestroyHash(hash);\n    }\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptDeriveKey function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptderivekey",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptDeriveKey - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptderivekey.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptdestroyhash",
+      "name": "CryptDestroyHash",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Destroys the hash object referenced by the hHash parameter.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptDestroyHash function destroys the hash object referenced by the hHash parameter. After a hash object has been destroyed, it can no longer be used. To help ensure security, we recommend that hash objects be destroyed after they have been used.",
+      "prototype": "BOOL CryptDestroyHash(HCRYPTHASH hHash);",
+      "parameters": [
+        {
+          "name": "hHash",
+          "type": "HCRYPTHASH",
+          "description": "The handle of the hash object to be destroyed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The error codes prefaced by \"NTE\" are generated by the particular cryptographic service provider (CSP) you are using. Some possible error codes follow. Return code Description ERROR_BUSY The hash object specified by hHash is currently being used and cannot be destroyed. ERROR_INVALID_HANDLE The hHash parameter specifies a handle that is not valid. ERROR_INVALID_PARAMETER The hHash parameter contains a value that is not valid. NTE_BAD_ALGID The hHash handle specifies an algorithm that this CSP does not support. NTE_BAD_HASH The hash object specified by the hHash parameter is not valid. NTE_BAD_UID The CSP context that was specified when the hash object was created cannot be found.",
+        "failure": "If the function fails, the return value is zero. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography",
+        "cryptographic-hashing"
+      ],
+      "remarks": "When a hash object is destroyed, many CSPs overwrite the memory in the CSP where the hash object was held. The CSP memory is then freed. There should be a one-to-one correspondence between calls to CryptCreateHash and CryptDestroyHash. All hash objects that have been created by using a specific CSP must be destroyed before that CSP handle is released with the CryptReleaseContext function. #### Examples For an example that uses the CryptDestroyHash function, see Example C Program: Creating and Hashing a Session Key.",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Hash data and destroy the hash object",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char text[] = \"example\";\n    CryptHashData(hash, reinterpret_cast<const BYTE*>(text), sizeof(text) - 1,\n        0);\n    CryptDestroyHash(hash);\n\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptDestroyHash function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptdestroyhash",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptDestroyHash - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptdestroyhash.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptdestroykey",
+      "name": "CryptDestroyKey",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Releases the handle referenced by the hKey parameter.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptDestroyKey function releases the handle referenced by the hKey parameter. After a key handle has been released, it is no longer valid and cannot be used again. If the handle refers to a session key, or to a public key that has been imported into the cryptographic service provider (CSP) through CryptImportKey, this function destroys the key and frees the memory that the key used. Many CSPs overwrite the memory where the key was held before freeing it. However, the underlying public/private key pair is not destroyed by this function. Only the handle is destroyed.",
+      "prototype": "BOOL CryptDestroyKey(HCRYPTKEY hKey);",
+      "parameters": [
+        {
+          "name": "hKey",
+          "type": "HCRYPTKEY",
+          "description": "The handle of the key to be destroyed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The error codes prefaced by \"NTE\" are generated by the particular CSP being used. Some possible error codes are listed in the following table. Return code Description ERROR_BUSY The key object specified by hKey is currently being used and cannot be destroyed. ERROR_INVALID_HANDLE The hKey parameter specifies a handle that is not valid. ERROR_INVALID_PARAMETER The hKey parameter contains a value that is not valid. NTE_BAD_KEY The hKey parameter does not contain a valid handle to a key. NTE_BAD_UID The CSP context that was specified when the key was created cannot be found.",
+        "failure": "If the function fails, the return value is zero. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "Keys take up both operating system's memory space and the CSP's memory space. Some CSPs are implemented in hardware with limited memory resources. Applications must destroy all keys with the CryptDestroyKey function when they are finished with them. All key handles that have been created or imported by using a specific CSP must be destroyed before that CSP handle is released with the CryptReleaseContext function. #### Examples For an example that uses the CryptDestroyKey function, see Example C Program: Creating and Hashing a Session Key.",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Derive and destroy an AES key",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    HCRYPTKEY key = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char password[] = \"example password\";\n    CryptHashData(hash, reinterpret_cast<const BYTE*>(password),\n        sizeof(password) - 1, 0);\n    CryptDeriveKey(provider, CALG_AES_128, hash, 0, &key);\n\n    if (key != 0) {\n        CryptDestroyKey(key);\n    }\n    CryptDestroyHash(hash);\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptDestroyKey function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptdestroykey",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptDestroyKey - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptdestroykey.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptencrypt",
+      "name": "CryptEncrypt",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Encrypts data.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptEncrypt function encrypts data. The algorithm used to encrypt the data is designated by the key held by the CSP module and is referenced by the hKey parameter. Important changes to support Secure/Multipurpose Internet Mail Extensions (S/MIME) email interoperability have been made to CryptoAPI that affect the handling of enveloped messages. For more information, see the Remarks section of CryptMsgOpenToEncode. Important The CryptEncrypt function is not guaranteed to be thread safe and may return incorrect results if invoked simultaneously by multiple callers.",
+      "prototype": "BOOL CryptEncrypt(HCRYPTKEY hKey, HCRYPTHASH hHash, BOOL Final, DWORD dwFlags, BYTE* pbData, DWORD* pdwDataLen, DWORD dwBufLen);",
+      "parameters": [
+        {
+          "name": "hKey",
+          "type": "HCRYPTKEY",
+          "description": "A handle to the encryption key. An application obtains this handle by using either the CryptGenKey or the CryptImportKey function. The key specifies the encryption algorithm used."
+        },
+        {
+          "name": "hHash",
+          "type": "HCRYPTHASH",
+          "description": "A handle to a hash object. If data is to be hashed and encrypted simultaneously, a handle to a hash object can be passed in the hHash parameter. The hash value is updated with the plaintext passed in. This option is useful when generating signed and encrypted text. Before calling CryptEncrypt, the application must obtain a handle to the hash object by calling the CryptCreateHash function. After the encryption is complete, the hash value can be obtained by using the CryptGetHashParam function, or the hash can be signed by using the CryptSignHash function. If no hash is to be done, this parameter must be NULL."
+        },
+        {
+          "name": "Final",
+          "type": "BOOL",
+          "description": "A Boolean value that specifies whether this is the last section in a series being encrypted. Final is set to TRUE for the last or only block and to FALSE if there are more blocks to be encrypted. For more information, see Remarks."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The following dwFlags value is defined but reserved for future use. Value Meaning CRYPT_OAEP Use Optimal Asymmetric Encryption Padding (OAEP) (PKCS #1 version 2). This flag is only supported by the Microsoft Enhanced Cryptographic Provider with RSA encryption/decryption."
+        },
+        {
+          "name": "pbData",
+          "type": "BYTE*",
+          "description": "A pointer to a buffer that contains the plaintext to be encrypted. The plaintext in this buffer is overwritten with the ciphertext created by this function. The pdwDataLen parameter points to a variable that contains the length, in bytes, of the plaintext. The dwBufLen parameter contains the total size, in bytes, of this buffer. If this parameter contains NULL, this function will calculate the required size for the ciphertext and place that in the value pointed to by the pdwDataLen parameter."
+        },
+        {
+          "name": "pdwDataLen",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD value that , on entry, contains the length, in bytes, of the plaintext in the pbData buffer. On exit, this DWORD contains the length, in bytes, of the ciphertext written to the pbData buffer. If the buffer allocated for pbData is not large enough to hold the encrypted data, GetLastError returns ERROR_MORE_DATA and stores the required buffer size, in bytes, in the DWORD value pointed to by pdwDataLen. If pbData is NULL, no error is returned, and the function stores the size of the encrypted data, in bytes, in the DWORD value pointed to by pdwDataLen. This allows an application to determine the correct buffer size. When a block cipher is used, this data length must be a multiple of the block size unless this is the final section of data to be encrypted and the Final parameter is TRUE."
+        },
+        {
+          "name": "dwBufLen",
+          "type": "DWORD",
+          "description": "Specifies the total size, in bytes, of the input pbData buffer. Note that, depending on the algorithm used, the encrypted text can be larger than the original plaintext. In this case, the pbData buffer needs to be large enough to contain the encrypted text and any padding. As a rule, if a stream cipher is used, the ciphertext is the same size as the plaintext. If a block cipher is used, the ciphertext is up to a block length larger than the plaintext."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero (TRUE). The error codes prefaced by NTE are generated by the particular CSP being used. Some possible error codes follow. Value Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_ALGID The hKey session key specifies an algorithm that this CSP does not support. NTE_BAD_DATA The data to be encrypted is not valid. For example, when a block cipher is used and the Final flag is FALSE, the value specified by pdwDataLen must be a multiple of the block size. NTE_BAD_FLAGS The dwFlags parameter is nonzero. NTE_BAD_HASH The hHash parameter contains a handle that is not valid. NTE_BAD_HASH_STATE An attempt was made to add data to a hash object that is already marked \"",
+        "failure": "If the function fails, it returns zero (FALSE). For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "If a large amount of data is to be encrypted, it can be done in sections by calling CryptEncrypt repeatedly. The Final parameter must be set to TRUE on the last call to CryptEncrypt, so that the encryption engine can properly finish the encryption process. The following extra actions are performed when Final is TRUE: If the key is a block cipher key, the data is padded to a multiple of the block size of the cipher. If the data length equals the block size of the cipher, one additional block of padding is appended to the data. To find the block size of a cipher, use CryptGetKeyParam to get the KP_BLOCKLEN value of the key. If the cipher is operating in a chaining mode, the next CryptEncrypt operation resets the cipher's feedback register to the KP_IV value of the key. If the cipher is a stream cipher, the next CryptEncrypt resets the cipher to its initial state. There is no way to set the cipher's feedback register to the KP_IV value of the key without setting the Final parameter to TRUE. If this is necessary, as in the case where you do not want to add an additional padding block or change the size of each block, you can simulate this by creating a duplicate of the original key by using the CryptDuplicateKey function, and passing the duplicate key to the CryptEncrypt function. This causes the KP_IV of the original key to be placed in the duplicate key. After you create or impor",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Encrypt a short buffer with an AES key",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    HCRYPTKEY key = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char password[] = \"example password\";\n    CryptHashData(hash, reinterpret_cast<const BYTE*>(password),\n        sizeof(password) - 1, 0);\n    CryptDeriveKey(provider, CALG_AES_128, hash, 0, &key);\n\n    BYTE data[64] = \"example\";\n    DWORD length = 7;\n    if (CryptEncrypt(key, 0, TRUE, 0, data, &length, sizeof(data))) {\n        printf(\"Encrypted %lu bytes.\\n\", length);\n    }\n\n    CryptDestroyKey(key);\n    CryptDestroyHash(hash);\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptEncrypt function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptencrypt",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptEncrypt - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptencrypt.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptgenrandom",
+      "name": "CryptGenRandom",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Fills a buffer with cryptographically random bytes.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptGenRandom function fills a buffer with cryptographically random bytes.",
+      "prototype": "BOOL CryptGenRandom(HCRYPTPROV hProv, DWORD dwLen, BYTE* pbBuffer);",
+      "parameters": [
+        {
+          "name": "hProv",
+          "type": "HCRYPTPROV",
+          "description": "Handle of a cryptographic service provider (CSP) created by a call to CryptAcquireContext."
+        },
+        {
+          "name": "dwLen",
+          "type": "DWORD",
+          "description": "Number of bytes of random data to be generated."
+        },
+        {
+          "name": "pbBuffer",
+          "type": "BYTE*",
+          "description": "Buffer to receive the returned data. This buffer must be at least dwLen bytes in length. Optionally, the application can fill this buffer with data to use as an auxiliary random seed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero (TRUE). The error codes prefaced by \"NTE\" are generated by the particular CSP being used. Some possible error codes are listed in the following table. Return code Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_UID The hProv parameter does not contain a valid context handle. NTE_FAIL The function failed in some unexpected way.",
+        "failure": "If the function fails, the return value is zero (FALSE). For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography",
+        "random-generation"
+      ],
+      "remarks": "The data produced by this function is cryptographically random. It is far more random than the data generated by the typical random number generator such as the one shipped with your C compiler. This function is often used to generate random initialization vectors and salt values. Software random number generators work in fundamentally the same way. They start with a random number, known as the seed, and then use an algorithm to generate a pseudo-random sequence of bits based on it. The most difficult part of this process is to get a seed that is truly random. This is usually based on user input latency, or the jitter from one or more hardware components. With Microsoft CSPs, CryptGenRandom uses the same random number generator used by other security components. This allows numerous processes to contribute to a system-wide seed. CryptoAPI stores an intermediate random seed with every user. To form the seed for the random number generator, a calling application supplies bits it might have—for instance, mouse or keyboard timing input—that are then combined with both the stored seed and various system data and user data such as the process ID and thread ID, the system clock, the system time, the system counter, memory status, free disk clusters, the hashed user environment block. This result is used to seed the pseudorandom number generator (PRNG). In Windows Vista with Service Pa",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Generate random bytes with the legacy CryptoAPI",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    if (!CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_FULL,\n            CRYPT_VERIFYCONTEXT)) {\n        return 1;\n    }\n\n    BYTE buffer[16] = {};\n    if (CryptGenRandom(provider, sizeof(buffer), buffer)) {\n        printf(\"Generated %zu random bytes.\\n\", sizeof(buffer));\n    }\n\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptGenRandom function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptgenrandom",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptGenRandom - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptgenrandom.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptgethashparam",
+      "name": "CryptGetHashParam",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves data that governs the operations of a hash object.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptGetHashParam function retrieves data that governs the operations of a hash object. The actual hash value can be retrieved by using this function.",
+      "prototype": "BOOL CryptGetHashParam(HCRYPTHASH hHash, DWORD dwParam, BYTE* pbData, DWORD* pdwDataLen, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "hHash",
+          "type": "HCRYPTHASH",
+          "description": "Handle of the hash object to be queried."
+        },
+        {
+          "name": "dwParam",
+          "type": "DWORD",
+          "description": "Query type. This parameter can be set to one of the following queries. Value Meaning HP_ALGID Hash algorithm An ALG_ID that indicates the algorithm specified when the hash object was created. For a list of hash algorithms, see CryptCreateHash. HP_HASHSIZE Hash value size DWORD value indicating the number of bytes in the hash value. This value will vary depending on the hash algorithm. Applications must retrieve this value just before the HP_HASHVAL value so the correct amount of memory can be allocated. HP_HASHVAL Hash value The hash value or message hash for the hash object specified by hHash. This value is generated based on the data supplied to the hash object earlier through the CryptHashData and CryptHashSessionKey functions. The CryptGetHashParam function completes the hash. After CryptGetHashParam has been called, no more data can be added to the hash. Additional calls to CryptHas"
+        },
+        {
+          "name": "pbData",
+          "type": "BYTE*",
+          "description": "A pointer to a buffer that receives the specified value data. The form of this data varies, depending on the value number. This parameter can be NULL to determine the memory size required."
+        },
+        {
+          "name": "pdwDataLen",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD value specifying the size, in bytes, of the pbData buffer. When the function returns, the DWORD value contains the number of bytes stored in the buffer. If pbData is NULL, set the value of pdwDataLen to zero. Note When processing the data returned in the buffer, applications must use the actual size of the data returned. The actual size can be slightly smaller than the size of the buffer specified on input. (On input, buffer sizes are usually specified large enough to ensure that the largest possible output data fits in the buffer.) On output, the variable pointed to by this parameter is updated to reflect the actual size of the data copied to the buffer."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Reserved for future use and must be zero."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is TRUE. The error codes prefaced by \"NTE\" are generated by the particular CSP you are using. Some possible error codes follow. Return code Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. ERROR_MORE_DATA If the buffer specified by the pbData parameter is not large enough to hold the returned data, the function sets the ERROR_MORE_DATA code and stores the required buffer size, in bytes, in the variable pointed to by pdwDataLen. NTE_BAD_FLAGS The dwFlags parameter is nonzero. NTE_BAD_HASH The hash object specified by the hHash parameter is not valid. NTE_BAD_TYPE The dwParam parameter specifies an unknown value number. NTE_BAD_UID The CSP context that was specified when the h",
+        "failure": "If the function fails, the return value is FALSE. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography",
+        "cryptographic-hashing"
+      ],
+      "remarks": "",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the SHA-256 digest value",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char text[] = \"example\";\n    CryptHashData(hash, reinterpret_cast<const BYTE*>(text), sizeof(text) - 1,\n        0);\n\n    BYTE digest[32] = {};\n    DWORD size = sizeof(digest);\n    if (CryptGetHashParam(hash, HP_HASHVAL, digest, &size, 0)) {\n        printf(\"Digest length: %lu\\n\", size);\n    }\n\n    CryptDestroyHash(hash);\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptGetHashParam function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptgethashparam",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptGetHashParam - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptgethashparam.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.crypthashdata",
+      "name": "CryptHashData",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Adds data to a specified hash object.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptHashData function adds data to a specified hash object. This function and CryptHashSessionKey can be called multiple times to compute the hash of long or discontinuous data streams. Before calling this function, CryptCreateHash must be called to create a handle of a hash object.",
+      "prototype": "BOOL CryptHashData(HCRYPTHASH hHash, CONST BYTE* pbData, DWORD dwDataLen, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "hHash",
+          "type": "HCRYPTHASH",
+          "description": "Handle of the hash object."
+        },
+        {
+          "name": "pbData",
+          "type": "CONST BYTE*",
+          "description": "A pointer to a buffer that contains the data to be added to the hash object."
+        },
+        {
+          "name": "dwDataLen",
+          "type": "DWORD",
+          "description": "Number of bytes of data to be added. This must be zero if the CRYPT_USERDATA flag is set."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The following flag values are defined. Value Meaning CRYPT_OWF_REPL_LM_HASH 0x00000001 This flag is not used. CRYPT_USERDATA 1 (0x1) All Microsoft Cryptographic Providers ignore this parameter. For any CSP that does not ignore this parameter, if this flag is set, the CSP prompts the user to input data directly. This data is added to the hash. The application is not allowed access to the data. This flag can be used to allow the user to enter a PIN into the system."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is TRUE. The error codes prefaced by \"NTE\" are generated by the particular CSP you are using. Some possible error codes follow. Return code Description ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_ALGID The hHash handle specifies an algorithm that this CSP does not support. NTE_BAD_FLAGS The dwFlags parameter contains a value that is not valid. NTE_BAD_HASH The hash object specified by the hHash parameter is not valid. NTE_BAD_HASH_STATE An attempt was made to add data to a hash object that is already marked \"finished.\" NTE_BAD_KEY A keyed hash algorithm is being used, but the session key is no longer valid. This error is generated if the session key is destroyed before the",
+        "failure": "If the function fails, the return value is FALSE. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography",
+        "cryptographic-hashing"
+      ],
+      "remarks": "",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Hash a short buffer with SHA-256",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char text[] = \"example\";\n    if (CryptHashData(hash, reinterpret_cast<const BYTE*>(text),\n            sizeof(text) - 1, 0)) {\n        printf(\"Hash updated.\\n\");\n    }\n\n    CryptDestroyHash(hash);\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptHashData function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-crypthashdata",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptHashData - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-crypthashdata.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptprotectdata",
+      "name": "CryptProtectData",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Crypt32.dll",
+      "library": "Crypt32.lib",
+      "header": "dpapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Performs encryption on the data in a DATA_BLOB structure.",
+      "description": "The CryptProtectData function performs encryption on the data in a DATA_BLOB) structure. Typically, only a user with the same logon credential as the user who encrypted the data can decrypt the data. In addition, the encryption and decryption usually must be done on the same computer. For information about exceptions, see Remarks.",
+      "prototype": "BOOL CryptProtectData(DATA_BLOB* pDataIn, LPCWSTR szDataDescr, DATA_BLOB* pOptionalEntropy, PVOID pvReserved, CRYPTPROTECT_PROMPTSTRUCT* pPromptStruct, DWORD dwFlags, DATA_BLOB* pDataOut);",
+      "parameters": [
+        {
+          "name": "pDataIn",
+          "type": "DATA_BLOB*",
+          "description": "A pointer to a DATA_BLOB) structure that contains the plaintext to be encrypted."
+        },
+        {
+          "name": "szDataDescr",
+          "type": "LPCWSTR",
+          "description": "A string with a readable description of the data to be encrypted. This description string is included with the encrypted data. This parameter is optional and can be set to NULL."
+        },
+        {
+          "name": "pOptionalEntropy",
+          "type": "DATA_BLOB*",
+          "description": "A pointer to a DATA_BLOB) structure that contains a password or other additional entropy used to encrypt the data. The DATA_BLOB structure used in the encryption phase must also be used in the decryption phase. This parameter can be set to NULL for no additional entropy. For information about protecting passwords, see Handling Passwords."
+        },
+        {
+          "name": "pvReserved",
+          "type": "PVOID",
+          "description": "Reserved for future use and must be set to NULL."
+        },
+        {
+          "name": "pPromptStruct",
+          "type": "CRYPTPROTECT_PROMPTSTRUCT*",
+          "description": "A pointer to a CRYPTPROTECT_PROMPTSTRUCT structure that provides information about where and when prompts are to be displayed and what the content of those prompts should be. This parameter can be set to NULL in both the encryption and decryption phases."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "This parameter can be one of the following flags. If no flags are required, this parameter can be set to 0. | Value | Meaning | |-------|---------| | CRYPTPROTECT_LOCAL_MACHINE | When this flag is set, it associates the data encrypted with the current computer instead of with an individual user. Any user on the computer on which CryptProtectData is called can use CryptUnprotectData to decrypt the data. | | CRYPTPROTECT_UI_FORBIDDEN | This flag is used for remote situations where presenting a user interface (UI) is not an option. When this flag is set and a UI is specified for either the protect or unprotect operation, the operation fails and GetLastError returns the ERROR_PASSWORD_RESTRICTION code. | | CRYPTPROTECT_AUDIT | This flag generates an audit on protect and unprotect operations. Audit log entries are recorded only if szDataDescr is not NULL and not empty. |"
+        },
+        {
+          "name": "pDataOut",
+          "type": "DATA_BLOB*",
+          "description": "A pointer to a DATA_BLOB) structure that receives the encrypted data. When you have finished using the DATA_BLOB structure, free its pbData member by calling the LocalFree function."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns TRUE.",
+        "failure": "If the function fails, it returns FALSE. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "data-protection",
+        "cryptography"
+      ],
+      "remarks": "Typically, only a user with logon credentials that match those of the user who encrypted the data can decrypt the data. In addition, decryption usually can only be done on the computer where the data was encrypted. However, a user with a roaming profile can decrypt the data from another computer on the network. If the CRYPTPROTECT_LOCAL_MACHINE flag is set when the data is encrypted, any user on the computer where the encryption was done can decrypt the data. The function creates a session key to perform the encryption. The session key is derived again when the data is to be decrypted. The function also adds a Message Authentication Code (MAC) (keyed integrity check) to the encrypted data to guard against data tampering. To encrypt memory for temporary use in the same process or across processes, call the CryptProtectMemory function. ### Examples The following example shows encryption of the data in a DATA_BLOB) structure. The CryptProtectData function does the encryption by using a session key that the function creates by using the user's logon credentials. For another example that uses this function, see Example C Program: Using CryptProtectData. cpp // Encrypt data from DATA_BLOB DataIn to DATA_BLOB DataOut. //-------------------------------------------------------------------- // Declare and initialize variables. DATA_BLOB DataIn; DATA_BLOB DataOut; BYTE *pbDataInput =(BYTE",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Protect and unprotect a small buffer",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"crypt32.lib\")\n\nint main() {\n    const char text[] = \"example\";\n    DATA_BLOB input = {};\n    input.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(text));\n    input.cbData = sizeof(text) - 1;\n\n    DATA_BLOB protected_data = {};\n    DATA_BLOB output = {};\n    if (CryptProtectData(&input, L\"NtExplorer example\", nullptr, nullptr,\n            nullptr, CRYPTPROTECT_UI_FORBIDDEN, &protected_data)) {\n        if (CryptUnprotectData(&protected_data, nullptr, nullptr, nullptr,\n                nullptr, CRYPTPROTECT_UI_FORBIDDEN, &output)) {\n            printf(\"Unprotected %lu bytes.\\n\", output.cbData);\n            LocalFree(output.pbData);\n        }\n        LocalFree(protected_data.pbData);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptProtectData function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptProtectData - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/dpapi/nf-dpapi-cryptprotectdata.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (dpapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptreleasecontext",
+      "name": "CryptReleaseContext",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Releases the handle of a cryptographic service provider (CSP) and a key container.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptReleaseContext function releases the handle of a cryptographic service provider (CSP) and a key container. At each call to this function, the reference count on the CSP is reduced by one. When the reference count reaches zero, the context is fully released and it can no longer be used by any function in the application. An application calls this function after finishing the use of the CSP. After this function is called, the released CSP handle is no longer valid. This function does not destroy key containers or key pairs.",
+      "prototype": "BOOL CryptReleaseContext(HCRYPTPROV hProv, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "hProv",
+          "type": "HCRYPTPROV",
+          "description": "Handle of a cryptographic service provider (CSP) created by a call to CryptAcquireContext."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Reserved for future use and must be zero. If dwFlags is not set to zero, this function returns FALSE but the CSP is released."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero (TRUE). Return code Description ERROR_BUSY The CSP context specified by hProv is currently being used by another process. ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_FLAGS The dwFlags parameter is nonzero. NTE_BAD_UID The hProv parameter does not contain a valid context handle.",
+        "failure": "If the function fails, the return value is zero (FALSE). For extended error information, call GetLastError. Some possible error codes are listed in the following table."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "After this function has been called, the CSP session is finished and all existing session keys and hash objects created by using the hProv handle are no longer valid. In practice, all of these objects should be destroyed with calls to CryptDestroyKey and CryptDestroyHash before CryptReleaseContext is called. #### Examples For an example that uses this function, see Example C Program: Creating and Hashing a Session Key.",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Acquire and release a cryptographic context",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    if (!CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n            CRYPT_VERIFYCONTEXT)) {\n        return 1;\n    }\n\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptReleaseContext function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptreleasecontext",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptReleaseContext - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptreleasecontext.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptsetkeyparam",
+      "name": "CryptSetKeyParam",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Customizes various aspects of a session key's operations.",
+      "description": "Important This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases. The CryptSetKeyParam function customizes various aspects of a session key's operations. The values set by this function are not persisted to memory and can only be used with in a single session. The Microsoft Base Cryptographic Provider does not permit setting values for key exchange or signature keys; however, custom providers can define values that can be set for its keys.",
+      "prototype": "BOOL CryptSetKeyParam(HCRYPTKEY hKey, DWORD dwParam, CONST BYTE* pbData, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "hKey",
+          "type": "HCRYPTKEY",
+          "description": "A handle to the key for which values are to be set."
+        },
+        {
+          "name": "dwParam",
+          "type": "DWORD",
+          "description": "The following tables contain predefined values that can be used. For all key types, this parameter can contain one of the following values. Value Meaning KP_ALGID pbData points to an appropriate ALG_ID. This is used when exchanging session keys with the Microsoft Base Digital Signature Standard (DSS), Diffie-Hellman Cryptographic Provider, or compatible CSPs. After a key is agreed upon with the CryptImportKey function, the session key is enabled for use by setting its algorithm type. KP_CERTIFICATE pbData is the address of a buffer that contains the X.509 certificate that has been encoded by using Distinguished Encoding Rules (DER). The public key in the certificate must match the corresponding signature or exchange key. KP_PERMISSIONS pbData points to a DWORD value that specifies zero or more permission flags. For a description of these flags, see CryptGetKeyParam. KP_SALT pbData points"
+        },
+        {
+          "name": "pbData",
+          "type": "CONST BYTE*",
+          "description": "A pointer to a buffer initialized with the value to be set before calling CryptSetKeyParam. The form of this data varies depending on the value of dwParam."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Used only when dwParam is KP_ALGID. The dwFlags parameter is used to pass in flag values for the enabled key. The dwFlags parameter can hold values such as the key size and the other flag values allowed when generating the same type of key with CryptGenKey. For information about allowable flag values, see CryptGenKey."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero (TRUE). The error codes prefaced by \"NTE\" are generated by the particular CSP being used. Some possible error codes follow. Return code Description ERROR_BUSY The CSP context is currently being used by another process. ERROR_INVALID_HANDLE One of the parameters specifies a handle that is not valid. ERROR_INVALID_PARAMETER One of the parameters contains a value that is not valid. This is most often a pointer that is not valid. NTE_BAD_FLAGS The dwFlags parameter is nonzero, or the pbData buffer contains a value that is not valid. NTE_BAD_TYPE The dwParam parameter specifies an unknown parameter. NTE_BAD_UID The CSP context that was specified when the hKey key was created cannot be found. NTE_FAIL The function failed in some unexpected way. NTE_FIXEDPARAMETER Some CSPs have hard-coded P, Q, and G values. If this is the case, then using",
+        "failure": "If the function fails, the return value is zero (FALSE). For extended error information, call GetLastError."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "If the KP_Q, KP_P, or KP_X parameters are set on a PREGEN Diffie-Hellman or DSS key, the key lengths must be compatible with the key length set using the upper 16 bits of the dwFlags parameter when the key was created using CryptGenKey. If no key length was set in CryptGenKey, the default key length was used. This will create an error if a nondefault key length is used to set P, Q, or X. #### Examples For an example that uses this function, see Example C Program: Duplicating a Session Key. For more code that uses this function, see Example C Program: Setting and Getting Session Key Parameters .",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Set an AES key to ECB mode",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    HCRYPTPROV provider = 0;\n    HCRYPTHASH hash = 0;\n    HCRYPTKEY key = 0;\n    CryptAcquireContextA(&provider, nullptr, nullptr, PROV_RSA_AES,\n        CRYPT_VERIFYCONTEXT);\n    CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash);\n\n    const char password[] = \"example password\";\n    CryptHashData(hash, reinterpret_cast<const BYTE*>(password),\n        sizeof(password) - 1, 0);\n    CryptDeriveKey(provider, CALG_AES_128, hash, 0, &key);\n\n    DWORD mode = CRYPT_MODE_ECB;\n    CryptSetKeyParam(key, KP_MODE, reinterpret_cast<const BYTE*>(&mode), 0);\n\n    CryptDestroyKey(key);\n    CryptDestroyHash(hash);\n    CryptReleaseContext(provider, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptSetKeyParam function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptsetkeyparam",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptSetKeyParam - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptsetkeyparam.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.cryptstringtobinary",
+      "name": "CryptStringToBinary",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Crypt32.dll",
+      "library": "Crypt32.lib",
+      "header": "wincrypt.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Converts a formatted string into an array of bytes.",
+      "description": "The CryptStringToBinary function converts a formatted string into an array of bytes.",
+      "prototype": "BOOL CryptStringToBinaryA(LPCSTR pszString, DWORD cchString, DWORD dwFlags, BYTE* pbBinary, DWORD* pcbBinary, DWORD* pdwSkip, DWORD* pdwFlags);",
+      "parameters": [
+        {
+          "name": "pszString",
+          "type": "LPCSTR",
+          "description": "A pointer to a string that contains the formatted string to be converted."
+        },
+        {
+          "name": "cchString",
+          "type": "DWORD",
+          "description": "The number of characters of the formatted string to be converted, not including the terminating NULL character. If this parameter is zero, pszString is considered to be a null-terminated string."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Indicates the format of the string to be converted. This can be one of the following values. Value Meaning CRYPT_STRING_BASE64HEADER 0x00000000 Base64 between lines of the form -----BEGIN ...----- and -----END ...-----. See Remarks below. CRYPT_STRING_BASE64 0x00000001 Base64, without headers. CRYPT_STRING_BINARY 0x00000002 Pure binary copy. CRYPT_STRING_BASE64REQUESTHEADER 0x00000003 Base64 between lines of the form -----BEGIN ...----- and -----END ...-----. See Remarks below. CRYPT_STRING_HEX 0x00000004 Hexadecimal only format. CRYPT_STRING_HEXASCII 0x00000005 Hexadecimal format with ASCII character display. CRYPT_STRING_BASE64_ANY 0x00000006 Tries the following, in order: CRYPT_STRING_BASE64HEADER CRYPT_STRING_BASE64 CRYPT_STRING_ANY 0x00000007 Tries the following, in order: CRYPT_STRING_BASE64HEADER CRYPT_STRING_BASE64 CRYPT_STRING_BINARY CRYPT_STRING_HEX_ANY 0x00000008 Tries the fol"
+        },
+        {
+          "name": "pbBinary",
+          "type": "BYTE*",
+          "description": "A pointer to a buffer that receives the returned sequence of bytes. If this parameter is NULL, the function calculates the length of the buffer needed and returns the size, in bytes, of required memory in the DWORD pointed to by pcbBinary."
+        },
+        {
+          "name": "pcbBinary",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD variable that, on entry, contains the size, in bytes, of the pbBinary buffer. After the function returns, this variable contains the number of bytes copied to the buffer. If this value is not large enough to contain all of the data, the function fails and GetLastError returns ERROR_MORE_DATA. If pbBinary is NULL, the DWORD pointed to by pcbBinary is ignored."
+        },
+        {
+          "name": "pdwSkip",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD value that receives the number of characters skipped to reach the beginning of the -----BEGIN ...----- header. If no header is present, then the DWORD is set to zero. This parameter is optional and can be NULL if it is not needed."
+        },
+        {
+          "name": "pdwFlags",
+          "type": "DWORD*",
+          "description": "A pointer to a DWORD value that receives the flags actually used in the conversion. These are the same flags used for the dwFlags parameter. In many cases, these will be the same flags that were passed in the dwFlags parameter. If dwFlags contains one of the following flags, this value will receive a flag that indicates the actual format of the string. This parameter is optional and can be NULL if it is not needed. Value Meaning CRYPT_STRING_ANY This variable will receive one of the following values. Each value indicates the actual format of the string. CRYPT_STRING_BASE64HEADER CRYPT_STRING_BASE64 CRYPT_STRING_BINARY CRYPT_STRING_BASE64_ANY This variable will receive one of the following values. Each value indicates the actual format of the string. CRYPT_STRING_BASE64HEADER CRYPT_STRING_BASE64 CRYPT_STRING_HEX_ANY This variable will receive one of the following values. Each value indica"
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero (TRUE).",
+        "failure": "If the function fails, the return value is zero (FALSE)."
+      },
+      "tags": [
+        "cryptography"
+      ],
+      "remarks": "The CRYPT_STRING_BASE64HEADER, CRYPT_STRING_BASE64REQUESTHEADER, and CRYPT_STRING_BASE64X509CRLHEADER flags are all treated identically by this function: They attempt to parse the first block of base64-encoded data between lines of the form -----BEGIN ...----- and -----END ...-----. The ... portions are ignored, and they need not match. If parsing is successful, the value passed in the dwFlags parameter is returned in the DWORD pointed to by the pdwFlags parameter. Note that a value of CRYPT_STRING_BASE64REQUESTHEADER or CRYPT_STRING_BASE64X509CRLHEADER does not mean that a request header or X.509 certificate revocation list (CRL) was found. > > The wincrypt.h header defines CryptStringToBinary as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Decode a Base64 string",
+        "code": "#include <windows.h>\n#include <wincrypt.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"crypt32.lib\")\n\nint main() {\n    const char text[] = \"ZXhhbXBsZQ==\";\n    DWORD size = 0;\n    CryptStringToBinaryA(text, 0, CRYPT_STRING_BASE64, nullptr, &size,\n        nullptr, nullptr);\n\n    auto data = static_cast<BYTE*>(LocalAlloc(LPTR, size));\n    if (data != nullptr &&\n        CryptStringToBinaryA(text, 0, CRYPT_STRING_BASE64, data, &size,\n            nullptr, nullptr)) {\n        printf(\"Decoded %lu bytes.\\n\", size);\n    }\n\n    LocalFree(data);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CryptStringToBinary function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptstringtobinaryw",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CryptStringToBinary - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wincrypt/nf-wincrypt-cryptstringtobinaryw.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wincrypt.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.decryptfilea",
+      "name": "DecryptFileA",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Decrypts an encrypted file or directory.",
+      "description": "Decrypts an encrypted file or directory.",
+      "prototype": "BOOL DecryptFileA(LPCSTR lpFileName, DWORD dwReserved);",
+      "parameters": [
+        {
+          "name": "lpFileName",
+          "type": "LPCSTR",
+          "description": "The name of the file or directory to be decrypted. The caller must have the FILE_READ_DATA, FILE_WRITE_DATA, FILE_READ_ATTRIBUTES, FILE_WRITE_ATTRIBUTES, and SYNCHRONIZE access rights. For more information, see File Security and Access Rights."
+        },
+        {
+          "name": "dwReserved",
+          "type": "DWORD",
+          "description": "Reserved; must be zero."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-encryption",
+        "cryptography"
+      ],
+      "remarks": "The DecryptFile function requires exclusive access to the file being decrypted, and will fail if another process is using the file. If the file is not encrypted, DecryptFile simply returns a nonzero value, which indicates success. If lpFileName specifies a read-only file, the function fails and GetLastError returns ERROR_FILE_READ_ONLY. If lpFileName specifies a directory that contains a read-only file, the functions succeeds but the directory is not decrypted. In Windows 8, Windows Server 2012, and later, this function is supported by the following technologies. Technology Supported Server Message Block (SMB) 3.0 protocol Yes SMB 3.0 Transparent Failover (TFO) No SMB 3.0 with Scale-out File Shares (SO) No Cluster Shared Volume File System (CsvFS) No Resilient File System (ReFS) No SMB 3.0 does not support EFS on shares with continuous availability capability. > > The winbase.h header defines DecryptFile as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Encrypt and decrypt a temporary file with EFS",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char temp_path[MAX_PATH] = {};\n    char file_path[MAX_PATH] = {};\n    GetTempPathA(MAX_PATH, temp_path);\n    GetTempFileNameA(temp_path, \"nte\", 0, file_path);\n\n    HANDLE file = CreateFileA(file_path, GENERIC_WRITE, 0, nullptr,\n        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);\n    if (file == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n    CloseHandle(file);\n\n    // EFS may be unavailable on some editions; failures are reported, not\n    // escalated.\n    if (EncryptFileA(file_path)) {\n        printf(\"File encrypted.\\n\");\n        if (DecryptFileA(file_path, 0)) {\n            printf(\"File decrypted.\\n\");\n        }\n    } else {\n        printf(\"EncryptFileA failed: %lu\\n\", GetLastError());\n    }\n\n    DeleteFileA(file_path);\n    return 0;\n}\n",
+        "notes": "EFS availability depends on the Windows edition and policy; the example reports failures and removes the temporary file."
+      },
+      "references": [
+        {
+          "title": "DecryptFileA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-decryptfilea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "DecryptFileA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-decryptfilea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.encryptfilea",
+      "name": "EncryptFileA",
+      "aliases": [],
+      "category": "Cryptography",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP Professional [desktop apps only]",
+      "summary": "Encrypts a file or directory.",
+      "description": "Encrypts a file or directory. All data streams in a file are encrypted. All new files created in an encrypted directory are encrypted.",
+      "prototype": "BOOL EncryptFileA(LPCSTR lpFileName);",
+      "parameters": [
+        {
+          "name": "lpFileName",
+          "type": "LPCSTR",
+          "description": "The name of the file or directory to be encrypted. The caller must have the FILE_READ_DATA, FILE_WRITE_DATA, FILE_READ_ATTRIBUTES, FILE_WRITE_ATTRIBUTES, and SYNCHRONIZE access rights. For more information, see File Security and Access Rights."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-encryption",
+        "cryptography"
+      ],
+      "remarks": "The EncryptFile function requires exclusive access to the file being encrypted, and will fail if another process is using the file. If the file is already encrypted, EncryptFile simply returns a nonzero value, which indicates success. If the file is compressed, EncryptFile will decompress the file before encrypting it. If lpFileName specifies a read-only file, the function fails and GetLastError returns ERROR_FILE_READ_ONLY. If lpFileName specifies a directory that contains a read-only file, the functions succeeds but the directory is not encrypted. To decrypt an encrypted file, use the DecryptFile function. In Windows 8, Windows Server 2012, and later, this function is supported by the following technologies. Technology Supported Server Message Block (SMB) 3.0 protocol Yes SMB 3.0 Transparent Failover (TFO) No SMB 3.0 with Scale-out File Shares (SO) No Cluster Shared Volume File System (CsvFS) No Resilient File System (ReFS) No SMB 3.0 does not support EFS on shares with continuous availability capability. > > The winbase.h header defines EncryptFile as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventio",
+      "maldev_notes": "Cryptographic APIs are used by browsers, installers, credential stores, and ordinary applications. Analysts note the algorithm, key scope, data protected, and whether operations match the application’s purpose.",
+      "defensive_notes": "Cryptographic operations are high-volume and usually low-signal. Analysts focus on unusual key handling, protected-data scope, and combinations with file or network activity.",
+      "example": {
+        "language": "cpp",
+        "title": "Encrypt and decrypt a temporary file with EFS",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char temp_path[MAX_PATH] = {};\n    char file_path[MAX_PATH] = {};\n    GetTempPathA(MAX_PATH, temp_path);\n    GetTempFileNameA(temp_path, \"nte\", 0, file_path);\n\n    HANDLE file = CreateFileA(file_path, GENERIC_WRITE, 0, nullptr,\n        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);\n    if (file == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n    CloseHandle(file);\n\n    // EFS may be unavailable on some editions; failures are reported, not\n    // escalated.\n    if (EncryptFileA(file_path)) {\n        printf(\"File encrypted.\\n\");\n        if (DecryptFileA(file_path, 0)) {\n            printf(\"File decrypted.\\n\");\n        }\n    } else {\n        printf(\"EncryptFileA failed: %lu\\n\", GetLastError());\n    }\n\n    DeleteFileA(file_path);\n    return 0;\n}\n",
+        "notes": "EFS availability depends on the Windows edition and policy; the example reports failures and removes the temporary file."
+      },
+      "references": [
+        {
+          "title": "EncryptFileA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-encryptfilea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EncryptFileA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-encryptfilea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

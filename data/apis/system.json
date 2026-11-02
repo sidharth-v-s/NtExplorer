@@ -1,0 +1,1522 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.getsysteminfo",
+      "name": "GetSystemInfo",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "summary": "Retrieves information about the current system, including processor architecture, processor count, page size, and address limits.",
+      "description": "GetSystemInfo fills a SYSTEM_INFO structure with information about the current system as seen by the calling process. The structure reports the processor architecture, the number of logical processors in the current processor group, page size, allocation granularity, processor affinity mask, and the minimum and maximum application addresses. The values are commonly used to size memory allocations and to adapt to the host architecture. The function returns no value and reports no error through GetLastError.",
+      "prototype": "void GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);",
+      "parameters": [
+        {
+          "name": "lpSystemInfo",
+          "type": "LPSYSTEM_INFO",
+          "description": "A pointer to a SYSTEM_INFO structure that receives the system information. The pointer must be valid; the function does not accept NULL."
+        }
+      ],
+      "return": {
+        "type": "void",
+        "success": "The function fills lpSystemInfo with system information and returns no value.",
+        "failure": "There is no return value or documented error path; pass a valid SYSTEM_INFO pointer."
+      },
+      "tags": [
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getnativesysteminfo",
+        "win32.virtualalloc",
+        "win32.virtualquery"
+      ],
+      "related_structures": [
+        "win32.system_info"
+      ],
+      "related_constants": [],
+      "remarks": "dwPageSize and dwAllocationGranularity are distinct values and should not be used interchangeably when planning virtual memory. dwNumberOfProcessors reports the logical processor count for the current processor group, which can differ from the total on systems with multiple groups. On WOW64, use GetNativeSystemInfo when the native architecture is required.",
+      "maldev_notes": "System information queries are pervasive in ordinary software, including installers, runtimes, and management agents. Analysis may encounter them in environment checks, but the call is benign in isolation and becomes interesting only in the context of how the results influence behavior.",
+      "defensive_notes": "Environment discovery is high-volume and usually legitimate. Sequences that combine architecture, processor count, and memory limits with other host checks can be relevant context, but no single system-information call is a detection.",
+      "example": {
+        "language": "cpp",
+        "title": "Read page size and allocation granularity",
+        "code": "#include <windows.h>\n\nint main() {\n    SYSTEM_INFO info{};\n    GetSystemInfo(&info);\n\n    // These values guide virtual memory planning; they are not equal.\n    if (info.dwPageSize == 0 || info.dwAllocationGranularity == 0) {\n        return 1;\n    }\n\n    return 0;\n}\n",
+        "notes": "The example fills a zero-initialized SYSTEM_INFO structure and performs a basic sanity check. It requires no privileges and is illustrative only."
+      },
+      "references": [
+        {
+          "title": "GetSystemInfo function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Void return, SYSTEM_INFO fields, and WOW64 guidance checked against Microsoft Learn (sysinfoapi.h)."
+    },
+    {
+      "id": "win32.getnativesysteminfo",
+      "name": "GetNativeSystemInfo",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "summary": "Retrieves information about the native system, including when the caller is running under WOW64.",
+      "description": "GetNativeSystemInfo fills a SYSTEM_INFO structure using the native system's architecture and limits. It is intended for 32-bit processes running under WOW64 that need information about the 64-bit host rather than the emulated environment. When called from a 64-bit process, its behavior is equivalent to GetSystemInfo. Like GetSystemInfo, it returns no value and does not report errors through GetLastError.",
+      "prototype": "void GetNativeSystemInfo(LPSYSTEM_INFO lpSystemInfo);",
+      "parameters": [
+        {
+          "name": "lpSystemInfo",
+          "type": "LPSYSTEM_INFO",
+          "description": "A pointer to a SYSTEM_INFO structure that receives the native system information. The pointer must be valid; the function does not accept NULL."
+        }
+      ],
+      "return": {
+        "type": "void",
+        "success": "The function fills lpSystemInfo with native system information and returns no value.",
+        "failure": "There is no return value or documented error path; pass a valid SYSTEM_INFO pointer."
+      },
+      "tags": [
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getsysteminfo",
+        "win32.virtualalloc",
+        "win32.virtualquery"
+      ],
+      "related_structures": [
+        "win32.system_info"
+      ],
+      "related_constants": [],
+      "remarks": "Use this function when a 32-bit process needs the native processor architecture or address limits. A 64-bit process can call either function, and the results are equivalent. The structure's processor architecture field reflects the native system rather than the WOW64 emulation.",
+      "maldev_notes": "WOW64-aware environment queries appear in legitimate software that must adapt to the host architecture. In analysis they can indicate awareness of the process's bitness and the underlying system, but the call itself is ordinary.",
+      "defensive_notes": "Comparing GetSystemInfo and GetNativeSystemInfo results can help explain whether a process is running under WOW64. The distinction is architectural, not behavioral evidence of malicious intent.",
+      "references": [
+        {
+          "title": "GetNativeSystemInfo function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "WOW64 behavior and equivalence to GetSystemInfo on 64-bit processes checked against Microsoft Learn (sysinfoapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Read native system information",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SYSTEM_INFO info = {};\n    GetNativeSystemInfo(&info);\n    printf(\"Architecture: %u Processors: %lu\\n\", info.wProcessorArchitecture,\n        info.dwNumberOfProcessors);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.getcomputernamew",
+      "name": "GetComputerNameW",
+      "aliases": [
+        "GetComputerName"
+      ],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "summary": "Retrieves the NetBIOS name of the local computer.",
+      "description": "GetComputerNameW copies the computer's NetBIOS name into a caller-supplied buffer. The name is established at system startup and does not include a domain suffix. The size parameter is expressed in characters: on input it gives the buffer capacity, and on output it receives the number of characters copied, excluding the terminating null. If the buffer is too small, the function fails with ERROR_BUFFER_OVERFLOW and the size parameter receives the required capacity. For DNS host names and other formats, use GetComputerNameExW.",
+      "prototype": "BOOL GetComputerNameW(LPWSTR lpBuffer, LPDWORD nSize);",
+      "parameters": [
+        {
+          "name": "lpBuffer",
+          "type": "LPWSTR",
+          "description": "A buffer that receives the null-terminated computer name. The buffer should hold at least MAX_COMPUTERNAME_LENGTH + 1 characters."
+        },
+        {
+          "name": "nSize",
+          "type": "LPDWORD",
+          "description": "On input, the size of lpBuffer in characters, including room for the terminating null. On success, receives the number of characters copied, excluding the null. If the buffer is too small, receives the required buffer size, including the terminating null."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; lpBuffer contains the null-terminated computer name and nSize holds the character count excluding the null.",
+        "failure": "Zero. Call GetLastError; ERROR_BUFFER_OVERFLOW indicates that the buffer was too small."
+      },
+      "tags": [
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getusernamew",
+        "win32.getsysteminfo"
+      ],
+      "related_constants": [],
+      "remarks": "MAX_COMPUTERNAME_LENGTH is 15, so a 16-character buffer is sufficient for the NetBIOS name plus its terminator. The returned name is not the fully qualified DNS name. Renaming the computer requires a restart before the new name is reported by this function.",
+      "maldev_notes": "Host names are routinely collected by installers, management agents, telemetry, and diagnostics. In sample analysis, host and user queries may precede configuration or targeting decisions, but they are equally common in legitimate software and are not evidence by themselves.",
+      "defensive_notes": "Hostname collection is high-volume benign behavior. It is more useful to consider what other data is gathered and where it is sent than to flag the query alone.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the local NetBIOS computer name",
+        "code": "#include <windows.h>\n\nint main() {\n    WCHAR name[MAX_COMPUTERNAME_LENGTH + 1]{};\n    DWORD size = MAX_COMPUTERNAME_LENGTH + 1;\n    if (!GetComputerNameW(name, &size)) {\n        return static_cast<int>(GetLastError());\n    }\n\n    // name is null-terminated; size excludes the terminator.\n    return 0;\n}\n",
+        "notes": "The example sizes the buffer for the documented NetBIOS limit and checks the return value. No privileges are required, and the snippet is illustrative only."
+      },
+      "references": [
+        {
+          "title": "GetComputerNameW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcomputernamew",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Buffer sizing, character-count semantics, and ERROR_BUFFER_OVERFLOW behavior checked against Microsoft Learn (winbase.h)."
+    },
+    {
+      "id": "win32.getusernamew",
+      "name": "GetUserNameW",
+      "aliases": [
+        "GetUserName"
+      ],
+      "category": "System Information",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "summary": "Retrieves the name of the user associated with the calling thread.",
+      "description": "GetUserNameW returns the account name of the user associated with the calling thread. If the thread is impersonating another client, the returned name is the impersonated client's name rather than the process owner's name. The buffer size is expressed in characters and includes the terminating null. When the buffer is too small, the function fails with ERROR_INSUFFICIENT_BUFFER and the size parameter receives the required size, including the null. For domain-qualified or alternate formats, use GetUserNameExW.",
+      "prototype": "BOOL GetUserNameW(LPWSTR lpBuffer, LPDWORD pcbBuffer);",
+      "parameters": [
+        {
+          "name": "lpBuffer",
+          "type": "LPWSTR",
+          "description": "A buffer that receives the null-terminated user name. A buffer of UNLEN + 1 characters is typically sufficient."
+        },
+        {
+          "name": "pcbBuffer",
+          "type": "LPDWORD",
+          "description": "On input, the size of lpBuffer in characters. On success, receives the number of characters copied, including the terminating null. If the buffer is too small, receives the required size including the null."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; lpBuffer contains the null-terminated user name and pcbBuffer holds the size including the null.",
+        "failure": "Zero. Call GetLastError; ERROR_INSUFFICIENT_BUFFER indicates that the buffer was too small."
+      },
+      "tags": [
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getcomputernamew",
+        "win32.getcurrentprocessid"
+      ],
+      "related_constants": [],
+      "remarks": "UNLEN is defined as 256, so a buffer of UNLEN + 1 characters is typically sufficient; include lmcons.h when using UNLEN. The returned name is not necessarily domain-qualified. Because the function follows the thread's impersonation state, the result can differ from the identity of the process that created the thread.",
+      "maldev_notes": "User identity queries are common in installers, management software, and diagnostics. In analysis, a user name can help establish the token or impersonation context, but querying it is not inherently suspicious.",
+      "defensive_notes": "User names are widely logged and rarely distinctive. When impersonation is in use, compare the returned name with the process token and thread token to avoid misattributing activity.",
+      "references": [
+        {
+          "title": "GetUserNameW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getusernamew",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Impersonation behavior, buffer-size semantics, and ERROR_INSUFFICIENT_BUFFER handling checked against Microsoft Learn (winbase.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current user name with wide strings",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    wchar_t name[256] = {};\n    DWORD size = 256;\n    if (GetUserNameW(name, &size)) {\n        wprintf(L\"User: %s\\n\", name);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.isdebuggerpresent",
+      "name": "IsDebuggerPresent",
+      "aliases": [],
+      "category": "Debugging and Diagnostics",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "debugapi.h",
+      "summary": "Determines whether the calling process is being debugged by a user-mode debugger.",
+      "description": "IsDebuggerPresent reports whether a user-mode debugger is attached to the calling process. It examines only the caller; it cannot inspect another process. The function returns a nonzero value when the process is being debugged and zero otherwise, and it does not use GetLastError to report failure. The check is common in diagnostics, crash-reporting code, and analysis-aware software that changes behavior when a debugger is attached.",
+      "prototype": "BOOL IsDebuggerPresent(void);",
+      "parameters": [],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value if the calling process is being debugged by a user-mode debugger.",
+        "failure": "Zero if the process is not being debugged by a user-mode debugger. The function does not report errors through GetLastError."
+      },
+      "tags": [
+        "debugger-awareness",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.checkremotedebuggerpresent",
+        "win32.getcurrentprocess",
+        "win32.getcurrentprocessid"
+      ],
+      "related_constants": [],
+      "remarks": "The check is limited to the calling process and to user-mode debuggers. Kernel-mode debuggers and other instrumentation are outside its scope, so a zero result does not prove that no analysis tooling is present. The result reflects the process's debug state at the time of the call.",
+      "maldev_notes": "Debugger checks appear in both benign diagnostics and analysis-aware code. In sample analysis, a call indicates that the program may branch on debugger state; it is one signal and can be affected by legitimate debuggers, debugger configuration, and instrumentation, so the result should be corroborated with other evidence.",
+      "defensive_notes": "A debugger check is not inherently malicious. Analysts can note where the result influences control flow and combine it with other behavior; ordinary debuggers and crash tooling can change the result.",
+      "references": [
+        {
+          "title": "IsDebuggerPresent function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-isdebuggerpresent",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "User-mode scope, zero-parameter prototype, and return convention checked against Microsoft Learn (debugapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Check whether a debugger is attached",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    printf(\"Debugger present: %s\\n\",\n        IsDebuggerPresent() ? \"yes\" : \"no\");\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.checkremotedebuggerpresent",
+      "name": "CheckRemoteDebuggerPresent",
+      "aliases": [],
+      "category": "Debugging and Diagnostics",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "debugapi.h",
+      "summary": "Determines whether a specified process is being debugged.",
+      "description": "CheckRemoteDebuggerPresent queries the debug state of a process identified by a handle and stores the result in a BOOL. Unlike IsDebuggerPresent, it can examine another process, subject to the access permitted by the handle. The function returns nonzero when the query itself succeeds; the debug state is reported separately through pbDebuggerPresent, which is set to TRUE or FALSE. A zero return therefore means the query failed, not that no debugger is attached.",
+      "prototype": "BOOL CheckRemoteDebuggerPresent(HANDLE hProcess, PBOOL pbDebuggerPresent);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process to query. The handle must permit process query operations; OpenProcess with query access is the usual way to obtain it."
+        },
+        {
+          "name": "pbDebuggerPresent",
+          "type": "PBOOL",
+          "description": "A pointer to a BOOL that receives TRUE if the process is being debugged and FALSE otherwise. The pointer must be valid."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; pbDebuggerPresent contains the debug state of the target process.",
+        "failure": "Zero. Call GetLastError. Do not interpret a zero return as meaning that the process is not being debugged."
+      },
+      "tags": [
+        "debugger-awareness",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.isdebuggerpresent",
+        "win32.openprocess",
+        "win32.getcurrentprocess",
+        "win32.closehandle"
+      ],
+      "related_constants": [],
+      "remarks": "The target handle must remain valid for the duration of the call. The result reflects the target's debug state at that moment and may be affected by the type of debugger, the process state, and the permissions of the caller. Always test the return value before reading pbDebuggerPresent.",
+      "maldev_notes": "Remote debugger checks are used by debuggers, crash handlers, and analysis-aware software. A positive result is one signal and can be caused by legitimate debugging or instrumentation; it should be corroborated rather than treated as conclusive.",
+      "defensive_notes": "Querying another process's debug state can be relevant when combined with cross-process handle access, but monitoring and debugging tools do this routinely. Interpret the access mask and the caller's role together.",
+      "references": [
+        {
+          "title": "CheckRemoteDebuggerPresent function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-checkremotedebuggerpresent",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Separate return-value and output-parameter semantics checked against Microsoft Learn (debugapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Check the current process for a debugger",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    BOOL present = FALSE;\n    if (CheckRemoteDebuggerPresent(GetCurrentProcess(), &present)) {\n        printf(\"Debugger present: %s\\n\", present ? \"yes\" : \"no\");\n    }\n    return 0;\n}\n",
+        "notes": "The example checks its own process only."
+      }
+    },
+    {
+      "id": "win32.debugactiveprocessstop",
+      "name": "DebugActiveProcessStop",
+      "aliases": [],
+      "category": "Debugging and Diagnostics",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "debugapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Stops the debugger from debugging the specified process.",
+      "description": "Stops the debugger from debugging the specified process.",
+      "prototype": "BOOL DebugActiveProcessStop(DWORD dwProcessId);",
+      "parameters": [
+        {
+          "name": "dwProcessId",
+          "type": "DWORD",
+          "description": "The identifier of the process to stop debugging."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "debugging"
+      ],
+      "remarks": "",
+      "maldev_notes": "Debugging and diagnostic APIs are used by debuggers, crash reporters, and observability tools. Analysts determine whether a debugger is legitimately attached and which process owns it.",
+      "defensive_notes": "Debugger attachment, output, and driver-enumeration telemetry is reviewed with process lineage and authorization. Legitimate developer and support activity is common.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare to detach from a debuggee",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Detaching requires that the caller is already attached as a debugger.\n    // The example only prints the current process id.\n    printf(\"Would detach from PID %lu if attached.\\n\", GetCurrentProcessId());\n    return 0;\n}\n",
+        "notes": "Debugger attach/detach is privileged and stateful; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "DebugActiveProcessStop function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-debugactiveprocessstop",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "DebugActiveProcessStop - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/debugapi/nf-debugapi-debugactiveprocessstop.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (debugapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumdevicedrivers",
+      "name": "EnumDeviceDrivers",
+      "aliases": [],
+      "category": "Debugging and Diagnostics",
+      "dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "library": "Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "header": "psapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves the load address for each device driver in the system.",
+      "description": "Retrieves the load address for each device driver in the system.",
+      "prototype": "BOOL EnumDeviceDrivers(LPVOID* lpImageBase, DWORD cb, LPDWORD lpcbNeeded);",
+      "parameters": [
+        {
+          "name": "lpImageBase",
+          "type": "LPVOID*",
+          "description": "An array that receives the list of load addresses for the device drivers."
+        },
+        {
+          "name": "cb",
+          "type": "DWORD",
+          "description": "The size of the lpImageBase array, in bytes. If the array is not large enough to store the load addresses, the lpcbNeeded parameter receives the required size of the array."
+        },
+        {
+          "name": "lpcbNeeded",
+          "type": "LPDWORD",
+          "description": "The number of bytes returned in the lpImageBase array."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "driver-enumeration",
+        "debugging"
+      ],
+      "remarks": "To determine how many device drivers were enumerated by the call to EnumDeviceDrivers, divide the resulting value in the lpcbNeeded parameter by sizeof(LPVOID). Starting with Windows 7 and Windows Server 2008 R2, Psapi.h establishes version numbers for the PSAPI functions. The PSAPI version number affects the name used to call the function and the library that a program must load. If PSAPI_VERSION is 2 or greater, this function is defined as K32EnumDeviceDrivers in Psapi.h and exported in Kernel32.lib and Kernel32.dll. If PSAPI_VERSION is 1, this function is defined as EnumDeviceDrivers in Psapi.h and exported in Psapi.lib and Psapi.dll as a wrapper that calls K32EnumDeviceDrivers. Programs that must run on earlier versions of Windows as well as Windows 7 and later versions should always call this function as EnumDeviceDrivers. To ensure correct resolution of symbols, add Psapi.lib to the TARGETLIBS macro and compile the program with –DPSAPI_VERSION=1. To use run-time dynamic linking, load Psapi.dll. Starting in Windows 11 Version 24H2, EnumDeviceDrivers will require SeDebugPrivilege to return valid ImageBase values. The function will still succeed if the caller does not have this privilege enabled, but the returned lpImageBase array will contain addresses that are all NULL. #### Examples For an example, see Enumerating all Device Drivers in the System.",
+      "maldev_notes": "Debugging and diagnostic APIs are used by debuggers, crash reporters, and observability tools. Analysts determine whether a debugger is legitimately attached and which process owns it.",
+      "defensive_notes": "Debugger attachment, output, and driver-enumeration telemetry is reviewed with process lineage and authorization. Legitimate developer and support activity is common.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate loaded kernel driver bases",
+        "code": "#include <windows.h>\n#include <psapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"psapi.lib\")\n\nint main() {\n    DWORD needed = 0;\n    EnumDeviceDrivers(nullptr, 0, &needed);\n    auto bases = static_cast<LPVOID*>(LocalAlloc(LPTR, needed));\n    if (bases == nullptr) {\n        return 1;\n    }\n\n    if (EnumDeviceDrivers(bases, needed, &needed)) {\n        printf(\"Driver bases: %lu\\n\", needed / sizeof(LPVOID));\n    }\n\n    LocalFree(bases);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumDeviceDrivers function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumdevicedrivers",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumDeviceDrivers - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/psapi/nf-psapi-enumdevicedrivers.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (psapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.outputdebugstringa",
+      "name": "OutputDebugStringA",
+      "aliases": [],
+      "category": "Debugging and Diagnostics",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "debugapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Sends a string to the debugger for display.",
+      "description": "Sends a string to the debugger for display.",
+      "prototype": "VOID OutputDebugStringA(LPCSTR lpOutputString);",
+      "parameters": [
+        {
+          "name": "lpOutputString",
+          "type": "LPCSTR",
+          "description": "The null-terminated string to be displayed."
+        }
+      ],
+      "return": {
+        "type": "VOID",
+        "success": "See the reference for the documented success value.",
+        "failure": ""
+      },
+      "tags": [
+        "debugging"
+      ],
+      "remarks": "> To use this function, you must include the Windows.h header in your application (not debugapi.h). In the past, the operating system did not return Unicode strings through OutputDebugStringW (ASCII strings were returned instead). To force OutputDebugStringW to return Unicode strings, debuggers are required to call the WaitForDebugEventEx function to opt into the new behavior. In this way, the operating system knows that the debugger supports Unicode and is specifically opting into receiving Unicode strings. If the application does not have a debugger, and the filter mask allows it, the system debugger displays the string. To display the string, this function calls the DbgPrint function. Prior to Windows Vista, content was not filtered by the system debugger. If the application does not have a debugger and the system debugger is not active, OutputDebugString does nothing. OutputDebugStringW converts the specified string based on the current system locale information and passes it to OutputDebugStringA to be displayed. As a result, some Unicode characters may not be displayed correctly. Applications should send very minimal debug output and provide a way for the user to enable or disable its use. See Event Tracing to learn more about tracing details. Visual Studio has changed how it handles the display of these strings throughout its revision history. Refer to the Visual Studio ",
+      "maldev_notes": "Debugging and diagnostic APIs are used by debuggers, crash reporters, and observability tools. Analysts determine whether a debugger is legitimately attached and which process owns it.",
+      "defensive_notes": "Debugger attachment, output, and driver-enumeration telemetry is reviewed with process lineage and authorization. Legitimate developer and support activity is common.",
+      "example": {
+        "language": "cpp",
+        "title": "Send a message to the debugger output",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    OutputDebugStringA(\"NtExplorer example message\\n\");\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "OutputDebugStringA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-outputdebugstringa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "OutputDebugStringA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/debugapi/nf-debugapi-outputdebugstringa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (debugapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumsystemlocalesa",
+      "name": "EnumSystemLocalesA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winnls.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Enumerates the locales that are either installed on or supported by an operating system.Note For interoperability reasons, the application should prefer the EnumSystemLocalesEx function to EnumSystemLocales because Microsoft is migrating toward the use of loca",
+      "description": "Enumerates the locales that are either installed on or supported by an operating system. Note For interoperability reasons, the application should prefer the EnumSystemLocalesEx function to EnumSystemLocales because Microsoft is migrating toward the use of locale names instead of locale identifiers for new locales. Any application that will be run only on Windows Vista and later should use EnumSystemLocalesEx.",
+      "prototype": "BOOL EnumSystemLocalesA(LOCALE_ENUMPROCA lpLocaleEnumProc, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "lpLocaleEnumProc",
+          "type": "LOCALE_ENUMPROCA",
+          "description": "Pointer to an application-defined callback function. For more information, see EnumLocalesProc."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Flags specifying the locale identifiers to enumerate. The flags can be used singly or combined using a binary OR. If the application specifies 0 for this parameter, the function behaves as for LCID_SUPPORTED. Value Meaning LCID_INSTALLED Enumerate only installed locale identifiers. This value cannot be used with LCID_SUPPORTED. LCID_SUPPORTED Enumerate all supported locale identifiers. This value cannot be used with LCID_INSTALLED. LCID_ALTERNATE_SORTS Enumerate only the alternate sort locale identifiers. If this value is used with either LCID_INSTALLED or LCID_SUPPORTED, the installed or supported locales are retrieved, as well as the alternate sort locale identifiers."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns a nonzero value if successful, or 0 otherwise. To get extended error information, the application can call GetLastError, which can return one of the following error codes:",
+        "failure": "ERROR_BADDB. The function could not access the data. This situation should not normally occur, and typically indicates a bad installation, a disk problem, or the like. ERROR_INVALID_FLAGS. The values supplied for flags were not valid. ERROR_INVALID_PARAMETER. Any of the parameter values was invalid."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "The function enumerates locales by passing locale identifiers, one at a time, to the specified application-defined callback function. This continues until all of the installed or supported locale identifiers have been passed to the callback function or the callback function returns FALSE. > > The winnls.h header defines EnumSystemLocales as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate a few system locales",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic BOOL CALLBACK OnLocale(LPSTR name) {\n    printf(\"Locale: %s\\n\", name);\n    return TRUE;\n}\n\nint main() {\n    EnumSystemLocalesA(OnLocale, LCID_SUPPORTED);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumSystemLocalesA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-enumsystemlocalesa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumSystemLocalesA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winnls/nf-winnls-enumsystemlocalesa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winnls.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getcomputernamea",
+      "name": "GetComputerNameA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the NetBIOS name of the local computer.",
+      "description": "Retrieves the NetBIOS name of the local computer. This name is established at system startup, when the system reads it from the registry. GetComputerName retrieves only the NetBIOS name of the local computer. To retrieve the DNS host name, DNS domain name, or the fully qualified DNS name, call the GetComputerNameEx function. Additional information is provided by the IADsADSystemInfo interface. The behavior of this function can be affected if the local computer is a node in a cluster. For more information, see ResUtilGetEnvironmentWithNetName and UseNetworkName.",
+      "prototype": "BOOL GetComputerNameA(LPSTR lpBuffer, LPDWORD nSize);",
+      "parameters": [
+        {
+          "name": "lpBuffer",
+          "type": "LPSTR",
+          "description": "A pointer to a buffer that receives the computer name or the cluster virtual server name. The buffer size should be large enough to contain MAX_COMPUTERNAME_LENGTH + 1 characters."
+        },
+        {
+          "name": "nSize",
+          "type": "LPDWORD",
+          "description": "On input, specifies the size of the buffer, in TCHARs. On output, the number of TCHARs copied to the destination buffer, not including the terminating null character. If the buffer is too small, the function fails and GetLastError returns ERROR_BUFFER_OVERFLOW. The lpnSize parameter specifies the size of the buffer required, including the terminating null character."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is a nonzero value.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "The GetComputerName function retrieves the NetBIOS name established at system startup. Name changes made by the SetComputerName or SetComputerNameEx functions do not take effect until the user restarts the computer. If the caller is running under a client session, this function returns the server name. To retrieve the client name, use the WTSQuerySessionInformation function. #### Examples For an example, see Getting System Information. > > The winbase.h header defines GetComputerName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the local computer name",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char name[MAX_COMPUTERNAME_LENGTH + 1] = {};\n    DWORD size = sizeof(name);\n    if (GetComputerNameA(name, &size)) {\n        printf(\"Computer: %s\\n\", name);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetComputerNameA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcomputernamea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetComputerNameA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-getcomputernamea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getcurrenthwprofilea",
+      "name": "GetCurrentHwProfileA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves information about the current hardware profile for the local computer.",
+      "description": "Retrieves information about the current hardware profile for the local computer.",
+      "prototype": "BOOL GetCurrentHwProfileA(LPHW_PROFILE_INFOA lpHwProfileInfo);",
+      "parameters": [
+        {
+          "name": "lpHwProfileInfo",
+          "type": "LPHW_PROFILE_INFOA",
+          "description": "A pointer to an HW_PROFILE_INFO structure that receives information about the current hardware profile."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is a nonzero value.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "The GetCurrentHwProfile function retrieves the display name and globally unique identifier (GUID) string for the hardware profile. The function also retrieves the reported docking state for portable computers with docking stations. The system generates a GUID for each hardware profile and stores it as a string in the registry. You can use GetCurrentHwProfile to retrieve the GUID string to use as a registry subkey under your application's configuration settings key in HKEY_CURRENT_USER. This enables you to store each user's settings for each hardware profile. For example, the Colors control panel application could use the subkey to store each user's color preferences for different hardware profiles, such as profiles for the docked and undocked states. Applications that use this functionality can check the current hardware profile when they start up, and update their settings accordingly. Applications can also update their settings when a system device message, such as DBT_CONFIGCHANGED, indicates that the hardware profile has changed. To compile an application that uses this function, define the _WIN32_WINNT macro as 0x0400 or later. For more information, see Using the Windows Headers. #### Examples cpp #include #include #include void main(void) { HW_PROFILE_INFO HwProfInfo; if (!GetCurrentHwProfile(&HwProfInfo)) { _tprintf(TEXT(\"GetCurrentHwProfile failed with error %lx\\n\"), Ge",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current hardware profile",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HW_PROFILE_INFOA info = {};\n    if (GetCurrentHwProfileA(&info)) {\n        printf(\"Hardware profile: %s\\n\", info.szHwProfileName);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetCurrentHwProfileA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrenthwprofilea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetCurrentHwProfileA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-getcurrenthwprofilea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getlogicalprocessorinformation",
+      "name": "GetLogicalProcessorInformation",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows Vista, Windows XP Professional x64 Edition, Windows XP with SP3 [desktop apps \\| UWP apps]",
+      "summary": "Retrieves information about logical processors and related hardware.",
+      "description": "Retrieves information about logical processors and related hardware. To retrieve information about logical processors and related hardware, including processor groups, use the GetLogicalProcessorInformationEx function.",
+      "prototype": "BOOL GetLogicalProcessorInformation(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Buffer, PDWORD ReturnedLength);",
+      "parameters": [
+        {
+          "name": "Buffer",
+          "type": "PSYSTEM_LOGICAL_PROCESSOR_INFORMATION",
+          "description": "A pointer to a buffer that receives an array of SYSTEM_LOGICAL_PROCESSOR_INFORMATION structures. If the function fails, the contents of this buffer are undefined."
+        },
+        {
+          "name": "ReturnedLength",
+          "type": "PDWORD",
+          "description": "On input, specifies the length of the buffer pointed to by Buffer, in bytes. If the buffer is large enough to contain all of the data, this function succeeds and ReturnLength is set to the number of bytes returned. If the buffer is not large enough to contain all of the data, the function fails, GetLastError returns ERROR_INSUFFICIENT_BUFFER, and ReturnLength is set to the buffer length required to contain all of the data. If the function fails with an error other than ERROR_INSUFFICIENT_BUFFER, the value of ReturnLength is undefined."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is TRUE and at least one SYSTEM_LOGICAL_PROCESSOR_INFORMATION structure is written to the output buffer.",
+        "failure": "If the function fails, the return value is FALSE. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "GetLogicalProcessorInformation can be used to get information about the relationship between logical processors in the system, including: The logical processors that are part of a NUMA node. The logical processors that share resources. An example of this type of resource sharing would be hyperthreading scenarios. Your application can use this information when affinitizing your threads and processes to take best advantage of the hardware properties of the platform, or to determine the number of logical and physical processors for licensing purposes. Each of the SYSTEM_LOGICAL_PROCESSOR_INFORMATION structures returned in the buffer contains the following: A logical processor affinity mask, which indicates the logical processors that the information in the structure applies to. A logical processor mask of type LOGICAL_PROCESSOR_RELATIONSHIP, which indicates the relationship between the logical processors in the mask. Applications calling this function must be prepared to handle additional indicator values in the future. Note that the order in which the structures are returned in the buffer may change between calls to this function. The size of the SYSTEM_LOGICAL_PROCESSOR_INFORMATION structure varies between processor architectures and versions of Windows. For this reason, applications should first call this function to obtain the required buffer size, then dynamically allocate me",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read logical processor information",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    DWORD size = 0;\n    GetLogicalProcessorInformation(nullptr, &size);\n    auto buffer = static_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION>(\n        LocalAlloc(LPTR, size));\n    if (buffer == nullptr) {\n        return 1;\n    }\n\n    if (GetLogicalProcessorInformation(buffer, &size)) {\n        printf(\"Processor information: %lu bytes\\n\", size);\n    }\n\n    LocalFree(buffer);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetLogicalProcessorInformation function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetLogicalProcessorInformation - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getlogicalprocessorinformationex",
+      "name": "GetLogicalProcessorInformationEx",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 7 [desktop apps \\| UWP apps]",
+      "summary": "Retrieves information about the relationships of logical processors and related hardware.",
+      "description": "Retrieves information about the relationships of logical processors and related hardware.",
+      "prototype": "BOOL GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP RelationshipType, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Buffer, PDWORD ReturnedLength);",
+      "parameters": [
+        {
+          "name": "RelationshipType",
+          "type": "LOGICAL_PROCESSOR_RELATIONSHIP",
+          "description": "The type of relationship to retrieve. This parameter can be one of the following LOGICAL_PROCESSOR_RELATIONSHIP values. Value Meaning RelationProcessorCore 0 Retrieves information about logical processors that share a single processor core. RelationNumaNode 1 Retrieves information about logical processors that are part of the same NUMA node. RelationCache 2 Retrieves information about logical processors that share a cache. RelationProcessorPackage 3 Retrieves information about logical processors that share a physical package. RelationGroup 4 Retrieves information about logical processors that share a processor group. RelationProcessorDie 5 Retrieves information about logical processors that share a processor die. RelationNumaNodeEx 6 Retrieves information about logical processors that are part of the same NUMA node (with full affinity). RelationProcessorModule 7 Retrieves information abo"
+        },
+        {
+          "name": "Buffer",
+          "type": "PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX",
+          "description": "A pointer to a buffer that receives a sequence of variable-sized SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX structures. If the function fails, the contents of this buffer are undefined."
+        },
+        {
+          "name": "ReturnedLength",
+          "type": "PDWORD",
+          "description": "On input, specifies the length of the buffer pointed to by Buffer, in bytes. If the buffer is large enough to contain all of the data, this function succeeds and ReturnedLength is set to the number of bytes returned. If the buffer is not large enough to contain all of the data, the function fails, GetLastError returns ERROR_INSUFFICIENT_BUFFER, and ReturnedLength is set to the buffer length required to contain all of the data. If the function fails with an error other than ERROR_INSUFFICIENT_BUFFER, the value of ReturnedLength is undefined."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is TRUE and at least one SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX structure is written to the output buffer.",
+        "failure": "If the function fails, the return value is FALSE. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "If a 32-bit process running under WOW64 calls this function on a system with more than 64 processors, some of the processor affinity masks returned by the function may be incorrect. This is because the high-order DWORD of the 64-bit KAFFINITY structure that represents all 64 processors is \"folded\" into a 32-bit KAFFINITY structure in the caller's buffer. As a result, the affinity masks for processors 32 through 63 are incorrectly represented as duplicates of the masks for processors 0 through 31. In addition, the affinity masks for processors 32 through 63 are incorrectly represented as duplicates of the masks for processors 0 through 31. In addition, the sum of all per-group ActiveProcessorCount and MaximumProcessorCount values reported in PROCESSOR_GROUP_INFO structures may exclude some active logical processors. When this function is called with a relationship type of RelationProcessorCore, it returns a PROCESSOR_RELATIONSHIP structure for every active processor core in every processor group in the system. This is by design, because an unaffinitized 32-bit thread can run on any logical processor in a given group, including processors 32 through 63. A 32-bit caller can use the total count of PROCESSOR_RELATIONSHIP structures to determine the actual number of active processor cores on the system. However, the affinity of a 32-bit thread cannot be explicitly set to logical proc",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read extended processor topology",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    DWORD size = 0;\n    GetLogicalProcessorInformationEx(RelationProcessorCore, nullptr, &size);\n    auto buffer = static_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(\n        LocalAlloc(LPTR, size));\n    if (buffer == nullptr) {\n        return 1;\n    }\n\n    if (GetLogicalProcessorInformationEx(RelationProcessorCore, buffer,\n            &size)) {\n        printf(\"Topology: %lu bytes\\n\", size);\n    }\n\n    LocalFree(buffer);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetLogicalProcessorInformationEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetLogicalProcessorInformationEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getsystemdefaultlangid",
+      "name": "GetSystemDefaultLangId",
+      "aliases": [
+        "GetSystemDefaultLangID"
+      ],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winnls.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Returns the language identifier for the system locale.",
+      "description": "Returns the language identifier for the system locale.",
+      "prototype": "LANGID GetSystemDefaultLangID(void);",
+      "parameters": [],
+      "return": {
+        "type": "LANGID",
+        "success": "Returns the language identifier for the system locale. This is the language used when displaying text in programs that do not support Unicode. It is set by the Administrator under Control Panel > Clock, Language, and Region > Change date, time, or number formats > Administrative tab.",
+        "failure": "For more information on language identifiers, see Language Identifier Constants and Strings."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the system default language identifier",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    LANGID language = GetSystemDefaultLangID();\n    printf(\"Language id: 0x%04x\\n\", language);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetSystemDefaultLangId function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getsystemdefaultlangid",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetSystemDefaultLangId - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winnls/nf-winnls-getsystemdefaultlangid.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winnls.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getsystemdirectorya",
+      "name": "GetSystemDirectoryA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the path of the system directory.",
+      "description": "Retrieves the path of the system directory. The system directory contains system files such as dynamic-link libraries and drivers. This function is provided primarily for compatibility. Applications should store code in the Program Files folder and persistent data in the Application Data folder in the user's profile. For more information, see ShGetFolderPath.",
+      "prototype": "UINT GetSystemDirectoryA(LPSTR lpBuffer, UINT uSize);",
+      "parameters": [
+        {
+          "name": "lpBuffer",
+          "type": "LPSTR",
+          "description": "A pointer to the buffer to receive the path. This path does not end with a backslash unless the system directory is the root directory. For example, if the system directory is named Windows\\System32 on drive C, the path of the system directory retrieved by this function is C:\\Windows\\System32."
+        },
+        {
+          "name": "uSize",
+          "type": "UINT",
+          "description": "The maximum size of the buffer, in TCHARs."
+        }
+      ],
+      "return": {
+        "type": "UINT",
+        "success": "If the function succeeds, the return value is the length, in TCHARs, of the string copied to the buffer, not including the terminating null character. If the length is greater than the size of the buffer, the return value is the size of the buffer required to hold the path, including the terminating null character.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "Applications should not create files in the system directory. If the user is running a shared version of the operating system, the application does not have write access to the system directory. #### Examples For an example, see Getting System Information. > > The sysinfoapi.h header defines GetSystemDirectory as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the system directory",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char path[MAX_PATH] = {};\n    if (GetSystemDirectoryA(path, MAX_PATH) > 0) {\n        printf(\"System directory: %s\\n\", path);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetSystemDirectoryA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemdirectorya",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetSystemDirectoryA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getsystemdirectorya.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getsystemtime",
+      "name": "GetSystemTime",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the current system date and time in Coordinated Universal Time (UTC) format.",
+      "description": "Retrieves the current system date and time in Coordinated Universal Time (UTC) format. To retrieve the current system date and time in local time, use the GetLocalTime function.",
+      "prototype": "VOID GetSystemTime(LPSYSTEMTIME lpSystemTime);",
+      "parameters": [
+        {
+          "name": "lpSystemTime",
+          "type": "LPSYSTEMTIME",
+          "description": "A pointer to a SYSTEMTIME structure to receive the current system date and time. The lpSystemTime parameter must not be NULL. Using NULL will result in an access violation."
+        }
+      ],
+      "return": {
+        "type": "VOID",
+        "success": "See the reference for the documented success value.",
+        "failure": ""
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "To set the current system date and time, use the SetSystemTime function. #### Examples cpp #include #include void main() { SYSTEMTIME st, lt; GetSystemTime(&st); GetLocalTime(<); printf(\"The system time is: %02d:%02d\\n\", st.wHour, st.wMinute); printf(\" The local time is: %02d:%02d\\n\", lt.wHour, lt.wMinute); } dos // Sample output The system time is: 19:34 The local time is: 12:34 For more information about this example, see SYSTEMTIME.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current UTC time",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SYSTEMTIME time = {};\n    GetSystemTime(&time);\n    printf(\"UTC: %04u-%02u-%02u %02u:%02u\\n\", time.wYear, time.wMonth,\n        time.wDay, time.wHour, time.wMinute);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetSystemTime function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtime",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetSystemTime - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getsystemtime.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getsystemtimeasfiletime",
+      "name": "GetSystemTimeAsFileTime",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the current system date and time.",
+      "description": "Retrieves the current system date and time. The information is in Coordinated Universal Time (UTC) format.",
+      "prototype": "VOID GetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFileTime);",
+      "parameters": [
+        {
+          "name": "lpSystemTimeAsFileTime",
+          "type": "LPFILETIME",
+          "description": "A pointer to a FILETIME structure to receive the current system date and time in UTC format."
+        }
+      ],
+      "return": {
+        "type": "VOID",
+        "success": "See the reference for the documented success value.",
+        "failure": ""
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current time as a FILETIME",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    FILETIME time = {};\n    GetSystemTimeAsFileTime(&time);\n    printf(\"FILETIME: %lu%lu\\n\", time.dwHighDateTime, time.dwLowDateTime);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetSystemTimeAsFileTime function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemtimeasfiletime",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetSystemTimeAsFileTime - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getsystemtimeasfiletime.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getthreadlocale",
+      "name": "GetThreadLocale",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winnls.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Returns the locale identifier of the current locale for the calling thread.Note This function can retrieve data that changes between releases, for example, due to a custom locale.",
+      "description": "Returns the locale identifier of the current locale for the calling thread.Note This function can retrieve data that changes between releases, for example, due to a custom locale. If your application must persist or transmit data, see Using Persistent Locale Data.",
+      "prototype": "LCID GetThreadLocale();",
+      "parameters": [],
+      "return": {
+        "type": "LCID",
+        "success": "Returns the locale identifier of the locale associated with the current thread.",
+        "failure": "Windows Vista: This function can return the identifier of a custom locale. If the current thread locale is a custom locale, the function returns LOCALE_CUSTOM_DEFAULT. If the current thread locale is a supplemental custom locale, the function can return LOCALE_CUSTOM_UNSPECIFIED. All supplemental locales share this locale identifier."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "When an application process launches, it uses the Standards and Formats variable for the locale. For more information, see NLS Terminology. When a new thread is created in a process, it inherits the locale of the creating thread. This locale can be either the default Standards and Formats locale or a different locale set for the creating thread in a call to SetThreadLocale. GetThreadLocale and SetThreadLocale can be used to modify the locale of the new thread.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current thread locale",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    LCID locale = GetThreadLocale();\n    printf(\"Thread locale: 0x%08lx\\n\", locale);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetThreadLocale function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnls/nf-winnls-getthreadlocale",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetThreadLocale - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winnls/nf-winnls-getthreadlocale.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winnls.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.gettickcount",
+      "name": "GetTickCount",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the number of milliseconds that have elapsed since the system was started, up to 49.7 days.",
+      "description": "Retrieves the number of milliseconds that have elapsed since the system was started, up to 49.7 days.",
+      "prototype": "DWORD GetTickCount(VOID);",
+      "parameters": [],
+      "return": {
+        "type": "DWORD",
+        "success": "The return value is the number of milliseconds that have elapsed since the system was started.",
+        "failure": ""
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "The resolution of the GetTickCount function is limited to the resolution of the system timer, which is typically in the range of 10 milliseconds to 16 milliseconds. The resolution of the GetTickCount function is not affected by adjustments made by the GetSystemTimeAdjustment function. The elapsed time is stored as a DWORD value. Therefore, the time will wrap around to zero if the system is run continuously for 49.7 days. To avoid this problem, use the GetTickCount64 function. Otherwise, check for an overflow condition when comparing times. If you need a higher resolution timer, use a multimedia timer or a high-resolution timer. To obtain the time elapsed since the computer was started, retrieve the System Up Time counter in the performance data in the registry key HKEY_PERFORMANCE_DATA. The value returned is an 8-byte value. For more information, see Performance Counters. To obtain the time the system has spent in the working state since it was started, use the QueryUnbiasedInterruptTime function. Note The QueryUnbiasedInterruptTime function produces different results on debug (\"checked\") builds of Windows, because the interrupt-time count and tick count are advanced by approximately 49 days. This helps to identify bugs that might not occur until the system has been running for a long time.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the millisecond tick counter",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    printf(\"Tick count: %lu\\n\", GetTickCount());\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetTickCount function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-gettickcount",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetTickCount - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-gettickcount.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.gettickcount64",
+      "name": "GetTickCount64",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows Vista [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the number of milliseconds that have elapsed since the system was started.",
+      "description": "Retrieves the number of milliseconds that have elapsed since the system was started.",
+      "prototype": "ULONGLONG GetTickCount64(VOID);",
+      "parameters": [],
+      "return": {
+        "type": "ULONGLONG",
+        "success": "The number of milliseconds.",
+        "failure": ""
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "The resolution of the GetTickCount64 function is limited to the resolution of the system timer, which is typically in the range of 10 milliseconds to 16 milliseconds. The resolution of the GetTickCount64 function is not affected by adjustments made by the GetSystemTimeAdjustment function. If you need a higher resolution timer, use a multimedia timer or a high-resolution timer. To obtain the time the system has spent in the working state since it was started, use the QueryUnbiasedInterruptTime function. Note The QueryUnbiasedInterruptTime function produces different results on debug (\"checked\") builds of Windows, because the interrupt-time count and tick count are advanced by approximately 49 days. This helps to identify bugs that might not occur until the system has been running for a long time. To compile an application that uses this function, define _WIN32_WINNT as 0x0600 or later. For more information, see Using the Windows Headers.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the 64-bit millisecond tick counter",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    printf(\"Tick count: %llu\\n\",\n        static_cast<unsigned long long>(GetTickCount64()));\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetTickCount64 function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-gettickcount64",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetTickCount64 - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-gettickcount64.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getusernamea",
+      "name": "GetUserNameA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves the name of the user associated with the current thread.",
+      "description": "Retrieves the name of the user associated with the current thread. Use the GetUserNameEx function to retrieve the user name in a specified format. Additional information is provided by the IADsADSystemInfo interface.",
+      "prototype": "BOOL GetUserNameA(LPSTR lpBuffer, LPDWORD pcbBuffer);",
+      "parameters": [
+        {
+          "name": "lpBuffer",
+          "type": "LPSTR",
+          "description": "A pointer to the buffer to receive the user's logon name. If this buffer is not large enough to contain the entire user name, the function fails. A buffer size of (UNLEN + 1) characters will hold the maximum length user name including the terminating null character. UNLEN is defined in Lmcons.h."
+        },
+        {
+          "name": "pcbBuffer",
+          "type": "LPDWORD",
+          "description": "On input, this variable specifies the size of the lpBuffer buffer, in TCHARs. On output, the variable receives the number of TCHARs copied to the buffer, including the terminating null character. If lpBuffer is too small, the function fails and GetLastError returns ERROR_INSUFFICIENT_BUFFER. This parameter receives the required buffer size, including the terminating null character."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is a nonzero value, and the variable pointed to by lpnSize contains the number of TCHARs copied to the buffer specified by lpBuffer, including the terminating null character.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information",
+        "account-management"
+      ],
+      "remarks": "If the current thread is impersonating another client, the GetUserName function returns the user name of the client that the thread is impersonating. If GetUserName is called from a process that is running under the \"NETWORK SERVICE\" account, the string returned in lpBuffer may be different depending on the version of Windows. On Windows XP, the \"NETWORK SERVICE\" string is returned. On Windows Vista, the “<HOSTNAME>$” string is returned. #### Examples For an example, see Getting System Information. > > The winbase.h header defines GetUserName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current user name",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char name[256] = {};\n    DWORD size = sizeof(name);\n    if (GetUserNameA(name, &size)) {\n        printf(\"User: %s\\n\", name);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetUserNameA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getusernamea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetUserNameA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-getusernamea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getversionexa",
+      "name": "GetVersionExA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "With the release of Windows 8.1, the behavior of the GetVersionEx API has changed in the value it will return for the operating system version.",
+      "description": "GetVersionExA may be altered or unavailable for releases after Windows 8.1. Instead, use the Version Helper functions. For Windows 10 apps, please see Targeting your applications for Windows. With the release of Windows 8.1, the behavior of the GetVersionEx API has changed in the value it will return for the operating system version. The value returned by the GetVersionEx function now depends on how the application is manifested. Applications not manifested for Windows 8.1 or Windows 10 will return the Windows 8 OS version value (6.2). Once an application is manifested for a given operating system version, GetVersionEx will always return the version that the application is manifested for in future releases. To manifest your applications for Windows 8.1 or Windows 10, refer to Targeting your application for Windows.",
+      "prototype": "NOT_BUILD_WINDOWS_DEPRECATE BOOL GetVersionExA(LPOSVERSIONINFOA lpVersionInformation);",
+      "parameters": [
+        {
+          "name": "lpVersionInformation",
+          "type": "LPOSVERSIONINFOA",
+          "description": "An OSVERSIONINFOA or OSVERSIONINFOEXA structure that receives the operating system information. Before calling the GetVersionEx function, set the dwOSVersionInfoSize member of the structure as appropriate to indicate which data structure is being passed to this function."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is a nonzero value.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError. The function fails if you specify an invalid value for the dwOSVersionInfoSize member of the OSVERSIONINFOA or OSVERSIONINFOEXA structure."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "Identifying the current operating system is usually not the best way to determine whether a particular operating system feature is present. This is because the operating system may have had new features added in a redistributable DLL. Rather than using GetVersionEx to determine the operating system platform or version number, test for the presence of the feature itself. For more information, see Operating System Version. The GetSystemMetrics function provides additional information about the current operating system. Product Setting Windows XP Media Center Edition SM_MEDIACENTER Windows XP Starter Edition SM_STARTER Windows XP Tablet PC Edition SM_TABLETPC Windows Server 2003 R2 SM_SERVERR2 To check for specific operating systems or operating system features, use the IsOS function. The GetProductInfo function retrieves the product type. To retrieve information for the operating system on a remote computer, use the NetWkstaGetInfo function, the Win32_OperatingSystem WMI class, or the OperatingSystem property of the IADsComputer interface. To compare the current system version to a required version, use the VerifyVersionInfo function instead of using GetVersionEx to perform the comparison yourself. If compatibility mode is in effect, the GetVersionEx function reports the operating system as it identifies itself, which may not be the operating system that is installed. For example",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the operating-system version",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"version.lib\")\n\nint main() {\n    OSVERSIONINFOA info = { sizeof(info) };\n    if (GetVersionExA(&info)) {\n        printf(\"Version: %lu.%lu Build: %lu\\n\", info.dwMajorVersion,\n            info.dwMinorVersion, info.dwBuildNumber);\n    }\n    return 0;\n}\n",
+        "notes": "GetVersionExA is deprecated for version checks; RtlGetVersion or version resources are preferred for new code."
+      },
+      "references": [
+        {
+          "title": "GetVersionExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getversionexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetVersionExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getversionexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getwindowsdirectorya",
+      "name": "GetWindowsDirectoryA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "sysinfoapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves the path of the Windows directory.",
+      "description": "Retrieves the path of the Windows directory. This function is provided primarily for compatibility with legacy applications. New applications should store code in the Program Files folder and persistent data in the Application Data folder in the user's profile. For more information, see ShGetFolderPath.",
+      "prototype": "UINT GetWindowsDirectoryA(LPSTR lpBuffer, UINT uSize);",
+      "parameters": [
+        {
+          "name": "lpBuffer",
+          "type": "LPSTR",
+          "description": "A pointer to a buffer that receives the path. This path does not end with a backslash unless the Windows directory is the root directory. For example, if the Windows directory is named Windows on drive C, the path of the Windows directory retrieved by this function is C:\\Windows. If the system was installed in the root directory of drive C, the path retrieved is C:\\."
+        },
+        {
+          "name": "uSize",
+          "type": "UINT",
+          "description": "The maximum size of the buffer specified by the lpBuffer parameter, in TCHARs. This value should be set to MAX_PATH."
+        }
+      ],
+      "return": {
+        "type": "UINT",
+        "success": "If the function succeeds, the return value is the length of the string copied to the buffer, in TCHARs, not including the terminating null character.",
+        "failure": "If the length is greater than the size of the buffer, the return value is the size of the buffer required to hold the path. If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "system-information"
+      ],
+      "remarks": "The Windows directory is the directory where some legacy applications store initialization and help files. New applications should not store files in the Windows directory; instead, they should store system-wide data in the application's installation directory, and user-specific data in the user's profile. If the user is running a shared version of the system, the Windows directory is guaranteed to be private for each user. If an application creates other files that it wants to store on a per-user basis, it should place them in the directory specified by the HOMEPATH environment variable. This directory will be different for each user, if so specified by an administrator, through the User Manager administrative tool. HOMEPATH always specifies either the user's home directory, which is guaranteed to be private for each user, or a default directory (for example, C:\\USERS\\DEFAULT) where the user will have all access. Terminal Services: If the application is running in a Terminal Services environment, each user has a private Windows directory. There is also a shared Windows directory for the system. If the application is Terminal-Services-aware (has the IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE flag set in the image header), this function returns the path of the system Windows directory, just as the GetSystemWindowsDirectory function does. Otherwise, it retrieves the path of t",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the Windows directory",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char path[MAX_PATH] = {};\n    if (GetWindowsDirectoryA(path, MAX_PATH) > 0) {\n        printf(\"Windows directory: %s\\n\", path);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetWindowsDirectoryA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getwindowsdirectorya",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetWindowsDirectoryA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/sysinfoapi/nf-sysinfoapi-getwindowsdirectorya.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (sysinfoapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.iswow64process",
+      "name": "IsWoW64Process",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "wow64apiset.h",
+      "minimum_windows": "Windows Vista, Windows XP with SP2 [desktop apps \\| UWP apps]",
+      "summary": "Determines whether the specified process is running under WOW64 or an Intel64 of x64 processor.",
+      "description": "Determines whether the specified process is running under WOW64 or an Intel64 of x64 processor.",
+      "prototype": "BOOL IsWow64Process(HANDLE hProcess, PBOOL Wow64Process);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process. The handle must have the PROCESS_QUERY_INFORMATION or PROCESS_QUERY_LIMITED_INFORMATION access right. For more information, see Process Security and Access Rights. Windows Server 2003 and Windows XP: The handle must have the PROCESS_QUERY_INFORMATION access right."
+        },
+        {
+          "name": "Wow64Process",
+          "type": "PBOOL",
+          "description": "A pointer to a value that is set to TRUE if the process is running under WOW64 on an Intel64, x64, or ARM64 processor. If the process is running under 32-bit Windows, the value is set to FALSE. If the process is a 32-bit application running under 64-bit Windows 10 on ARM, the value is set to FALSE. If the process is a 64-bit application running under 64-bit Windows, the value is also set to FALSE."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is a nonzero value.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "wow64",
+        "system-information"
+      ],
+      "remarks": "Applications should use IsWow64Process2 instead of IsWow64Process to determine if a process is running under WOW. IsWow64Process2 removes the ambiguity inherent to multiple WOW environments by explicitly returning both the architecture of the host and guest for a given process. Applications can use this information to reliably identify situations such as running under emulation on ARM64. To compile an application that uses this function, define _WIN32_WINNT as 0x0501 or later. For more information, see Using the Windows Headers.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Check whether the current process is WOW64",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    BOOL wow64 = FALSE;\n    if (IsWow64Process(GetCurrentProcess(), &wow64)) {\n        printf(\"WOW64: %s\\n\", wow64 ? \"yes\" : \"no\");\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "IsWoW64Process function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-iswow64process",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "IsWoW64Process - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wow64apiset/nf-wow64apiset-iswow64process.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wow64apiset.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.queryperformancecounter",
+      "name": "QueryPerformanceCounter",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "profileapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the current value of the performance counter, which is a high resolution (<1µs) time stamp that can be used for time-interval measurements.",
+      "description": "Retrieves the current value of the performance counter, which is a high resolution (<1µs) time stamp that can be used for time-interval measurements.",
+      "prototype": "BOOL QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount);",
+      "parameters": [
+        {
+          "name": "lpPerformanceCount",
+          "type": "LARGE_INTEGER*",
+          "description": "A pointer to a variable that receives the current performance-counter value, in counts."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError. On systems that run Windows XP or later, the function will always succeed when given valid parameters and will thus never return zero."
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "For more info about this function and its usage, see Acquiring high-resolution time stamps.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read a high-resolution counter value",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    LARGE_INTEGER counter = {};\n    if (QueryPerformanceCounter(&counter)) {\n        printf(\"Counter: %lld\\n\", counter.QuadPart);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "QueryPerformanceCounter function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "QueryPerformanceCounter - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/profileapi/nf-profileapi-queryperformancecounter.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (profileapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.queryperformancefrequency",
+      "name": "QueryPerformanceFrequency",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "profileapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the frequency of the performance counter.",
+      "description": "Retrieves the frequency of the performance counter. The frequency of the performance counter is fixed at system boot and is consistent across all processors. Therefore, the frequency need only be queried upon application initialization, and the result can be cached.",
+      "prototype": "BOOL QueryPerformanceFrequency(LARGE_INTEGER* lpFrequency);",
+      "parameters": [
+        {
+          "name": "lpFrequency",
+          "type": "LARGE_INTEGER*",
+          "description": "A pointer to a variable that receives the current performance-counter frequency, in counts per second. If the installed hardware doesn't support a high-resolution performance counter, this parameter can be zero (this will not occur on systems that run Windows XP or later)."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the installed hardware supports a high-resolution performance counter, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError. On systems that run Windows XP or later, the function will always succeed when given valid parameters and will thus never return zero."
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "For more info about this function and its usage, see Acquiring high-resolution time stamps.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the high-resolution counter frequency",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    LARGE_INTEGER frequency = {};\n    if (QueryPerformanceFrequency(&frequency)) {\n        printf(\"Frequency: %lld Hz\\n\", frequency.QuadPart);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "QueryPerformanceFrequency function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancefrequency",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "QueryPerformanceFrequency - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/profileapi/nf-profileapi-queryperformancefrequency.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (profileapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.timegettime",
+      "name": "TimeGetTime",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Winmm.dll",
+      "library": "Winmm.lib",
+      "header": "timeapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The timeGetTime function retrieves the system time, in milliseconds.",
+      "description": "The timeGetTime function retrieves the system time, in milliseconds. The system time is the time elapsed since Windows was started.",
+      "prototype": "DWORD timeGetTime();",
+      "parameters": [],
+      "return": {
+        "type": "DWORD",
+        "success": "Returns the system time, in milliseconds.",
+        "failure": ""
+      },
+      "tags": [
+        "system-information",
+        "time-management"
+      ],
+      "remarks": "The only difference between this function and the timeGetSystemTime function is that timeGetSystemTime uses the MMTIME structure to return the system time. The timeGetTime function has less overhead than timeGetSystemTime. Note that the value returned by the timeGetTime function is a DWORD value. The return value wraps around to 0 every 2^32 milliseconds, which is about 49.71 days. This can cause problems in code that directly uses the timeGetTime return value in computations, particularly where the value is used to control code execution. You should always use the difference between two timeGetTime return values in computations. The default precision of the timeGetTime function can be five milliseconds or more, depending on the machine. You can use the timeBeginPeriod and timeEndPeriod functions to increase the precision of timeGetTime. If you do so, the minimum difference between successive values returned by timeGetTime can be as large as the minimum period value set using timeBeginPeriod and timeEndPeriod. Use the QueryPerformanceCounter and QueryPerformanceFrequency functions to measure short time intervals at a high resolution.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the multimedia timer tick count",
+        "code": "#include <windows.h>\n#include <mmsystem.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"winmm.lib\")\n\nint main() {\n    printf(\"Multimedia ticks: %lu\\n\", timeGetTime());\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "TimeGetTime function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/timeapi/nf-timeapi-timegettime",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "TimeGetTime - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/timeapi/nf-timeapi-timegettime.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (timeapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.uuidfromstringa",
+      "name": "UuidFromStringA",
+      "aliases": [],
+      "category": "System Information",
+      "dll": "Rpcrt4.dll",
+      "library": "Rpcrt4.lib",
+      "header": "rpcdce.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps \\| UWP apps]",
+      "summary": "The UuidFromString function converts a string to a UUID.",
+      "description": "The UuidFromString function converts a string to a UUID.",
+      "prototype": "RPCRTAPI RPC_STATUS RPC_ENTRY UuidFromStringA(RPC_CSTR StringUuid, UUID* Uuid);",
+      "parameters": [
+        {
+          "name": "StringUuid",
+          "type": "RPC_CSTR",
+          "description": "Pointer to a string representation of a UUID."
+        },
+        {
+          "name": "Uuid",
+          "type": "UUID*",
+          "description": "Returns a pointer to a UUID in binary form."
+        }
+      ],
+      "return": {
+        "type": "RPC_STATUS",
+        "success": "Value Meaning The call succeeded. RPC_S_INVALID_STRING_UUID The string UUID is invalid. Note For a list of valid error codes, see RPC Return Values.",
+        "failure": "RPC_S_OK"
+      },
+      "tags": [
+        "rpc",
+        "system-information"
+      ],
+      "remarks": "An application calls the UuidFromString function to convert a string UUID to a binary UUID. > > The rpcdce.h header defines UuidFromString as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "System-information APIs are common in diagnostics, compatibility checks, licensing, and inventory software. Analysts treat queries as context, not as evidence of intent.",
+      "defensive_notes": "System-inventory and version queries are low-signal on their own. Analysts correlate them with later behavior and with the software’s documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Convert a UUID string to a UUID value",
+        "code": "#include <windows.h>\n#include <rpc.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"rpcrt4.lib\")\n\nint main() {\n    UUID uuid = {};\n    RPC_STATUS status = UuidFromStringA(\n        const_cast<RPC_CSTR>(\"00000000-0000-0000-0000-000000000000\"), &uuid);\n    if (status == RPC_S_OK) {\n        printf(\"UUID parsed: %08lx\\n\", uuid.Data1);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "UuidFromStringA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/rpcdce/nf-rpcdce-uuidfromstringa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "UuidFromStringA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/rpcdce/nf-rpcdce-uuidfromstringa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (rpcdce.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

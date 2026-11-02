@@ -1,0 +1,1110 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.createeventw",
+      "name": "CreateEventW",
+      "aliases": [
+        "CreateEvent"
+      ],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Creates or opens a named or unnamed event object and returns a handle to it.",
+      "description": "CreateEventW creates an event object and returns a handle. An event is a synchronization object whose state is either signaled or nonsignaled; threads can wait on the handle and are released according to the event's reset mode. A manual-reset event stays signaled until it is reset explicitly, while an auto-reset event releases one waiting thread and then returns to the nonsignaled state. If lpName matches an existing event, the function opens that object, and the bManualReset and bInitialState parameters are ignored. The last handle to the event must be closed with CloseHandle.",
+      "prototype": "HANDLE CreateEventW(LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset, BOOL bInitialState, LPCWSTR lpName);",
+      "parameters": [
+        {
+          "name": "lpEventAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the event object. NULL gives the object a default security descriptor and a non-inheritable handle. To make the handle inheritable, set bInheritHandle to TRUE in the SECURITY_ATTRIBUTES structure."
+        },
+        {
+          "name": "bManualReset",
+          "type": "BOOL",
+          "description": "If TRUE, the event is a manual-reset event that remains signaled until ResetEvent is called. If FALSE, the event is an auto-reset event that returns to the nonsignaled state after releasing a single waiting thread."
+        },
+        {
+          "name": "bInitialState",
+          "type": "BOOL",
+          "description": "If TRUE, the event is initially signaled. If FALSE, it is initially nonsignaled."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCWSTR",
+          "description": "The name of the event object, or NULL for an unnamed event. Names are case-sensitive and can use the Global\\ or Local\\ namespace prefixes. If the name matches an existing object of a different type, the call fails."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "A handle to the event object. If a named event already existed, the return value is a handle to the existing object and GetLastError reports ERROR_ALREADY_EXISTS.",
+        "failure": "NULL. Call GetLastError for the error code."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.waitforsingleobject",
+        "win32.waitformultipleobjects",
+        "win32.setevent",
+        "win32.closehandle"
+      ],
+      "related_structures": [
+        "win32.security_attributes"
+      ],
+      "related_constants": [],
+      "remarks": "The returned handle has EVENT_ALL_ACCESS access. Closing the handle does not reset the event; the object is destroyed when its last handle is closed. A named event can be opened from another process with OpenEventW, which is subject to the object's security descriptor.",
+      "maldev_notes": "Events are general-purpose signaling objects used by services, installers, managed runtimes, and ordinary multithreaded software. Named events can be shared between processes, so analysis may consider the name, reset mode, initial state, and which process later signals or waits on the object. The creation call alone does not indicate malicious behavior.",
+      "defensive_notes": "Event handles may appear in handle-table and wait telemetry. Names can be fixed, configuration-derived, or dynamically generated, so a name by itself is weak evidence. Correlating the object with process relationships and its lifetime is more informative.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a manual-reset event, signal it, and wait on it",
+        "code": "#include <windows.h>\n\nint main() {\n    HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    if (event == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    SetEvent(event);\n    DWORD result = WaitForSingleObject(event, 1000);\n    if (result != WAIT_OBJECT_0) {\n        CloseHandle(event);\n        return 1;\n    }\n\n    // The manual-reset event remains signaled until reset or closed.\n    CloseHandle(event);\n    return 0;\n}\n",
+        "notes": "This example uses an unnamed event within one process and closes the handle on every path. It is illustrative and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "CreateEventW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createeventw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, reset semantics, name-conflict behavior, and handle access checked against Microsoft Learn (synchapi.h)."
+    },
+    {
+      "id": "win32.createmutexw",
+      "name": "CreateMutexW",
+      "aliases": [
+        "CreateMutex"
+      ],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Creates or opens a named or unnamed mutex object and returns a handle to it.",
+      "description": "CreateMutexW creates a mutex object, a synchronization primitive that grants mutually exclusive ownership to one thread at a time. A thread acquires the mutex by waiting on its handle and releases it with ReleaseMutex. Mutex ownership is recursive for the owning thread: a thread can wait on the same mutex again without blocking, and it must call ReleaseMutex once for each successful acquisition. If lpName matches an existing mutex, the function opens that object and the bInitialOwner parameter is ignored.",
+      "prototype": "HANDLE CreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCWSTR lpName);",
+      "parameters": [
+        {
+          "name": "lpMutexAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the mutex object. NULL gives the object a default security descriptor and a non-inheritable handle."
+        },
+        {
+          "name": "bInitialOwner",
+          "type": "BOOL",
+          "description": "If TRUE and the mutex is newly created, the calling thread requests initial ownership. If FALSE, the mutex is created without an owner. The parameter is ignored when an existing named mutex is opened."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCWSTR",
+          "description": "The name of the mutex object, or NULL for an unnamed mutex. Names are case-sensitive and can use the Global\\ or Local\\ namespace prefixes. If the name matches an existing object of a different type, the call fails."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "A handle to the mutex object. If a named mutex already existed, the return value is a handle to the existing object and GetLastError reports ERROR_ALREADY_EXISTS.",
+        "failure": "NULL. Call GetLastError for the error code."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant",
+        "maldev-relevant"
+      ],
+      "related_apis": [
+        "win32.waitforsingleobject",
+        "win32.releasemutex",
+        "win32.createsemaphorew",
+        "win32.closehandle"
+      ],
+      "related_structures": [
+        "win32.security_attributes"
+      ],
+      "related_constants": [],
+      "remarks": "The returned handle has MUTEX_ALL_ACCESS access. If a thread terminates while owning a mutex without releasing it, the mutex becomes abandoned; the next waiting thread receives WAIT_ABANDONED, acquires ownership, and must still call ReleaseMutex. Closing a handle does not call ReleaseMutex, so release ownership explicitly before closing the last handle.",
+      "maldev_notes": "Named mutexes are a common single-instance and cross-process coordination mechanism, and they appear in sample analysis as host artifacts. Names may be fixed, derived from configuration, or generated at run time. A mutex name is contextual evidence, not proof of malicious behavior.",
+      "defensive_notes": "Mutex names often remain as strings in binaries and can be observed through object-manager or handle telemetry. Repeated single-instance checks are ordinary application behavior. Correlate the name with process behavior and object lifetime rather than treating the name as a detection by itself.",
+      "example": {
+        "language": "cpp",
+        "title": "Acquire and release a named mutex",
+        "code": "#include <windows.h>\n\nint main() {\n    HANDLE mutex = CreateMutexW(nullptr, FALSE, L\"NtExplorerExampleMutex\");\n    if (mutex == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    DWORD result = WaitForSingleObject(mutex, 5000);\n    if (result == WAIT_OBJECT_0 || result == WAIT_ABANDONED) {\n        // Perform the work guarded by the mutex.\n        ReleaseMutex(mutex);\n    }\n\n    CloseHandle(mutex);\n    return 0;\n}\n",
+        "notes": "The example uses a local name, waits with a bounded timeout, releases ownership after an abandoned-mutex result as well as a normal acquisition, and closes the handle. It is illustrative only."
+      },
+      "references": [
+        {
+          "title": "CreateMutexW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, ownership, abandonment, and existing-object behavior checked against Microsoft Learn (synchapi.h)."
+    },
+    {
+      "id": "win32.createsemaphorew",
+      "name": "CreateSemaphoreW",
+      "aliases": [
+        "CreateSemaphore"
+      ],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Creates or opens a named or unnamed semaphore object and returns a handle to it.",
+      "description": "CreateSemaphoreW creates a counting semaphore. The semaphore has a current count and a maximum count; it is signaled while the current count is greater than zero and nonsignaled when the count reaches zero. A successful wait on the handle decrements the count, and ReleaseSemaphore increases it by a specified amount. Semaphores are commonly used to limit concurrent access to a resource or to track a pool of available items. If lpName matches an existing semaphore, the function opens that object and the initial and maximum counts are ignored.",
+      "prototype": "HANDLE CreateSemaphoreW(LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCWSTR lpName);",
+      "parameters": [
+        {
+          "name": "lpSemaphoreAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the semaphore object. NULL gives the object a default security descriptor and a non-inheritable handle."
+        },
+        {
+          "name": "lInitialCount",
+          "type": "LONG",
+          "description": "The initial count for the semaphore. It must be greater than or equal to zero and less than or equal to lMaximumCount."
+        },
+        {
+          "name": "lMaximumCount",
+          "type": "LONG",
+          "description": "The maximum count for the semaphore. It must be greater than zero."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCWSTR",
+          "description": "The name of the semaphore object, or NULL for an unnamed semaphore. Names are case-sensitive and can use the Global\\ or Local\\ namespace prefixes. If the name matches an existing object of a different type, the call fails."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "A handle to the semaphore object. If a named semaphore already existed, the return value is a handle to the existing object and GetLastError reports ERROR_ALREADY_EXISTS.",
+        "failure": "NULL. Call GetLastError; ERROR_INVALID_PARAMETER is returned when the initial and maximum counts are inconsistent."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.waitforsingleobject",
+        "win32.waitformultipleobjects",
+        "win32.createmutexw",
+        "win32.closehandle"
+      ],
+      "related_structures": [
+        "win32.security_attributes"
+      ],
+      "related_constants": [],
+      "remarks": "The returned handle has SEMAPHORE_ALL_ACCESS access. The count is decremented by each successful wait and increased by ReleaseSemaphore. A semaphore whose count reaches zero is nonsignaled until another release occurs.",
+      "maldev_notes": "Counting semaphores appear in thread pools, producer-consumer code, and resource throttling. Named semaphores can coordinate processes, but their use is ordinary and does not indicate malicious behavior.",
+      "defensive_notes": "Semaphore handles and waits can appear in handle and synchronization telemetry. As with other named objects, a name is only one clue and should be evaluated with the processes that use the object.",
+      "references": [
+        {
+          "title": "CreateSemaphoreW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createsemaphorew",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, count constraints, and existing-object behavior checked against Microsoft Learn (synchapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Create and close a semaphore",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE semaphore = CreateSemaphoreW(nullptr, 0, 1,\n        L\"NtExplorerExampleSemaphore\");\n    if (semaphore == nullptr) {\n        return 1;\n    }\n\n    CloseHandle(semaphore);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.waitforsingleobject",
+      "name": "WaitForSingleObject",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Waits until a specified object is signaled or the timeout interval elapses.",
+      "description": "WaitForSingleObject waits on one waitable object, such as an event, mutex, semaphore, process, thread, or waitable timer. If the object is already signaled, the function returns immediately; otherwise the calling thread blocks until the object becomes signaled, the timeout expires, or an error occurs. The timeout can be a finite interval in milliseconds, zero to poll the current state, or INFINITE to wait indefinitely. For mutexes, an abandoned mutex causes a distinctive return value.",
+      "prototype": "DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);",
+      "parameters": [
+        {
+          "name": "hHandle",
+          "type": "HANDLE",
+          "description": "A handle to the object to wait on. The handle must have SYNCHRONIZE access. Process and thread handles can be used to observe their lifetime."
+        },
+        {
+          "name": "dwMilliseconds",
+          "type": "DWORD",
+          "description": "The timeout interval in milliseconds. Zero tests the object's current state and returns immediately. INFINITE waits until the object is signaled.",
+          "constants": [
+            "INFINITE"
+          ]
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "WAIT_OBJECT_0 if the object is signaled, or WAIT_ABANDONED if the object is a mutex that was abandoned by its previous owner.",
+        "failure": "WAIT_TIMEOUT if the interval elapsed before the object was signaled, or WAIT_FAILED if the call failed; call GetLastError for WAIT_FAILED."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.createeventw",
+        "win32.createmutexw",
+        "win32.createsemaphorew",
+        "win32.waitformultipleobjects",
+        "win32.closehandle"
+      ],
+      "related_constants": [
+        "win32.infinite",
+        "win32.wait_object_0",
+        "win32.wait_timeout"
+      ],
+      "remarks": "A zero timeout is a poll and does not guarantee that the object remains in the observed state. WAIT_ABANDONED is meaningful only for mutexes; the caller receives ownership and must call ReleaseMutex. WAIT_FAILED indicates a call error, not merely that the object was nonsignaled.",
+      "maldev_notes": "Wait calls are ordinary synchronization and scheduling operations. Analysis may note waits on process or thread handles to understand lifetime coordination or deliberately delayed execution, but the call itself is not an indicator of malicious behavior.",
+      "defensive_notes": "Wait telemetry can show blocking relationships between threads and processes. A long or infinite wait may reflect normal service supervision as easily as orchestration, so it should be interpreted with the target handle and surrounding behavior.",
+      "references": [
+        {
+          "title": "WaitForSingleObject function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, return values, access requirement, and abandoned-mutex behavior checked against Microsoft Learn (synchapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Wait on an event with a bounded timeout",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    if (event == nullptr) {\n        return 1;\n    }\n\n    SetEvent(event);\n    DWORD result = WaitForSingleObject(event, 1000);\n    printf(\"Wait result: %lu\\n\", result);\n\n    CloseHandle(event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.waitformultipleobjects",
+      "name": "WaitForMultipleObjects",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Waits until one or all of a set of objects are signaled, or the timeout interval elapses.",
+      "description": "WaitForMultipleObjects waits on an array of waitable objects. When bWaitAll is FALSE it returns as soon as any one object is signaled; when TRUE it waits until every object is signaled. The function accepts up to MAXIMUM_WAIT_OBJECTS handles. Return values encode the index of the object that satisfied the wait, which lets the caller map the result back to the corresponding handle. As with WaitForSingleObject, the timeout can be zero, finite, or INFINITE.",
+      "prototype": "DWORD WaitForMultipleObjects(DWORD nCount, const HANDLE *lpHandles, BOOL bWaitAll, DWORD dwMilliseconds);",
+      "parameters": [
+        {
+          "name": "nCount",
+          "type": "DWORD",
+          "description": "The number of handles in the lpHandles array. It must be between one and MAXIMUM_WAIT_OBJECTS, which is 64."
+        },
+        {
+          "name": "lpHandles",
+          "type": "const HANDLE *",
+          "description": "An array of handles to waitable objects. Each handle must have SYNCHRONIZE access. The array may contain different object types, but it must not contain multiple copies of the same handle."
+        },
+        {
+          "name": "bWaitAll",
+          "type": "BOOL",
+          "description": "If TRUE, the function waits until all objects are signaled. If FALSE, it returns when any one object is signaled."
+        },
+        {
+          "name": "dwMilliseconds",
+          "type": "DWORD",
+          "description": "The timeout interval in milliseconds. Zero tests the objects' current state and returns immediately. INFINITE waits until the wait condition is satisfied.",
+          "constants": [
+            "INFINITE"
+          ]
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "A value in the WAIT_OBJECT_0 to WAIT_OBJECT_0 + nCount - 1 range. With bWaitAll FALSE, the offset is the index of the first signaled handle. With bWaitAll TRUE, the range indicates that the whole set is signaled. A value in the WAIT_ABANDONED_0 range indicates that at least one mutex was abandoned.",
+        "failure": "WAIT_TIMEOUT if the interval elapsed, or WAIT_FAILED if the call failed; call GetLastError for WAIT_FAILED."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.waitforsingleobject",
+        "win32.createeventw",
+        "win32.createmutexw",
+        "win32.createsemaphorew"
+      ],
+      "related_constants": [
+        "win32.infinite",
+        "win32.wait_object_0",
+        "win32.wait_timeout"
+      ],
+      "remarks": "Return indices refer to positions in lpHandles, so keep the array stable until the call returns. When bWaitAll is FALSE and several objects are signaled, the lowest index is reported. If a handle is closed while the wait is pending, behavior is undefined. WaitForMultipleObjectsEx provides additional options such as alertable waits.",
+      "maldev_notes": "Waits on multiple objects are common in orchestrators, thread pools, services, and software that supervises child processes. In sample analysis, the handle set and timeout can clarify dependencies, but the call is a general synchronization mechanism.",
+      "defensive_notes": "A multi-object wait can reveal that a process depends on several events or process lifetimes. The dependency graph is more useful than the wait itself, and such behavior is common in legitimate host and service software.",
+      "references": [
+        {
+          "title": "WaitForMultipleObjects function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjects",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, handle limits, return-index rules, and timeout behavior checked against Microsoft Learn (synchapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Wait for the first of two events",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE events[2] = {\n        CreateEventW(nullptr, TRUE, FALSE, nullptr),\n        CreateEventW(nullptr, TRUE, FALSE, nullptr)\n    };\n    if (events[0] == nullptr || events[1] == nullptr) {\n        return 1;\n    }\n\n    SetEvent(events[1]);\n    DWORD result = WaitForMultipleObjects(2, events, FALSE, 1000);\n    printf(\"Wait result: %lu\\n\", result);\n\n    CloseHandle(events[0]);\n    CloseHandle(events[1]);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.releasemutex",
+      "name": "ReleaseMutex",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Releases ownership of a mutex that is owned by the calling thread.",
+      "description": "ReleaseMutex decrements the calling thread's ownership count for a mutex. When the count reaches zero, the mutex becomes signaled and another waiting thread can acquire it. The function must be called by the thread that owns the mutex, and the thread must call it once for each successful wait that acquired the mutex. A thread that does not own the mutex cannot release it.",
+      "prototype": "BOOL ReleaseMutex(HANDLE hMutex);",
+      "parameters": [
+        {
+          "name": "hMutex",
+          "type": "HANDLE",
+          "description": "A handle to the mutex object. The handle must have MUTEX_MODIFY_STATE access. The calling thread must currently own the mutex."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; one level of ownership has been released.",
+        "failure": "Zero. Call GetLastError; ERROR_NOT_OWNER is returned when the calling thread does not own the mutex."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.createmutexw",
+        "win32.waitforsingleobject",
+        "win32.closehandle"
+      ],
+      "related_constants": [],
+      "remarks": "Mutex ownership is thread-specific, so a mutex acquired by one thread must not be released by another. Releasing only part of a recursive acquisition leaves the mutex owned. If the owning thread exits without releasing the mutex, the object becomes abandoned and waiting threads receive WAIT_ABANDONED.",
+      "maldev_notes": "ReleaseMutex is an ordinary cleanup operation in software that uses mutexes for mutual exclusion. In analysis, an abandoned mutex or a mismatch between acquisition and release can point to abnormal thread termination, but it does not establish intent.",
+      "defensive_notes": "Abandoned-mutex waits can accompany crashed or forcibly terminated threads and are useful for understanding process lifetime. The release call itself is routine and rarely distinctive.",
+      "references": [
+        {
+          "title": "ReleaseMutex function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-releasemutex",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, ownership rules, and ERROR_NOT_OWNER behavior checked against Microsoft Learn (synchapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Acquire and release a named mutex",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE mutex = CreateMutexA(nullptr, FALSE, \"NtExplorerExampleMutex\");\n    if (mutex == nullptr) {\n        return 1;\n    }\n\n    if (WaitForSingleObject(mutex, 1000) == WAIT_OBJECT_0) {\n        ReleaseMutex(mutex);\n    }\n\n    CloseHandle(mutex);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.setevent",
+      "name": "SetEvent",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "summary": "Sets the specified event object to the signaled state.",
+      "description": "SetEvent changes an event object from nonsignaled to signaled. If the event is a manual-reset event, it remains signaled until ResetEvent is called or the object is closed. If it is an auto-reset event, the call releases one waiting thread and the event returns to the nonsignaled state; if no thread is waiting, the event stays signaled until the next wait consumes it. The call returns without waiting for a receiver.",
+      "prototype": "BOOL SetEvent(HANDLE hEvent);",
+      "parameters": [
+        {
+          "name": "hEvent",
+          "type": "HANDLE",
+          "description": "A handle to the event object. The handle must have EVENT_MODIFY_STATE access."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the event is now signaled.",
+        "failure": "Zero. Call GetLastError for the error code."
+      },
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.createeventw",
+        "win32.waitforsingleobject",
+        "win32.waitformultipleobjects",
+        "win32.closehandle"
+      ],
+      "related_constants": [],
+      "remarks": "Setting an already-signaled manual-reset event succeeds and has no additional effect. Auto-reset events are binary: repeated SetEvent calls before a wait do not accumulate releases. Use ResetEvent to return a manual-reset event to the nonsignaled state.",
+      "maldev_notes": "Event signaling coordinates threads and, for named events, separate processes. It is used by ordinary services, installers, and runtimes and is not inherently suspicious. Analysis may consider who signals the object and what work the wait releases.",
+      "defensive_notes": "Event signaling is less visible than process or file activity, so it is usually interpreted through handle and wait telemetry. Object names and the signaling process are more useful than the call in isolation.",
+      "references": [
+        {
+          "title": "SetEvent function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-setevent",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, reset semantics, access requirement, and binary auto-reset behavior checked against Microsoft Learn (synchapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Create, signal, and close an event",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    if (event == nullptr) {\n        return 1;\n    }\n\n    SetEvent(event);\n    WaitForSingleObject(event, 1000);\n    CloseHandle(event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.createmutexa",
+      "name": "CreateMutexA",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Creates or opens a named or unnamed mutex object.",
+      "description": "Creates or opens a named or unnamed mutex object. To specify an access mask for the object, use the CreateMutexEx function.",
+      "prototype": "HANDLE CreateMutexA(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCSTR lpName);",
+      "parameters": [
+        {
+          "name": "lpMutexAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure. If this parameter is NULL, the handle cannot be inherited by child processes. The lpSecurityDescriptor member of the structure specifies a security descriptor for the new mutex. If lpMutexAttributes is NULL, the mutex gets a default security descriptor. The ACLs in the default security descriptor for a mutex come from the primary or impersonation token of the creator. For more information, see Synchronization Object Security and Access Rights."
+        },
+        {
+          "name": "bInitialOwner",
+          "type": "BOOL",
+          "description": "If this value is TRUE and the caller created the mutex, the calling thread obtains initial ownership of the mutex object. Otherwise, the calling thread does not obtain ownership of the mutex. To determine if the caller created the mutex, see the Return Values section."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "The name of the mutex object. The name is limited to MAX_PATH characters. Name comparison is case sensitive. If lpName matches the name of an existing named mutex object, this function requests the MUTEX_ALL_ACCESS access right. In this case, the bInitialOwner parameter is ignored because it has already been set by the creating process. If the lpMutexAttributes parameter is not NULL, it determines whether the handle can be inherited, but its security-descriptor member is ignored. If lpName is NULL, the mutex object is created without a name. If lpName matches the name of an existing event, semaphore, waitable timer, job, or file-mapping object, the function fails and the GetLastError function returns ERROR_INVALID_HANDLE. This occurs because these objects share the same namespace. The name can have a \"Global\\\" or \"Local\\\" prefix to explicitly create the object in the global or session na"
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the newly created mutex object. If the mutex is a named mutex and the object existed before this function call, the return value is a handle to the existing object, and the GetLastError function returns ERROR_ALREADY_EXISTS.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "synchronization"
+      ],
+      "remarks": "The handle returned by CreateMutex has the MUTEX_ALL_ACCESS access right; it can be used in any function that requires a handle to a mutex object, provided that the caller has been granted access. If a mutex is created from a service or a thread that is impersonating a different user, you can either apply a security descriptor to the mutex when you create it, or change the default security descriptor for the creating process by changing its default DACL. For more information, see Synchronization Object Security and Access Rights. If you are using a named mutex to limit your application to a single instance, a malicious user can create this mutex before you do and prevent your application from starting. To prevent this situation, create a randomly named mutex and store the name so that it can only be obtained by an authorized user. Alternatively, you can use a file for this purpose. To limit your application to one instance per user, create a locked file in the user's profile directory. Any thread of the calling process can specify the mutex-object handle in a call to one of the wait functions. The single-object wait functions return when the state of the specified object is signaled. The multiple-object wait functions can be instructed to return either when any one or when all of the specified objects are signaled. When a wait function returns, the waiting thread is released to",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Create and release a named mutex",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE mutex = CreateMutexA(nullptr, FALSE, \"NtExplorerExampleMutex\");\n    if (mutex == nullptr) {\n        return 1;\n    }\n\n    WaitForSingleObject(mutex, 1000);\n    ReleaseMutex(mutex);\n    CloseHandle(mutex);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateMutexA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateMutexA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-createmutexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createmutexexa",
+      "name": "CreateMutexExA",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows Vista [desktop apps \\| UWP apps]",
+      "summary": "Creates or opens a named or unnamed mutex object and returns a handle to the object.",
+      "description": "Creates or opens a named or unnamed mutex object and returns a handle to the object.",
+      "prototype": "HANDLE CreateMutexExA(LPSECURITY_ATTRIBUTES lpMutexAttributes, LPCSTR lpName, DWORD dwFlags, DWORD dwDesiredAccess);",
+      "parameters": [
+        {
+          "name": "lpMutexAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure. If this parameter is NULL, the mutex handle cannot be inherited by child processes. The lpSecurityDescriptor member of the structure specifies a security descriptor for the new mutex. If lpMutexAttributes is NULL, the mutex gets a default security descriptor. The ACLs in the default security descriptor for a mutex come from the primary or impersonation token of the creator. For more information, see Synchronization Object Security and Access Rights."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "The name of the mutex object. The name is limited to MAX_PATH characters. Name comparison is case sensitive. If lpName is NULL, the mutex object is created without a name. If lpName matches the name of an existing event, semaphore, waitable timer, job, or file-mapping object, the function fails and the GetLastError function returns ERROR_INVALID_HANDLE. This occurs because these objects share the same namespace. The name can have a \"Global\\\" or \"Local\\\" prefix to explicitly create the object in the global or session namespace. The remainder of the name can contain any character except the backslash character (\\). For more information, see Kernel Object Namespaces. Fast user switching is implemented using Terminal Services sessions. Kernel object names must follow the guidelines outlined for Terminal Services so that applications can support multiple users. The object can be created in a"
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "This parameter can be 0 or the following value. Value Meaning CREATE_MUTEX_INITIAL_OWNER 0x00000001 The object creator is the initial owner of the mutex."
+        },
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access mask for the mutex object. For a list of access rights, see Synchronization Object Security and Access Rights."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the newly created mutex object. If the mutex is a named mutex and the object existed before this function call, the return value is a handle to the existing object, and the GetLastError function returns ERROR_ALREADY_EXISTS.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "synchronization"
+      ],
+      "remarks": "If you are using a named mutex to limit your application to a single instance, a malicious user can create this mutex before you do and prevent your application from starting. To prevent this situation, create a randomly named mutex and store the name so that it can only be obtained by an authorized user. Alternatively, you can use a file for this purpose. To limit your application to one instance per user, create a locked file in the user's profile directory. Any thread of the calling process can specify the mutex-object handle in a call to one of the wait functions. The single-object wait functions return when the state of the specified object is signaled. The multiple-object wait functions can be instructed to return either when any one or when all of the specified objects are signaled. When a wait function returns, the waiting thread is released to continue its execution. The state of a mutex object is signaled when it is not owned by any thread. The creating thread can use the dwFlags parameter to request immediate ownership of the mutex. Otherwise, a thread must use one of the wait functions to request ownership. When the mutex's state is signaled, one waiting thread is granted ownership, the mutex's state changes to nonsignaled, and the wait function returns. Only one thread can own a mutex at any given time. The owning thread uses the ReleaseMutex function to release it",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a mutex with extended access flags",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE mutex = CreateMutexExA(nullptr, \"NtExplorerExampleMutex\", 0,\n        MUTEX_ALL_ACCESS);\n    if (mutex == nullptr) {\n        return 1;\n    }\n\n    WaitForSingleObject(mutex, 1000);\n    ReleaseMutex(mutex);\n    CloseHandle(mutex);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateMutexExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateMutexExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-createmutexexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createtimerqueuetimer",
+      "name": "CreateTimerQueueTimer",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "threadpoollegacyapiset.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Creates a timer-queue timer.",
+      "description": "Creates a timer-queue timer. This timer expires at the specified due time, then after every specified period. When the timer expires, the callback function is called.",
+      "prototype": "BOOL CreateTimerQueueTimer(PHANDLE phNewTimer, HANDLE TimerQueue, WAITORTIMERCALLBACK Callback, PVOID Parameter, DWORD DueTime, DWORD Period, ULONG Flags);",
+      "parameters": [
+        {
+          "name": "phNewTimer",
+          "type": "PHANDLE",
+          "description": "A pointer to a buffer that receives a handle to the timer-queue timer on return. When this handle has expired and is no longer required, release it by calling DeleteTimerQueueTimer."
+        },
+        {
+          "name": "TimerQueue",
+          "type": "HANDLE",
+          "description": "A handle to the timer queue. This handle is returned by the CreateTimerQueue function. If this parameter is NULL, the timer is associated with the default timer queue."
+        },
+        {
+          "name": "Callback",
+          "type": "WAITORTIMERCALLBACK",
+          "description": "A pointer to the application-defined function of type WAITORTIMERCALLBACK to be executed when the timer expires. For more information, see WaitOrTimerCallback."
+        },
+        {
+          "name": "Parameter",
+          "type": "PVOID",
+          "description": "A single parameter value that will be passed to the callback function."
+        },
+        {
+          "name": "DueTime",
+          "type": "DWORD",
+          "description": "The amount of time in milliseconds relative to the current time that must elapse before the timer is signaled for the first time."
+        },
+        {
+          "name": "Period",
+          "type": "DWORD",
+          "description": "The period of the timer, in milliseconds. If this parameter is zero, the timer is signaled once. If this parameter is greater than zero, the timer is periodic. A periodic timer automatically reactivates each time the period elapses, until the timer is canceled."
+        },
+        {
+          "name": "Flags",
+          "type": "ULONG",
+          "description": "This parameter can be one or more of the following values from WinNT.h. Value Meaning WT_EXECUTEDEFAULT 0x00000000 By default, the callback function is queued to a non-I/O worker thread. WT_EXECUTEINTIMERTHREAD 0x00000020 The callback function is invoked by the timer thread itself. This flag should be used only for short tasks or it could affect other timer operations. The callback function is queued as an APC. It should not perform alertable wait operations. WT_EXECUTEINIOTHREAD 0x00000001 This flag is not used. Windows Server 2003 and Windows XP: The callback function is queued to an I/O worker thread. This flag should be used if the function should be executed in a thread that waits in an alertable state. I/O worker threads were removed starting with Windows Vista and Windows Server 2008. WT_EXECUTEINPERSISTENTTHREAD 0x00000080 The callback function is queued to a thread that never te"
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "synchronization",
+        "time-management"
+      ],
+      "remarks": "If the DueTime and Period parameters are both nonzero, the timer will be signaled first at the due time, then periodically. The callback is called every time the period elapses, whether or not the previous callback has finished executing. Callback functions are queued to the thread pool. These threads are subject to scheduling delays, so the timing can vary depending on what else is happening in the application or the system. The time that the system spends in sleep or hibernation does not count toward the expiration of the timer. The timer is signaled when the cumulative amount of elapsed time the system spends in the waking state matches the timer's due time or period. Windows Server 2003 and Windows XP: The time that the system spends in sleep or hibernation counts toward the expiration of the timer. If the timer expires while the system is sleeping, the timer is signaled immediately when the system wakes. To cancel a timer, call the DeleteTimerQueueTimer function. To cancel all timers in a timer queue, call the DeleteTimerQueueEx function. By default, the thread pool has a maximum of 500 threads. To raise this limit, use the WT_SET_MAX_THREADPOOL_THREAD macro defined in WinNT.h. ` syntax #define WT_SET_MAX_THREADPOOL_THREADS(Flags,Limit) \\ ((Flags)|=(Limit)Flags parameter. The macro parameters are the desired flags and the new limit (up to (2<<16)-1 threads). However, note ",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a timer-queue timer and wait for it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic HANDLE g_event = nullptr;\n\nstatic VOID CALLBACK OnTimer(PVOID, BOOLEAN) {\n    SetEvent(g_event);\n}\n\nint main() {\n    g_event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    if (g_event == nullptr) {\n        return 1;\n    }\n\n    HANDLE queue = CreateTimerQueue();\n    HANDLE timer = nullptr;\n    if (queue != nullptr &&\n        CreateTimerQueueTimer(&timer, queue, OnTimer, nullptr, 10, 0,\n            WT_EXECUTEONLYONCE)) {\n        WaitForSingleObject(g_event, 1000);\n    }\n\n    if (queue != nullptr) {\n        DeleteTimerQueueEx(queue, INVALID_HANDLE_VALUE);\n    }\n    CloseHandle(g_event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateTimerQueueTimer function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/threadpoollegacyapiset/nf-threadpoollegacyapiset-createtimerqueuetimer",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateTimerQueueTimer - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/threadpoollegacyapiset/nf-threadpoollegacyapiset-createtimerqueuetimer.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (threadpoollegacyapiset.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createwaitabletimer",
+      "name": "CreateWaitableTimer",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Creates or opens a waitable timer object.",
+      "description": "Creates or opens a waitable timer object. To specify an access mask for the object, use the CreateWaitableTimerEx function.",
+      "prototype": "HANDLE CreateWaitableTimerW(LPSECURITY_ATTRIBUTES lpTimerAttributes, BOOL bManualReset, LPCWSTR lpTimerName);",
+      "parameters": [
+        {
+          "name": "lpTimerAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that specifies a security descriptor for the new timer object and determines whether child processes can inherit the returned handle. If lpTimerAttributes is NULL, the timer object gets a default security descriptor and the handle cannot be inherited. The ACLs in the default security descriptor for a timer come from the primary or impersonation token of the creator."
+        },
+        {
+          "name": "bManualReset",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, the timer is a manual-reset notification timer. Otherwise, the timer is a synchronization timer."
+        },
+        {
+          "name": "lpTimerName",
+          "type": "LPCWSTR",
+          "description": "The name of the timer object. The name is limited to MAX_PATH characters. Name comparison is case sensitive. If lpTimerName is NULL, the timer object is created without a name. If lpTimerName matches the name of an existing event, semaphore, mutex, job, or file-mapping object, the function fails and GetLastError returns ERROR_INVALID_HANDLE. This occurs because these objects share the same namespace. The name can have a \"Global\\\" or \"Local\\\" prefix to explicitly create the object in the global or session namespace. The remainder of the name can contain any character except the backslash character (\\). For more information, see Kernel Object Namespaces. Fast user switching is implemented using Terminal Services sessions. Kernel object names must follow the guidelines outlined for Terminal Services so that applications can support multiple users. The object can be created in a private nam"
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the timer object. If the named timer object exists before the function call, the function returns a handle to the existing object and GetLastError returns ERROR_ALREADY_EXISTS.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "synchronization",
+        "time-management"
+      ],
+      "remarks": "The handle returned by CreateWaitableTimer is created with the TIMER_ALL_ACCESS access right; it can be used in any function that requires a handle to a timer object, provided that the caller has been granted access. If a timer is created from a service or thread that is impersonating a different user, you can either apply a security descriptor to the timer when you create it, or change the default security descriptor for the creating process by changing its default DACL. For more information, see Synchronization Object Security and Access Rights. Any thread of the calling process can specify the timer object handle in a call to one of the wait functions. Multiple processes can have handles to the same timer object, enabling use of the object for interprocess synchronization. A process created by the CreateProcess function can inherit a handle to a timer object if the lpTimerAttributes parameter of CreateWaitableTimer enables inheritance. A process can specify the timer object handle in a call to the DuplicateHandle function. The resulting handle can be used by another process. A process can specify the name of a timer object in a call to the OpenWaitableTimer or CreateWaitableTimer function. Use the CloseHandle function to close the handle. The system closes the handle automatically when the process terminates. The timer object is destroyed when its last handle has been closed",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Create and close a waitable timer",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE timer = CreateWaitableTimerW(nullptr, TRUE,\n        L\"NtExplorerExampleTimer\");\n    if (timer == nullptr) {\n        return 1;\n    }\n\n    CloseHandle(timer);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateWaitableTimer function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createwaitabletimerw",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateWaitableTimer - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-createwaitabletimerw.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setwaitabletimer",
+      "name": "SetWaitableTimer",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Activates the specified waitable timer.",
+      "description": "Activates the specified waitable timer. When the due time arrives, the timer is signaled and the thread that set the timer calls the optional completion routine.",
+      "prototype": "BOOL SetWaitableTimer(HANDLE hTimer, const LARGE_INTEGER* lpDueTime, LONG lPeriod, PTIMERAPCROUTINE pfnCompletionRoutine, LPVOID lpArgToCompletionRoutine, BOOL fResume);",
+      "parameters": [
+        {
+          "name": "hTimer",
+          "type": "HANDLE",
+          "description": "A handle to the timer object. The CreateWaitableTimer or OpenWaitableTimer function returns this handle. The handle must have the TIMER_MODIFY_STATE access right. For more information, see Synchronization Object Security and Access Rights."
+        },
+        {
+          "name": "lpDueTime",
+          "type": "const LARGE_INTEGER*",
+          "description": "The time after which the state of the timer is to be set to signaled, in 100 nanosecond intervals. Use the format described by the FILETIME structure. Positive values indicate absolute time. Be sure to use a UTC-based absolute time, as the system uses UTC-based time internally. Negative values indicate relative time. The actual timer accuracy depends on the capability of your hardware. For more information about UTC-based time, see System Time. Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2: If relative time is specified, the timer includes time spent in low-power states. For example, the timer continues counting down while the computer is asleep. Windows 8 and newer, Windows Server 2012 and newer: If relative time is specified, the timer does not include time spent in low-power states. For example, the timer does not continue co"
+        },
+        {
+          "name": "lPeriod",
+          "type": "LONG",
+          "description": "The period of the timer, in milliseconds. If lPeriod is zero, the timer is signaled once. If lPeriod is greater than zero, the timer is periodic. A periodic timer automatically reactivates each time the period elapses, until the timer is canceled using the CancelWaitableTimer function or reset using SetWaitableTimer. If lPeriod is less than zero, the function fails."
+        },
+        {
+          "name": "pfnCompletionRoutine",
+          "type": "PTIMERAPCROUTINE",
+          "description": "A pointer to an optional completion routine. The completion routine is application-defined function of type PTIMERAPCROUTINE to be executed when the timer is signaled. For more information on the timer callback function, see TimerAPCProc. For more information about APCs and thread pool threads, see Remarks."
+        },
+        {
+          "name": "lpArgToCompletionRoutine",
+          "type": "LPVOID",
+          "description": "A pointer to a structure that is passed to the completion routine."
+        },
+        {
+          "name": "fResume",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, restores a system in suspended power conservation mode when the timer state is set to signaled. Otherwise, the system is not restored. If the system does not support a restore, the call succeeds, but GetLastError returns ERROR_NOT_SUPPORTED."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "synchronization",
+        "time-management"
+      ],
+      "remarks": "Timers are initially inactive. To activate a timer, call SetWaitableTimer. If the timer is already active when you call SetWaitableTimer, the timer is stopped, then it is reactivated. Stopping the timer in this manner does not set the timer state to signaled, so threads blocked in a wait operation on the timer remain blocked. However, it does cancel any pending completion routines. When the specified due time arrives, the timer becomes inactive, and the optional APC is queued to the thread that set the timer if there is no outstanding APC already queued. The state of the timer is set to signaled, the timer is reactivated using the specified period, and the thread that set the timer calls the completion routine when it enters an alertable wait state. For more information, see QueueUserAPC. Note that APCs do not work as well as other signaling mechanisms for thread pool threads because the system controls the lifetime of thread pool threads, so it is possible for a thread to be terminated before the notification is delivered. Instead of using the pfnCompletionRoutine parameter or another APC-based signaling mechanism, use a waitable object such as a timer created with CreateThreadpoolTimer. For I/O, use an I/O completion object created with CreateThreadpoolIo or an hEvent-based OVERLAPPED structure where the event can be passed to the SetThreadpoolWait function. If the thread tha",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Arm a waitable timer for a short delay",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE timer = CreateWaitableTimerW(nullptr, TRUE, nullptr);\n    if (timer == nullptr) {\n        return 1;\n    }\n\n    LARGE_INTEGER due = {};\n    due.QuadPart = -1000000; // 100 milliseconds in 100-ns units.\n    if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE)) {\n        WaitForSingleObject(timer, 1000);\n    }\n\n    CloseHandle(timer);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetWaitableTimer function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-setwaitabletimer",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetWaitableTimer - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-setwaitabletimer.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sleep",
+      "name": "Sleep",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll; KernelBase.dll on Windows Phone 8.1",
+      "library": "Kernel32.lib; WindowsPhoneCore.lib on Windows Phone 8.1",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Suspends the execution of the current thread until the time-out interval elapses.",
+      "description": "Suspends the execution of the current thread until the time-out interval elapses. To enter an alertable wait state, use the SleepEx function.",
+      "prototype": "VOID Sleep(DWORD dwMilliseconds);",
+      "parameters": [
+        {
+          "name": "dwMilliseconds",
+          "type": "DWORD",
+          "description": "The time interval for which execution is to be suspended, in milliseconds. A value of zero causes the thread to relinquish the remainder of its time slice to any other thread that is ready to run. If there are no other threads ready to run, the function returns immediately, and the thread continues execution. Windows XP: A value of zero causes the thread to relinquish the remainder of its time slice to any other thread of equal priority that is ready to run. If there are no other threads of equal priority ready to run, the function returns immediately, and the thread continues execution. This behavior changed starting with Windows Server 2003. A value of INFINITE indicates that the suspension should not time out."
+        }
+      ],
+      "return": {
+        "type": "VOID",
+        "success": "See the reference for the documented success value.",
+        "failure": ""
+      },
+      "tags": [
+        "synchronization",
+        "time-management"
+      ],
+      "remarks": "This function causes a thread to relinquish the remainder of its time slice and become unrunnable for an interval based on the value of dwMilliseconds. The system clock \"ticks\" at a constant rate. If dwMilliseconds is less than the resolution of the system clock, the thread may sleep for less than the specified length of time. If dwMilliseconds is greater than one tick but less than two, the wait can be anywhere between one and two ticks, and so on. To increase the accuracy of the sleep interval, call the timeGetDevCaps function to determine the supported minimum timer resolution and the timeBeginPeriod function to set the timer resolution to its minimum. Use caution when calling timeBeginPeriod, as frequent calls can significantly affect the system clock, system power usage, and the scheduler. If you call timeBeginPeriod, call it one time early in the application and be sure to call the timeEndPeriod function at the very end of the application. After the sleep interval has passed, the thread is ready to run. If you specify 0 milliseconds, the thread will relinquish the remainder of its time slice but remain ready. Note that a ready thread is not guaranteed to run immediately. Consequently, the thread may not run until some time after the sleep interval elapses. For more information, see Scheduling Priorities. Be careful when using Sleep in the following scenarios: Code that di",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Sleep briefly in an ordinary wait",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    Sleep(10);\n    // SleepEx with alertable TRUE allows queued APCs to run.\n    SleepEx(10, TRUE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Sleep function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleep",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Sleep - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-sleep.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sleepex",
+      "name": "SleepEx",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "KernelBase.dll on Windows Phone 8.1; Kernel32.dll",
+      "library": "Kernel32.lib; WindowsPhoneCore.lib on Windows Phone 8.1",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Suspends the current thread until the specified condition is met.",
+      "description": "Suspends the current thread until the specified condition is met. Execution resumes when one of the following occurs: An I/O completion callback function is called. An asynchronous procedure call (APC) is queued to the thread. The time-out interval elapses.",
+      "prototype": "DWORD SleepEx(DWORD dwMilliseconds, BOOL bAlertable);",
+      "parameters": [
+        {
+          "name": "dwMilliseconds",
+          "type": "DWORD",
+          "description": "The time interval for which execution is to be suspended, in milliseconds. A value of zero causes the thread to relinquish the remainder of its time slice to any other thread that is ready to run. If there are no other threads ready to run, the function returns immediately, and the thread continues execution.Windows XP: A value of zero causes the thread to relinquish the remainder of its time slice to any other thread of equal priority that is ready to run. If there are no other threads of equal priority ready to run, the function returns immediately, and the thread continues execution. This behavior changed starting with Windows Server 2003. A value of INFINITE indicates that the suspension should not time out."
+        },
+        {
+          "name": "bAlertable",
+          "type": "BOOL",
+          "description": "If this parameter is FALSE, the function does not return until the time-out period has elapsed. If an I/O completion callback occurs, the function does not immediately return and the I/O completion function is not executed. If an APC is queued to the thread, the function does not immediately return and the APC function is not executed. If the parameter is TRUE and the thread that called this function is the same thread that called the extended I/O function (ReadFileEx or WriteFileEx), the function returns when either the time-out period has elapsed or when an I/O completion callback function occurs. If an I/O completion callback occurs, the I/O completion function is called. If an APC is queued to the thread (QueueUserAPC), the function returns when either the time-out period has elapsed or when the APC function is called."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The return value is zero if the specified time interval expired.",
+        "failure": "The return value is WAIT_IO_COMPLETION if the function returned due to one or more I/O completion callback functions. This can happen only if bAlertable is TRUE, and if the thread that called the SleepEx function is the same thread that called the extended I/O function."
+      },
+      "tags": [
+        "synchronization",
+        "time-management"
+      ],
+      "remarks": "This function causes a thread to relinquish the remainder of its time slice and become unrunnable for an interval based on the value of dwMilliseconds. After the sleep interval has passed, the thread is ready to run. Note that a ready thread is not guaranteed to run immediately. Consequently, the thread will not run until some arbitrary time after the sleep interval elapses, based upon the system \"tick\" frequency and the load factor from other processes. The system clock \"ticks\" at a constant rate. To increase the accuracy of the sleep interval, call the timeGetDevCaps function to determine the supported minimum timer resolution and the timeBeginPeriod function to set the timer resolution to its minimum. Use caution when calling timeBeginPeriod, as frequent calls can significantly affect the system clock, system power usage, and the scheduler. If you call timeBeginPeriod, call it one time early in the application and be sure to call the timeEndPeriod function at the very end of the application. If you specify 0 milliseconds, the thread will relinquish the remainder of its time slice but remain ready. For more information, see Scheduling Priorities. This function can be used with the ReadFileEx or WriteFileEx functions to suspend a thread until an I/O operation has been completed. These functions specify a completion routine that is to be executed when the I/O operation has been",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Sleep briefly in an ordinary wait",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    Sleep(10);\n    // SleepEx with alertable TRUE allows queued APCs to run.\n    SleepEx(10, TRUE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SleepEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-sleepex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SleepEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-sleepex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.timesetevent",
+      "name": "timeSetEvent",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Winmm.dll",
+      "library": "Winmm.lib",
+      "header": "mmsystem.h",
+      "minimum_windows": "Windows 2000 and later",
+      "summary": "Creates a multimedia timer event that calls a callback after a delay or at a periodic interval.",
+      "description": "timeSetEvent creates a multimedia timer. The timer can fire once or periodically and invokes the supplied callback with user data. Timers created with timeSetEvent are destroyed with timeKillEvent. The function is part of the legacy multimedia timer API; modern code generally uses timer queues or waitable timers.",
+      "prototype": "MMRESULT timeSetEvent(UINT uDelay, UINT uResolution, LPTIMECALLBACK fptc, DWORD_PTR dwUser, UINT fuEvent);",
+      "parameters": [
+        {
+          "name": "uDelay",
+          "type": "UINT",
+          "description": "The timer period in milliseconds."
+        },
+        {
+          "name": "uResolution",
+          "type": "UINT",
+          "description": "The desired timer resolution in milliseconds; zero uses the system default."
+        },
+        {
+          "name": "fptc",
+          "type": "LPTIMECALLBACK",
+          "description": "The callback function that receives the timer event."
+        },
+        {
+          "name": "dwUser",
+          "type": "DWORD_PTR",
+          "description": "User data passed to the callback."
+        },
+        {
+          "name": "fuEvent",
+          "type": "UINT",
+          "description": "Timer mode flags such as TIME_ONESHOT or TIME_PERIODIC."
+        }
+      ],
+      "return": {
+        "type": "MMRESULT",
+        "success": "Returns a timer identifier that can be passed to timeKillEvent.",
+        "failure": "Returns zero when the timer cannot be created."
+      },
+      "tags": [
+        "time-management",
+        "synchronization"
+      ],
+      "remarks": "",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Create and cancel a multimedia timer",
+        "code": "#include <windows.h>\n#include <mmsystem.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"winmm.lib\")\n\nstatic HANDLE g_event = nullptr;\n\nstatic void CALLBACK OnTimer(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR) {\n    SetEvent(g_event);\n}\n\nint main() {\n    g_event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    if (g_event == nullptr) {\n        return 1;\n    }\n\n    MMRESULT timer = timeSetEvent(10, 1, OnTimer, 0, TIME_ONESHOT);\n    if (timer != 0) {\n        WaitForSingleObject(g_event, 1000);\n        timeKillEvent(timer);\n    }\n\n    CloseHandle(g_event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "mmsystem.h - Windows SDK",
+          "url": "https://github.com/tpn/winsdk-10/blob/master/Include/10.0.16299.0/um/mmiscapi2.h",
+          "source_type": "source-code"
+        },
+        {
+          "title": "Multimedia timers",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/multimedia/multimedia-timers",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "This function is absent from the Microsoft sdk-api Markdown and NtDoc. Its prototype is taken from the Windows SDK 10.0.16299 headers, and behavior is checked against the linked Microsoft overview where one exists. Treat version-specific details as subject to change."
+    },
+    {
+      "id": "win32.waitformultipleobjectsex",
+      "name": "WaitForMultipleObjectsEx",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Waits until one or all of the specified objects are in the signaled state, an I/O completion routine or asynchronous procedure call (APC) is queued to the thread, or the time-out interval elapses.",
+      "description": "Waits until one or all of the specified objects are in the signaled state, an I/O completion routine or asynchronous procedure call (APC) is queued to the thread, or the time-out interval elapses.",
+      "prototype": "DWORD WaitForMultipleObjectsEx(DWORD nCount, CONST HANDLE* lpHandles, BOOL bWaitAll, DWORD dwMilliseconds, BOOL bAlertable);",
+      "parameters": [
+        {
+          "name": "nCount",
+          "type": "DWORD",
+          "description": "The number of object handles to wait for in the array pointed to by lpHandles. The maximum number of object handles is MAXIMUM_WAIT_OBJECTS. This parameter cannot be zero."
+        },
+        {
+          "name": "lpHandles",
+          "type": "CONST HANDLE*",
+          "description": "An array of object handles. For a list of the object types whose handles can be specified, see the following Remarks section. The array can contain handles of objects of different types. It may not contain multiple copies of the same handle. If one of these handles is closed while the wait is still pending, the function's behavior is undefined. The handles must have the SYNCHRONIZE access right. For more information, see Standard Access Rights."
+        },
+        {
+          "name": "bWaitAll",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, the function returns when the state of all objects in the lpHandles array is set to signaled. If FALSE, the function returns when the state of any one of the objects is set to signaled. In the latter case, the return value indicates the object whose state caused the function to return."
+        },
+        {
+          "name": "dwMilliseconds",
+          "type": "DWORD",
+          "description": "The time-out interval, in milliseconds. If a nonzero value is specified, the function waits until the specified objects are signaled, an I/O completion routine or APC is queued, or the interval elapses. If dwMilliseconds is zero, the function does not enter a wait state if the criteria is not met; it always returns immediately. If dwMilliseconds is INFINITE, the function will return only when the specified objects are signaled or an I/O completion routine or APC is queued. Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008, and Windows Server 2008 R2: The dwMilliseconds value does include time spent in low-power states. For example, the timeout does keep counting down while the computer is asleep. Windows 8 and newer, Windows Server 2012 and newer: The dwMilliseconds value does not include time spent in low-power states. For example, the timeout does not keep"
+        },
+        {
+          "name": "bAlertable",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE and the thread is in the waiting state, the function returns when the system queues an I/O completion routine or APC, and the thread runs the routine or function. Otherwise, the function does not return and the completion routine or APC function is not executed. A completion routine is queued when the ReadFileEx or WriteFileEx function in which it was specified has completed. The wait function returns and the completion routine is called only if bAlertable is TRUE and the calling thread is the thread that initiated the read or write operation. An APC is queued when you call QueueUserAPC."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value indicates the event that caused the function to return. It can be one of the following values. (Note that WAIT_OBJECT_0 is defined as 0 and WAIT_ABANDONED_0 is defined as 0x00000080L.) WAIT_OBJECT_0 to (WAIT_OBJECT_0 + nCount– 1) If bWaitAll is TRUE, a return value in this range indicates that the state of all specified objects is signaled. If bWaitAll is FALSE, the return value minus WAIT_OBJECT_0 indicates the lpHandles array index of the object that satisfied the wait. If more than one object became signaled during the call, this is the array index of the signaled object with the smallest index value of all the signaled objects. WAIT_ABANDONED_0 to (WAIT_ABANDONED_0 + nCount– 1) If bWaitAll is TRUE, a return value in this range indicates that the state of all specified objects is signaled, and at least one of the objects is an abandoned mutex",
+        "failure": "Return code/value Description"
+      },
+      "tags": [
+        "synchronization"
+      ],
+      "remarks": "The WaitForMultipleObjectsEx function determines whether the wait criteria have been met. If the criteria have not been met, the calling thread enters the wait state until the conditions of the wait criteria have been met or the time-out interval elapses. When bWaitAll is TRUE, the function's wait operation is completed only when the states of all objects have been set to signaled. The function does not modify the states of the specified objects until the states of all objects have been set to signaled. For example, a mutex can be signaled, but the thread does not get ownership until the states of the other objects are also set to signaled. In the meantime, some other thread may get ownership of the mutex, thereby setting its state to nonsignaled. When bWaitAll is FALSE, this function checks the handles in the array in order starting with index 0, until one of the objects is signaled. If multiple objects become signaled, the function returns the index of the first handle in the array whose object was signaled. The function modifies the state of some types of synchronization objects. Modification occurs only for the object or objects whose signaled state caused the function to return. For example, the count of a semaphore object is decreased by one. For more information, see the documentation for the individual synchronization objects. To wait on more than MAXIMUM_WAIT_OBJECTS h",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Wait for both events in alertable mode",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE events[2] = {\n        CreateEventW(nullptr, TRUE, FALSE, nullptr),\n        CreateEventW(nullptr, TRUE, FALSE, nullptr)\n    };\n    if (events[0] == nullptr || events[1] == nullptr) {\n        return 1;\n    }\n\n    SetEvent(events[0]);\n    SetEvent(events[1]);\n    DWORD result = WaitForMultipleObjectsEx(2, events, TRUE, 1000, TRUE);\n    printf(\"Wait result: %lu\\n\", result);\n\n    CloseHandle(events[0]);\n    CloseHandle(events[1]);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "WaitForMultipleObjectsEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjectsex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "WaitForMultipleObjectsEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-waitformultipleobjectsex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.waitforsingleobjectex",
+      "name": "WaitForSingleObjectEx",
+      "aliases": [],
+      "category": "Synchronization",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "synchapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Waits until the specified object is in the signaled state, an I/O completion routine or asynchronous procedure call (APC) is queued to the thread, or the time-out interval elapses.",
+      "description": "Waits until the specified object is in the signaled state, an I/O completion routine or asynchronous procedure call (APC) is queued to the thread, or the time-out interval elapses. To wait for multiple objects, use the WaitForMultipleObjectsEx.",
+      "prototype": "DWORD WaitForSingleObjectEx(HANDLE hHandle, DWORD dwMilliseconds, BOOL bAlertable);",
+      "parameters": [
+        {
+          "name": "hHandle",
+          "type": "HANDLE",
+          "description": "A handle to the object. For a list of the object types whose handles can be specified, see the following Remarks section. If this handle is closed while the wait is still pending, the function's behavior is undefined. The handle must have the SYNCHRONIZE access right. For more information, see Standard Access Rights."
+        },
+        {
+          "name": "dwMilliseconds",
+          "type": "DWORD",
+          "description": "The time-out interval, in milliseconds. If a nonzero value is specified, the function waits until the object is signaled, an I/O completion routine or APC is queued, or the interval elapses. If dwMilliseconds is zero, the function does not enter a wait state if the criteria is not met; it always returns immediately. If dwMilliseconds is INFINITE, the function will return only when the object is signaled or an I/O completion routine or APC is queued. Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008, and Windows Server 2008 R2: The dwMilliseconds value does include time spent in low-power states. For example, the timeout does keep counting down while the computer is asleep. Windows 8 and newer, Windows Server 2012 and newer: The dwMilliseconds value does not include time spent in low-power states. For example, the timeout does not keep counting down while the"
+        },
+        {
+          "name": "bAlertable",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE and the thread is in the waiting state, the function returns when the system queues an I/O completion routine or APC, and the thread runs the routine or function. Otherwise, the function does not return, and the completion routine or APC function is not executed. A completion routine is queued when the ReadFileEx or WriteFileEx function in which it was specified has completed. The wait function returns and the completion routine is called only if bAlertable is TRUE, and the calling thread is the thread that initiated the read or write operation. An APC is queued when you call QueueUserAPC."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value indicates the event that caused the function to return. It can be one of the following values. WAIT_ABANDONED 0x00000080L The specified object is a mutex object that was not released by the thread that owned the mutex object before the owning thread terminated. Ownership of the mutex object is granted to the calling thread and the mutex is set to nonsignaled. If the mutex was protecting persistent state information, you should check it for consistency. WAIT_IO_COMPLETION 0x000000C0L The wait was ended by one or more user-mode asynchronous procedure calls (APC) queued to the thread. WAIT_OBJECT_0 0x00000000L The state of the specified object is signaled. WAIT_TIMEOUT 0x00000102L The time-out interval elapsed, and the object's state is nonsignaled. WAIT_FAILED (DWORD)0xFFFFFFFF The function has failed. To get extended error information, call GetLa",
+        "failure": "Return code/value Description"
+      },
+      "tags": [
+        "synchronization"
+      ],
+      "remarks": "The WaitForSingleObjectEx function determines whether the wait criteria have been met. If the criteria have not been met, the calling thread enters the wait state until the conditions of the wait criteria have been met or the time-out interval elapses. The function modifies the state of some types of synchronization objects. Modification occurs only for the object whose signaled state caused the function to return. For example, the count of a semaphore object is decreased by one. The WaitForSingleObjectEx function can wait for the following objects: Change notification Console input Event Memory resource notification Mutex Process Semaphore Thread Waitable timer Use caution when calling the wait functions and code that directly or indirectly creates windows. If a thread creates any windows, it must process messages. Message broadcasts are sent to all windows in the system. A thread that uses a wait function with no time-out interval may cause the system to become deadlocked. Two examples of code that indirectly creates windows are DDE and the CoInitialize function. Therefore, if you have a thread that creates windows, use MsgWaitForMultipleObjects or MsgWaitForMultipleObjectsEx, rather than WaitForSingleObjectEx. #### Examples For an example, see Named Pipe Server Using Completion Routines.",
+      "maldev_notes": "Synchronization APIs coordinate ordinary threads and services. Analysts note object names, wait results, and timeout behavior when reconstructing execution order.",
+      "defensive_notes": "Wait and synchronization telemetry helps reconstruct ordering. The API call alone is not a useful indicator without process and object context.",
+      "example": {
+        "language": "cpp",
+        "title": "Wait on an event in alertable mode",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    if (event == nullptr) {\n        return 1;\n    }\n\n    SetEvent(event);\n    DWORD result = WaitForSingleObjectEx(event, 1000, TRUE);\n    printf(\"Wait result: %lu\\n\", result);\n\n    CloseHandle(event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "WaitForSingleObjectEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobjectex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "WaitForSingleObjectEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/synchapi/nf-synchapi-waitforsingleobjectex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (synchapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

@@ -1,0 +1,1026 @@
+{
+  "schema_version": 1,
+  "constants": [
+    {
+      "id": "win32.mem_commit",
+      "name": "MEM_COMMIT",
+      "value": "0x00001000",
+      "category": "Memory Management",
+      "description": "Allocates committed pages in the specified region, charging physical storage and the paging file.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "VirtualAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.mem_reserve",
+      "name": "MEM_RESERVE",
+      "value": "0x00002000",
+      "category": "Memory Management",
+      "description": "Reserves a range of the process address space without allocating physical storage.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "VirtualAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.mem_decommit",
+      "name": "MEM_DECOMMIT",
+      "value": "0x00004000",
+      "category": "Memory Management",
+      "description": "Decommits committed pages, releasing physical storage while keeping the address range reserved.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "VirtualFree function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.mem_release",
+      "name": "MEM_RELEASE",
+      "value": "0x00008000",
+      "category": "Memory Management",
+      "description": "Releases a reserved region, freeing the address range. The size must be zero when used with VirtualFree.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "VirtualFree function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_noaccess",
+      "name": "PAGE_NOACCESS",
+      "value": "0x01",
+      "category": "Memory Management",
+      "description": "Disables all access to the committed region; any access raises an access violation.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_readonly",
+      "name": "PAGE_READONLY",
+      "value": "0x02",
+      "category": "Memory Management",
+      "description": "Allows read-only access to committed pages; writes raise an access violation.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_readwrite",
+      "name": "PAGE_READWRITE",
+      "value": "0x04",
+      "category": "Memory Management",
+      "description": "Allows read and write access to committed pages.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_execute",
+      "name": "PAGE_EXECUTE",
+      "value": "0x10",
+      "category": "Memory Management",
+      "description": "Allows execution but not reading or writing of committed pages.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_execute_read",
+      "name": "PAGE_EXECUTE_READ",
+      "value": "0x20",
+      "category": "Memory Management",
+      "description": "Allows execution and reading of committed pages.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_execute_readwrite",
+      "name": "PAGE_EXECUTE_READWRITE",
+      "value": "0x40",
+      "category": "Memory Management",
+      "description": "Allows execution, reading, and writing of committed pages. Broad permissions deserve scrutiny in analysis.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_guard",
+      "name": "PAGE_GUARD",
+      "value": "0x100",
+      "category": "Memory Management",
+      "description": "Marks the page as a guard page. The first access raises a one-shot guard-page exception.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_terminate",
+      "name": "PROCESS_TERMINATE",
+      "value": "0x0001",
+      "category": "Process Management",
+      "description": "Permission to terminate the process with TerminateProcess.",
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_create_thread",
+      "name": "PROCESS_CREATE_THREAD",
+      "value": "0x0002",
+      "category": "Process Management",
+      "description": "Permission to create a thread in the process.",
+      "tags": [
+        "process-creation",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_vm_operation",
+      "name": "PROCESS_VM_OPERATION",
+      "value": "0x0008",
+      "category": "Process Management",
+      "description": "Permission to perform address-space operations such as changing memory protection.",
+      "tags": [
+        "remote-memory",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_vm_read",
+      "name": "PROCESS_VM_READ",
+      "value": "0x0010",
+      "category": "Process Management",
+      "description": "Permission to read process memory with ReadProcessMemory.",
+      "tags": [
+        "remote-memory",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_vm_write",
+      "name": "PROCESS_VM_WRITE",
+      "value": "0x0020",
+      "category": "Process Management",
+      "description": "Permission to write process memory with WriteProcessMemory.",
+      "tags": [
+        "remote-memory",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_query_information",
+      "name": "PROCESS_QUERY_INFORMATION",
+      "value": "0x0400",
+      "category": "Process Management",
+      "description": "Permission to query detailed process information such as token and memory statistics.",
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_query_limited_information",
+      "name": "PROCESS_QUERY_LIMITED_INFORMATION",
+      "value": "0x1000",
+      "category": "Process Management",
+      "description": "Permission to query limited process information. Preferred when full query access is unnecessary.",
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.process_all_access",
+      "name": "PROCESS_ALL_ACCESS",
+      "value": "0x001FFFFF",
+      "category": "Process Management",
+      "description": "All access rights that the system can grant for a process. Requesting it can fail when the caller cannot obtain every right.",
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.create_suspended",
+      "name": "CREATE_SUSPENDED",
+      "value": "0x00000004",
+      "category": "Process Management",
+      "description": "Creates the new process with its primary thread suspended until ResumeThread is called.",
+      "tags": [
+        "process-creation",
+        "execution-flow",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process creation flags",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.thread_suspend_resume",
+      "name": "THREAD_SUSPEND_RESUME",
+      "value": "0x0002",
+      "category": "Thread Management",
+      "description": "Permission to suspend or resume a thread.",
+      "tags": [
+        "thread-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Thread security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/thread-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.thread_query_information",
+      "name": "THREAD_QUERY_INFORMATION",
+      "value": "0x0040",
+      "category": "Thread Management",
+      "description": "Permission to query detailed thread information.",
+      "tags": [
+        "thread-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Thread security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/thread-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.generic_read",
+      "name": "GENERIC_READ",
+      "value": "0x80000000",
+      "category": "File and I/O",
+      "description": "Standard access right requesting read access to an object.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Generic access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/secauthz/generic-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.generic_write",
+      "name": "GENERIC_WRITE",
+      "value": "0x40000000",
+      "category": "File and I/O",
+      "description": "Standard access right requesting write access to an object.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Generic access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/secauthz/generic-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.open_existing",
+      "name": "OPEN_EXISTING",
+      "value": "3",
+      "category": "File and I/O",
+      "description": "Creation disposition that opens an existing file or device and fails if it does not exist.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.create_always",
+      "name": "CREATE_ALWAYS",
+      "value": "2",
+      "category": "File and I/O",
+      "description": "Creation disposition that creates a new file, overwriting an existing file if present.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.file_share_read",
+      "name": "FILE_SHARE_READ",
+      "value": "0x00000001",
+      "category": "File and I/O",
+      "description": "Share mode permitting other handles to read the file concurrently.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.file_attribute_normal",
+      "name": "FILE_ATTRIBUTE_NORMAL",
+      "value": "0x00000080",
+      "category": "File and I/O",
+      "description": "Attribute flag for a file with no other attributes set. Valid only when used alone.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "File attribute constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/file-attribute-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.key_read",
+      "name": "KEY_READ",
+      "value": "0x20019",
+      "category": "Registry",
+      "description": "Combined registry access mask for querying values, enumerating subkeys, and reading key metadata.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Registry key security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-key-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.key_write",
+      "name": "KEY_WRITE",
+      "value": "0x20006",
+      "category": "Registry",
+      "description": "Combined registry access mask for setting values and creating subkeys.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Registry key security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-key-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.key_all_access",
+      "name": "KEY_ALL_ACCESS",
+      "value": "0xF003F",
+      "category": "Registry",
+      "description": "Combined registry access mask requesting all standard and specific key rights.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Registry key security and access rights",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-key-security-and-access-rights",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.reg_sz",
+      "name": "REG_SZ",
+      "value": "1",
+      "category": "Registry",
+      "description": "Registry value type for a null-terminated string.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Registry value types",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-value-types",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.reg_expand_sz",
+      "name": "REG_EXPAND_SZ",
+      "value": "2",
+      "category": "Registry",
+      "description": "Registry value type for a null-terminated string containing unexpanded environment references.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Registry value types",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-value-types",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.reg_dword",
+      "name": "REG_DWORD",
+      "value": "4",
+      "category": "Registry",
+      "description": "Registry value type for a 32-bit little-endian number.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Registry value types",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/registry-value-types",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.hkey_local_machine",
+      "name": "HKEY_LOCAL_MACHINE",
+      "value": "0x80000002",
+      "category": "Registry",
+      "description": "Predefined registry root containing machine-wide configuration. The numeric value is an implementation detail; use the symbolic name.",
+      "tags": [
+        "registry-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Predefined registry keys",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/predefined-keys",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.infinite",
+      "name": "INFINITE",
+      "value": "0xFFFFFFFF",
+      "category": "Synchronization",
+      "description": "Wait timeout meaning the caller waits indefinitely until the object is signaled.",
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "WaitForSingleObject function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.wait_object_0",
+      "name": "WAIT_OBJECT_0",
+      "value": "0x00000000",
+      "category": "Synchronization",
+      "description": "Wait result indicating that the requested object or set of objects was signaled.",
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "WaitForSingleObject function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.wait_timeout",
+      "name": "WAIT_TIMEOUT",
+      "value": "0x00000102",
+      "category": "Synchronization",
+      "description": "Wait result indicating that the timeout interval elapsed before the object was signaled.",
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "WaitForSingleObject function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.bcrypt_use_system_preferred_rng",
+      "name": "BCRYPT_USE_SYSTEM_PREFERRED_RNG",
+      "value": "0x00000002",
+      "category": "Cryptography",
+      "description": "Flag for BCryptGenRandom selecting the system-preferred random number generator.",
+      "tags": [
+        "cryptography",
+        "random-number-generation",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "BCryptGenRandom function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.prov_rsa_aes",
+      "name": "PROV_RSA_AES",
+      "value": "24",
+      "category": "Cryptography",
+      "description": "Cryptographic service provider type supporting RSA and AES algorithms.",
+      "tags": [
+        "cryptography",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "ALG_ID",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/seccrypto/alg-id",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.crypt_verifycontext",
+      "name": "CRYPT_VERIFYCONTEXT",
+      "value": "0xF0000000",
+      "category": "Cryptography",
+      "description": "CryptAcquireContextW flag requesting a context without access to persistent key containers, suitable for hashing and random generation.",
+      "tags": [
+        "cryptography",
+        "random-number-generation",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CryptAcquireContextW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/nf-wincrypt-cryptacquirecontextw",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.mem_image",
+      "name": "MEM_IMAGE",
+      "value": "0x01000000",
+      "category": "Memory Management",
+      "description": "Indicates that the pages are mapped into the process from an executable image. This is the MEM_IMAGE value reported in the Type member of MEMORY_BASIC_INFORMATION.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "MEMORY_BASIC_INFORMATION structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.mem_mapped",
+      "name": "MEM_MAPPED",
+      "value": "0x00040000",
+      "category": "Memory Management",
+      "description": "Indicates that the pages are mapped into the process from a file-mapping object. This is the MEM_MAPPED value reported in the Type member of MEMORY_BASIC_INFORMATION.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "MEMORY_BASIC_INFORMATION structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.mem_private",
+      "name": "MEM_PRIVATE",
+      "value": "0x00020000",
+      "category": "Memory Management",
+      "description": "Indicates that the pages are private to the process and not shared with other processes. This is the MEM_PRIVATE value reported in the Type member of MEMORY_BASIC_INFORMATION.",
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "MEMORY_BASIC_INFORMATION structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-memory_basic_information",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_writecopy",
+      "name": "PAGE_WRITECOPY",
+      "value": "0x08",
+      "category": "Memory Management",
+      "description": "Enables read-only or copy-on-write access to a mapped view of a file-mapping object. Writes cause private copies of the pages to be made.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.page_execute_writecopy",
+      "name": "PAGE_EXECUTE_WRITECOPY",
+      "value": "0x80",
+      "category": "Memory Management",
+      "description": "Enables execute, read-only, or copy-on-write access to a mapped view of a file-mapping object. Writes cause private copies of the pages to be made.",
+      "tags": [
+        "memory-protection",
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Memory protection constants",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/memory/memory-protection-constants",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.still_active",
+      "name": "STILL_ACTIVE",
+      "value": "259",
+      "category": "Process Management",
+      "description": "Exit-code value reported by GetExitCodeProcess while the process has not terminated. The value is a macro for STATUS_PENDING (259, 0x103).",
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "GetExitCodeProcess function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitcodeprocess",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.extended_startupinfo_present",
+      "name": "EXTENDED_STARTUPINFO_PRESENT",
+      "value": "0x00080000",
+      "category": "Process Management",
+      "description": "Process-creation flag indicating that lpStartupInfo points to a STARTUPINFOEXW. Required when passing a process-thread attribute list to CreateProcessW.",
+      "tags": [
+        "process-creation",
+        "execution-flow",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "Process creation flags",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.startf_usestdhandles",
+      "name": "STARTF_USESTDHANDLES",
+      "value": "0x00000100",
+      "category": "Process Management",
+      "description": "STARTUPINFOW flag indicating that the hStdInput, hStdOutput, and hStdError members contain valid standard handles for the new process.",
+      "tags": [
+        "process-creation",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "STARTUPINFOW structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-startupinfow",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.file_share_write",
+      "name": "FILE_SHARE_WRITE",
+      "value": "0x00000002",
+      "category": "File and I/O",
+      "description": "Share mode permitting other handles to write to the file concurrently.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.file_share_delete",
+      "name": "FILE_SHARE_DELETE",
+      "value": "0x00000004",
+      "category": "File and I/O",
+      "description": "Share mode permitting other handles to delete the file or rename it while it remains open.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.create_new",
+      "name": "CREATE_NEW",
+      "value": "1",
+      "category": "File and I/O",
+      "description": "Creation disposition that creates a new file and fails if the file already exists.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.open_always",
+      "name": "OPEN_ALWAYS",
+      "value": "4",
+      "category": "File and I/O",
+      "description": "Creation disposition that opens an existing file or creates it if it does not exist.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.truncate_existing",
+      "name": "TRUNCATE_EXISTING",
+      "value": "5",
+      "category": "File and I/O",
+      "description": "Creation disposition that opens an existing file and truncates it to zero bytes; it fails if the file does not exist.",
+      "tags": [
+        "file-access",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "CreateFileW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.wait_abandoned",
+      "name": "WAIT_ABANDONED",
+      "value": "0x00000080",
+      "category": "Synchronization",
+      "description": "Wait result indicating that a mutex was abandoned because its owning thread terminated without releasing it.",
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "WaitForSingleObject function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject",
+          "source_type": "official-documentation"
+        }
+      ]
+    },
+    {
+      "id": "win32.wait_failed",
+      "name": "WAIT_FAILED",
+      "value": "0xFFFFFFFF",
+      "category": "Synchronization",
+      "description": "Wait result indicating that the wait failed. Call GetLastError for the specific error.",
+      "tags": [
+        "synchronization",
+        "analysis-relevant"
+      ],
+      "references": [
+        {
+          "title": "WaitForSingleObject function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject",
+          "source_type": "official-documentation"
+        }
+      ]
+    }
+  ]
+}

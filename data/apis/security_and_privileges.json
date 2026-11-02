@@ -1,0 +1,451 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.adjusttokenprivileges",
+      "name": "AdjustTokenPrivileges",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "securitybaseapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Enables or disables privileges in the specified access token.",
+      "description": "The AdjustTokenPrivileges function enables or disables privileges in the specified access token. Enabling or disabling privileges in an access token requires TOKEN_ADJUST_PRIVILEGES access.",
+      "prototype": "BOOL AdjustTokenPrivileges(HANDLE TokenHandle, BOOL DisableAllPrivileges, PTOKEN_PRIVILEGES NewState, DWORD BufferLength, PTOKEN_PRIVILEGES PreviousState, PDWORD ReturnLength);",
+      "parameters": [
+        {
+          "name": "TokenHandle",
+          "type": "HANDLE",
+          "description": "A handle to the access token that contains the privileges to be modified. The handle must have TOKEN_ADJUST_PRIVILEGES access to the token. If the PreviousState parameter is not NULL, the handle must also have TOKEN_QUERY access."
+        },
+        {
+          "name": "DisableAllPrivileges",
+          "type": "BOOL",
+          "description": "Specifies whether the function disables all of the token's privileges. If this value is TRUE, the function disables all privileges and ignores the NewState parameter. If it is FALSE, the function modifies privileges based on the information pointed to by the NewState parameter."
+        },
+        {
+          "name": "NewState",
+          "type": "PTOKEN_PRIVILEGES",
+          "description": "A pointer to a TOKEN_PRIVILEGES structure that specifies an array of privileges and their attributes. If the DisableAllPrivileges parameter is FALSE, the AdjustTokenPrivileges function enables, disables, or removes these privileges for the token. The following table describes the action taken by the AdjustTokenPrivileges function, based on the privilege attribute. Value Meaning SE_PRIVILEGE_ENABLED The function enables the privilege. SE_PRIVILEGE_REMOVED The privilege is removed from the list of privileges in the token. The other privileges in the list are reordered to remain contiguous. SE_PRIVILEGE_REMOVED supersedes SE_PRIVILEGE_ENABLED. Because the privilege has been removed from the token, attempts to reenable the privilege result in the warning ERROR_NOT_ALL_ASSIGNED as if the privilege had never existed. Attempting to remove a privilege that does not exist in the token results in"
+        },
+        {
+          "name": "BufferLength",
+          "type": "DWORD",
+          "description": "Specifies the size, in bytes, of the buffer pointed to by the PreviousState parameter. This parameter can be zero if the PreviousState parameter is NULL."
+        },
+        {
+          "name": "PreviousState",
+          "type": "PTOKEN_PRIVILEGES",
+          "description": "A pointer to a buffer that the function fills with a TOKEN_PRIVILEGES structure that contains the previous state of any privileges that the function modifies. That is, if a privilege has been modified by this function, the privilege and its previous state are contained in the TOKEN_PRIVILEGES structure referenced by PreviousState. If the PrivilegeCount member of TOKEN_PRIVILEGES is zero, then no privileges have been changed by this function. This parameter can be NULL. If you specify a buffer that is too small to receive the complete list of modified privileges, the function fails and does not adjust any privileges. In this case, the function sets the variable pointed to by the ReturnLength parameter to the number of bytes required to hold the complete list of modified privileges."
+        },
+        {
+          "name": "ReturnLength",
+          "type": "PDWORD",
+          "description": "A pointer to a variable that receives the required size, in bytes, of the buffer pointed to by the PreviousState parameter. This parameter can be NULL if PreviousState is NULL."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. To determine whether the function adjusted all of the specified privileges, call GetLastError, which returns one of the following values when the function succeeds: ERROR_SUCCESS The function adjusted all specified privileges. ERROR_NOT_ALL_ASSIGNED The token does not have one or more of the privileges specified in the NewState parameter. The function may succeed with this error value even if no privileges were adjusted. The PreviousState parameter indicates the privileges that were adjusted.",
+        "failure": "Return code Description If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "security-token",
+        "privilege-management"
+      ],
+      "remarks": "The AdjustTokenPrivileges function cannot add new privileges to the access token. It can only enable or disable the token's existing privileges. To determine the token's privileges, call the GetTokenInformation function. The NewState parameter can specify privileges that the token does not have, without causing the function to fail. In this case, the function adjusts the privileges that the token does have and ignores the other privileges so that the function succeeds. Call the GetLastError function to determine whether the function adjusted all of the specified privileges. The PreviousState parameter indicates the privileges that were adjusted. The PreviousState parameter retrieves a TOKEN_PRIVILEGES structure that contains the original state of the adjusted privileges. To restore the original state, pass the PreviousState pointer as the NewState parameter in a subsequent call to the AdjustTokenPrivileges function. #### Examples For an example that uses this function, see Enabling and Disabling Privileges.",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Disable and restore a token privilege",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE token = nullptr;\n    if (!OpenProcessToken(GetCurrentProcess(),\n            TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {\n        return 1;\n    }\n\n    LUID luid = {};\n    LookupPrivilegeValueA(nullptr, SE_CHANGE_NOTIFY_NAME, &luid);\n\n    TOKEN_PRIVILEGES privileges = {};\n    privileges.PrivilegeCount = 1;\n    privileges.Privileges[0].Luid = luid;\n    privileges.Privileges[0].Attributes = 0;\n\n    TOKEN_PRIVILEGES previous = {};\n    DWORD length = sizeof(previous);\n    if (AdjustTokenPrivileges(token, FALSE, &privileges, sizeof(previous),\n            &previous, &length) &&\n        GetLastError() == ERROR_SUCCESS) {\n        // Restore the previous state before closing the token.\n        AdjustTokenPrivileges(token, FALSE, &previous, 0, nullptr, nullptr);\n    }\n\n    CloseHandle(token);\n    return 0;\n}\n",
+        "notes": "The example disables and restores a privilege on its own token."
+      },
+      "references": [
+        {
+          "title": "AdjustTokenPrivileges function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-adjusttokenprivileges",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "AdjustTokenPrivileges - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/securitybaseapi/nf-securitybaseapi-adjusttokenprivileges.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (securitybaseapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.duplicatetoken",
+      "name": "DuplicateToken",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "securitybaseapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Creates a new access token that duplicates one already in existence.",
+      "description": "The DuplicateToken function creates a new access token that duplicates one already in existence.",
+      "prototype": "BOOL DuplicateToken(HANDLE ExistingTokenHandle, SECURITY_IMPERSONATION_LEVEL ImpersonationLevel, PHANDLE DuplicateTokenHandle);",
+      "parameters": [
+        {
+          "name": "ExistingTokenHandle",
+          "type": "HANDLE",
+          "description": "A handle to an access token opened with TOKEN_DUPLICATE access."
+        },
+        {
+          "name": "ImpersonationLevel",
+          "type": "SECURITY_IMPERSONATION_LEVEL",
+          "description": "Specifies a SECURITY_IMPERSONATION_LEVEL enumerated type that supplies the impersonation level of the new token."
+        },
+        {
+          "name": "DuplicateTokenHandle",
+          "type": "PHANDLE",
+          "description": "A pointer to a variable that receives a handle to the duplicate token. This handle has TOKEN_IMPERSONATE and TOKEN_QUERY access to the new token. When you have finished using the new token, call the CloseHandle function to close the token handle."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "security-token",
+        "impersonation"
+      ],
+      "remarks": "The DuplicateToken function creates an impersonation token, which you can use in functions such as SetThreadToken and ImpersonateLoggedOnUser. The token created by DuplicateToken cannot be used in the CreateProcessAsUser function, which requires a primary token. To create a token that you can pass to CreateProcessAsUser, use the DuplicateTokenEx function.",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Duplicate the current process token",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE token = nullptr;\n    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_DUPLICATE, &token)) {\n        return 1;\n    }\n\n    HANDLE duplicate = nullptr;\n    if (DuplicateToken(token, SecurityImpersonation, &duplicate)) {\n        CloseHandle(duplicate);\n    }\n\n    CloseHandle(token);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "DuplicateToken function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-duplicatetoken",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "DuplicateToken - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/securitybaseapi/nf-securitybaseapi-duplicatetoken.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (securitybaseapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.impersonateloggedonuser",
+      "name": "ImpersonateLoggedOnUser",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "securitybaseapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Lets the calling thread impersonate the security context of a logged-on user.",
+      "description": "The ImpersonateLoggedOnUser function lets the calling thread impersonate the security context of a logged-on user. The user is represented by a token handle.",
+      "prototype": "BOOL ImpersonateLoggedOnUser(HANDLE hToken);",
+      "parameters": [
+        {
+          "name": "hToken",
+          "type": "HANDLE",
+          "description": "A handle to a primary or impersonation access token that represents a logged-on user. This can be a token handle returned by a call to LogonUser, CreateRestrictedToken, DuplicateToken, DuplicateTokenEx, OpenProcessToken, or OpenThreadToken functions. If *hToken* is a handle to a primary token, the token must have TOKEN_QUERY and TOKEN_DUPLICATE access. If *hToken* is a handle to an impersonation token, the token must have TOKEN_QUERY and TOKEN_IMPERSONATE access."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "security-token",
+        "impersonation"
+      ],
+      "remarks": "The impersonation lasts until the thread exits or until it calls RevertToSelf. The calling thread does not need to have any particular privileges to call ImpersonateLoggedOnUser. If the call to ImpersonateLoggedOnUser fails, the client connection is not impersonated and the client request is made in the security context of the process. If the process is running as a highly privileged account, such as LocalSystem, or as a member of an administrative group, the user may be able to perform actions they would otherwise be disallowed. Therefore, it is important to always check the return value of the call, and if it fails, raise an error; do not continue execution of the client request. All impersonate functions, including ImpersonateLoggedOnUser allow the requested impersonation if one of the following is true: - The caller has the SeImpersonatePrivilege privilege. - A process (or another process in the caller's logon session) created the token using explicit credentials through LogonUser or LsaLogonUser function. - The authenticated identity is same as the caller. > > The token must have an impersonation level of SecurityImpersonation or higher for impersonation to succeed. Tokens with SecurityIdentification or SecurityAnonymous levels cannot be used for impersonation, even if the caller has SeImpersonatePrivilege. SecurityIdentification tokens allow identity verification and ACL ",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Impersonate a duplicate of the current token",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE token = nullptr;\n    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_DUPLICATE, &token)) {\n        return 1;\n    }\n\n    HANDLE duplicate = nullptr;\n    if (DuplicateToken(token, SecurityImpersonation, &duplicate)) {\n        if (ImpersonateLoggedOnUser(duplicate)) {\n            RevertToSelf();\n        }\n        CloseHandle(duplicate);\n    }\n\n    CloseHandle(token);\n    return 0;\n}\n",
+        "notes": "The example impersonates a duplicate of its own token and always reverts."
+      },
+      "references": [
+        {
+          "title": "ImpersonateLoggedOnUser function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-impersonateloggedonuser",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ImpersonateLoggedOnUser - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/securitybaseapi/nf-securitybaseapi-impersonateloggedonuser.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (securitybaseapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.lookupaccountnamea",
+      "name": "LookupAccountNameA",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Accepts the name of a system and an account as input.",
+      "description": "The LookupAccountName function accepts the name of a system and an account as input. It retrieves a security identifier (SID) for the account and the name of the domain on which the account was found. The LsaLookupNames function can also retrieve computer accounts.",
+      "prototype": "BOOL LookupAccountNameA(LPCSTR lpSystemName, LPCSTR lpAccountName, PSID Sid, LPDWORD cbSid, LPSTR ReferencedDomainName, LPDWORD cchReferencedDomainName, PSID_NAME_USE peUse);",
+      "parameters": [
+        {
+          "name": "lpSystemName",
+          "type": "LPCSTR",
+          "description": "A pointer to a null-terminated character string that specifies the name of the system. This string can be the name of a remote computer. If this string is NULL, the account name translation begins on the local system. If the name cannot be resolved on the local system, this function will try to resolve the name using domain controllers trusted by the local system. Generally, specify a value for lpSystemName only when the account is in an untrusted domain and the name of a computer in that domain is known."
+        },
+        {
+          "name": "lpAccountName",
+          "type": "LPCSTR",
+          "description": "A pointer to a null-terminated string that specifies the account name. Use a fully qualified string in the domain_name\\user_name format to ensure that LookupAccountName finds the account in the desired domain."
+        },
+        {
+          "name": "Sid",
+          "type": "PSID",
+          "description": "A pointer to a buffer that receives the SID structure that corresponds to the account name pointed to by the lpAccountName parameter. If this parameter is NULL, cbSid must be zero."
+        },
+        {
+          "name": "cbSid",
+          "type": "LPDWORD",
+          "description": "A pointer to a variable. On input, this value specifies the size, in bytes, of the Sid buffer. If the function fails because the buffer is too small or if cbSid is zero, this variable receives the required buffer size."
+        },
+        {
+          "name": "ReferencedDomainName",
+          "type": "LPSTR",
+          "description": "A pointer to a buffer that receives the name of the domain where the account name is found. For computers that are not joined to a domain, this buffer receives the computer name. If this parameter is NULL, the function returns the required buffer size."
+        },
+        {
+          "name": "cchReferencedDomainName",
+          "type": "LPDWORD",
+          "description": "A pointer to a variable. On input, this value specifies the size, in TCHARs, of the ReferencedDomainName buffer. If the function fails because the buffer is too small, this variable receives the required buffer size, including the terminating null character. If the ReferencedDomainName parameter is NULL, this parameter must be zero."
+        },
+        {
+          "name": "peUse",
+          "type": "PSID_NAME_USE",
+          "description": "A pointer to a SID_NAME_USE enumerated type that indicates the type of the account when the function returns."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero.",
+        "failure": "If the function fails, it returns zero. For extended error information, call GetLastError."
+      },
+      "tags": [
+        "account-management",
+        "security-token"
+      ],
+      "remarks": "The LookupAccountName function attempts to find a SID for the specified name by first checking a list of well-known SIDs. If the name does not correspond to a well-known SID, the function checks built-in and administratively defined local accounts. Next, the function checks the primary domain. If the name is not found there, trusted domains are checked. Use fully qualified account names (for example, domain_name\\user_name) instead of isolated names (for example, user_name). Fully qualified names are unambiguous and provide better performance when the lookup is performed. This function also supports fully qualified DNS names (for example, example.example.com\\user_name) and user principal names (UPN) (for example, someone@example.com). In addition to looking up local accounts, local domain accounts, and explicitly trusted domain accounts, LookupAccountName can look up the name for any account in any domain in the forest. > > The winbase.h header defines LookupAccountName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve the current user name to a SID",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char name[256] = {};\n    DWORD name_size = sizeof(name);\n    if (!GetUserNameA(name, &name_size)) {\n        return 1;\n    }\n\n    DWORD sid_size = 0;\n    DWORD domain_size = 0;\n    SID_NAME_USE use = SidTypeUser;\n    LookupAccountNameA(nullptr, name, nullptr, &sid_size, nullptr,\n        &domain_size, &use);\n\n    auto sid = static_cast<PSID>(LocalAlloc(LPTR, sid_size));\n    auto domain = static_cast<LPSTR>(LocalAlloc(LPTR, domain_size));\n    if (sid != nullptr && domain != nullptr &&\n        LookupAccountNameA(nullptr, name, sid, &sid_size, domain,\n            &domain_size, &use)) {\n        printf(\"Resolved %s\\\\%s\\n\", domain, name);\n    }\n\n    LocalFree(domain);\n    LocalFree(sid);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "LookupAccountNameA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-lookupaccountnamea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LookupAccountNameA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-lookupaccountnamea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.lookupprivilegevaluea",
+      "name": "LookupPrivilegeValueA",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the locally unique identifier (LUID) used on a specified system to locally represent the specified privilege name.",
+      "description": "The LookupPrivilegeValue function retrieves the locally unique identifier (LUID) used on a specified system to locally represent the specified privilege name.",
+      "prototype": "BOOL LookupPrivilegeValueA(LPCSTR lpSystemName, LPCSTR lpName, PLUID lpLuid);",
+      "parameters": [
+        {
+          "name": "lpSystemName",
+          "type": "LPCSTR",
+          "description": "A pointer to a null-terminated string that specifies the name of the system on which the privilege name is retrieved. If a null string is specified, the function attempts to find the privilege name on the local system."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "A pointer to a null-terminated string that specifies the name of the privilege, as defined in the Winnt.h header file. For example, this parameter could specify the constant, SE_SECURITY_NAME, or its corresponding string, \"SeSecurityPrivilege\"."
+        },
+        {
+          "name": "lpLuid",
+          "type": "PLUID",
+          "description": "A pointer to a variable that receives the LUID by which the privilege is known on the system specified by the lpSystemName parameter."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the function returns nonzero.",
+        "failure": "If the function fails, it returns zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "security-token",
+        "privilege-management"
+      ],
+      "remarks": "The LookupPrivilegeValue function supports only the privileges specified in the Defined Privileges section of Winnt.h. For a list of values, see Privilege Constants. #### Examples For an example that uses this function, see Enabling and Disabling Privileges. > > The winbase.h header defines LookupPrivilegeValue as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve a privilege name to a LUID",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    LUID luid = {};\n    if (LookupPrivilegeValueA(nullptr, SE_SHUTDOWN_NAME, &luid)) {\n        printf(\"SeShutdownPrivilege LUID: %lu:%ld\\n\", luid.HighPart,\n            luid.LowPart);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "LookupPrivilegeValueA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-lookupprivilegevaluea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LookupPrivilegeValueA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-lookupprivilegevaluea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.openprocesstoken",
+      "name": "OpenProcessToken",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Opens the access token associated with a process.",
+      "description": "The OpenProcessToken function opens the access token associated with a process.",
+      "prototype": "BOOL OpenProcessToken(HANDLE ProcessHandle, DWORD DesiredAccess, PHANDLE TokenHandle);",
+      "parameters": [
+        {
+          "name": "ProcessHandle",
+          "type": "HANDLE",
+          "description": "A handle to the process whose access token is opened. The process must have the PROCESS_QUERY_LIMITED_INFORMATION access permission. See Process Security and Access Rights for more info."
+        },
+        {
+          "name": "DesiredAccess",
+          "type": "DWORD",
+          "description": "Specifies an access mask that specifies the requested types of access to the access token. These requested access types are compared with the discretionary access control list (DACL) of the token to determine which accesses are granted or denied. For a list of access rights for access tokens, see Access Rights for Access-Token Objects."
+        },
+        {
+          "name": "TokenHandle",
+          "type": "PHANDLE",
+          "description": "A pointer to a handle that identifies the newly opened access token when the function returns."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "security-token"
+      ],
+      "remarks": "To get a handle to an elevated process from within a non-elevated process, both processes must be started from the same account. If the process being checked was started by a different account, the checking process needs to have the SE_DEBUG_NAME privilege enabled. See Privilege Constants (Authorization) for more info. To close the access token handle returned through the TokenHandle parameter, call CloseHandle.",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Open the current process token",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE token = nullptr;\n    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {\n        return 1;\n    }\n\n    DWORD length = 0;\n    GetTokenInformation(token, TokenUser, nullptr, 0, &length);\n    auto buffer = static_cast<PTOKEN_USER>(LocalAlloc(LPTR, length));\n    if (buffer != nullptr &&\n        GetTokenInformation(token, TokenUser, buffer, length, &length)) {\n        printf(\"Token user information read.\\n\");\n    }\n\n    LocalFree(buffer);\n    CloseHandle(token);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "OpenProcessToken function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocesstoken",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "OpenProcessToken - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-openprocesstoken.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setthreadtoken",
+      "name": "SetThreadToken",
+      "aliases": [],
+      "category": "Security and Privileges",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Assigns an impersonation token to a thread.",
+      "description": "The SetThreadToken function assigns an impersonation token to a thread. The function can also cause a thread to stop using an impersonation token.",
+      "prototype": "BOOL SetThreadToken(PHANDLE Thread, HANDLE Token);",
+      "parameters": [
+        {
+          "name": "Thread",
+          "type": "PHANDLE",
+          "description": "A pointer to a handle to the thread to which the function assigns the impersonation token. If Thread is NULL, the function assigns the impersonation token to the calling thread."
+        },
+        {
+          "name": "Token",
+          "type": "HANDLE",
+          "description": "A handle to the impersonation token to assign to the thread. This handle must have been opened with TOKEN_IMPERSONATE access rights. For more information, see Access Rights for Access-Token Objects. If Token is NULL, the function causes the thread to stop using an impersonation token."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "security-token",
+        "impersonation"
+      ],
+      "remarks": "When using the SetThreadToken function to impersonate, you must have the impersonate privileges and make sure that the SetThreadToken function succeeds before calling the RevertToSelf function.",
+      "maldev_notes": "Token and privilege APIs are used by services, installers, and management software. Analysts note the token, requested rights, enabling operation, and whether the change is temporary and justified.",
+      "defensive_notes": "Token and privilege telemetry records the caller, target token, and requested rights. Privilege escalation or impersonation should be evaluated with authorization and process lineage.",
+      "example": {
+        "language": "cpp",
+        "title": "Set and clear a thread impersonation token",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE token = nullptr;\n    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_DUPLICATE, &token)) {\n        return 1;\n    }\n\n    HANDLE duplicate = nullptr;\n    if (DuplicateToken(token, SecurityImpersonation, &duplicate)) {\n        if (SetThreadToken(nullptr, duplicate)) {\n            // Passing NULL restores the thread's normal token.\n            SetThreadToken(nullptr, nullptr);\n        }\n        CloseHandle(duplicate);\n    }\n\n    CloseHandle(token);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetThreadToken function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadtoken",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetThreadToken - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-setthreadtoken.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

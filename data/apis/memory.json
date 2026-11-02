@@ -1,0 +1,2397 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.virtualalloc",
+      "name": "VirtualAlloc",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Reserves, commits, or changes the state of a region of pages in the calling process's virtual address space.",
+      "description": "VirtualAlloc manages virtual memory in the calling process. Reserving sets aside a range of the address space without charging physical storage; committing makes pages accessible and backed by physical storage or the paging file. The system rounds addresses and sizes to page boundaries, and newly committed pages are zero-initialized. A single call can reserve and commit a region, which is the common case.",
+      "prototype": "LPVOID VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);",
+      "parameters": [
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The requested starting address for the region, or NULL to let the system choose one. With MEM_RESERVE the address is rounded down to the nearest allocation granularity; with MEM_COMMIT it is rounded down to the nearest page boundary."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region, in bytes. When lpAddress is NULL, the system rounds the size up to the next page boundary; otherwise every page containing part of the range is included, so a range that straddles a page boundary affects both pages."
+        },
+        {
+          "name": "flAllocationType",
+          "type": "DWORD",
+          "description": "The allocation operation, such as MEM_RESERVE, MEM_COMMIT, or both. Other documented flags control large pages, write tracking, and reset behavior. MEM_COMMIT without MEM_RESERVE commits pages inside an existing reserved region.",
+          "constants": [
+            "MEM_RESERVE",
+            "MEM_COMMIT"
+          ]
+        },
+        {
+          "name": "flProtect",
+          "type": "DWORD",
+          "description": "The memory protection for the committed pages, such as PAGE_READWRITE or PAGE_EXECUTE_READ. Protection applies when pages are committed; reserved pages are not accessible regardless of this value.",
+          "constants": [
+            "PAGE_READWRITE",
+            "PAGE_READONLY",
+            "PAGE_EXECUTE_READ",
+            "PAGE_EXECUTE_READWRITE"
+          ]
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "The base address of the allocated region.",
+        "failure": "NULL. Call GetLastError for the error code."
+      },
+      "tags": [
+        "memory-management",
+        "maldev-relevant",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtualfree",
+        "win32.virtualprotect",
+        "win32.virtualquery",
+        "win32.virtuallock",
+        "win32.virtualallocex"
+      ],
+      "related_constants": [
+        "win32.mem_commit",
+        "win32.mem_reserve",
+        "win32.page_readwrite"
+      ],
+      "remarks": "Addresses returned by VirtualAlloc are page-aligned and valid only in the calling process. Reserving a region does not make it accessible; access requires a successful commit. Pages that are decommitted and later recommitted are zeroed again, so their previous contents should not be relied on.",
+      "maldev_notes": "VirtualAlloc is a standard memory-management API that also appears frequently in analysis of code that creates private memory regions. Analysts often record the allocation type, protection, size, and whether the region is later written to or executed. The call alone is not evidence of malicious behavior.",
+      "defensive_notes": "Allocation telemetry and memory maps can show private regions and their protection. Context such as the allocating module, call stack, protection changes, and later execution is more meaningful than the allocation itself.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate and release a page in the current process",
+        "code": "#include <windows.h>\n\nint main() {\n    constexpr SIZE_T size = 4096;\n    void* region = VirtualAlloc(nullptr, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);\n    if (region == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    auto* bytes = static_cast<unsigned char*>(region);\n    bytes[0] = 0x41;  // Ordinary application data.\n\n    VirtualFree(region, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "The example allocates one page in the current process, writes a single byte, and releases the whole region with MEM_RELEASE. No special privileges are required. It is illustrative and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "VirtualAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, rounding rules, zero-initialization and allocation-type semantics checked against Microsoft Learn (memoryapi.h)."
+    },
+    {
+      "id": "win32.virtualfree",
+      "name": "VirtualFree",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Releases or decommits a region of pages in the calling process's virtual address space.",
+      "description": "VirtualFree changes the state of pages previously allocated with VirtualAlloc. Decommitting releases the physical storage behind committed pages while leaving the address range reserved, so the pages can be committed again later. Releasing frees the entire reserved region, after which the address range is no longer part of the process's allocations.",
+      "prototype": "BOOL VirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);",
+      "parameters": [
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The base address of the region to free. When dwFreeType is MEM_RELEASE, this must be the base address returned by VirtualAlloc."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region to free, in bytes. It must be zero when dwFreeType is MEM_RELEASE. With MEM_DECOMMIT, every page containing part of the range is decommitted, and a size of zero with the region's base address decommits the entire allocation."
+        },
+        {
+          "name": "dwFreeType",
+          "type": "DWORD",
+          "description": "The free operation: MEM_DECOMMIT releases physical storage but keeps the range reserved, while MEM_RELEASE frees the entire reserved region. The two flags cannot be combined.",
+          "constants": [
+            "MEM_DECOMMIT",
+            "MEM_RELEASE"
+          ]
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the pages were decommitted or the region was released.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtualalloc",
+        "win32.virtualprotect",
+        "win32.virtualquery"
+      ],
+      "related_constants": [
+        "win32.mem_decommit",
+        "win32.mem_release"
+      ],
+      "remarks": "MEM_DECOMMIT does not release the address range, and the reserved pages cannot be accessed until they are committed again. MEM_RELEASE requires the original base address and a size of zero. VirtualFree does not fail when the range contains pages in different states, but the entire range originally reserved in one VirtualAlloc call must be released together.",
+      "maldev_notes": "VirtualFree appears in ordinary cleanup and in analysis of code that releases or decommits regions after use. Its presence is usually less informative than the allocation and protection changes that preceded it.",
+      "defensive_notes": "Decommit and release events can help explain the lifetime of a memory region. Correlate them with the original allocation and any writes or execution that occurred while the memory was committed.",
+      "references": [
+        {
+          "title": "VirtualFree function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualfree",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "MEM_DECOMMIT and MEM_RELEASE rules checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate and release a private page",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE,\n        PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    // MEM_RELEASE requires a zero size and the original base address.\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.virtualprotect",
+      "name": "VirtualProtect",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Changes the protection of a region of committed pages in the calling process.",
+      "description": "VirtualProtect changes the access protection of committed pages in the calling process. The new protection can make pages read-only, read/write, executable, non-accessible, or guarded, subject to the documented combinations. The previous protection is returned so that the caller can restore it. The function does not change page state, contents, or allocation ownership.",
+      "prototype": "BOOL VirtualProtect(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);",
+      "parameters": [
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The base address of the region whose protection should change. The address is rounded down to a page boundary."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region, in bytes. Every page containing part of the range changes protection, so a range that straddles a page boundary affects both pages. The whole range must lie within a single reserved allocation."
+        },
+        {
+          "name": "flNewProtect",
+          "type": "DWORD",
+          "description": "The new memory protection, such as PAGE_READONLY, PAGE_READWRITE, PAGE_EXECUTE_READ, or PAGE_NOACCESS. PAGE_GUARD can be combined with an access protection.",
+          "constants": [
+            "PAGE_NOACCESS",
+            "PAGE_READONLY",
+            "PAGE_READWRITE",
+            "PAGE_EXECUTE_READ",
+            "PAGE_EXECUTE_READWRITE",
+            "PAGE_GUARD"
+          ]
+        },
+        {
+          "name": "lpflOldProtect",
+          "type": "PDWORD",
+          "description": "Receives the previous protection value of the first page in the region. This parameter must not be NULL, even when the old value is not needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the protection was changed and lpflOldProtect contains the previous value.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "memory-protection",
+        "maldev-relevant",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtualalloc",
+        "win32.virtualquery",
+        "win32.virtualprotectex",
+        "win32.virtualfree"
+      ],
+      "related_constants": [
+        "win32.page_noaccess",
+        "win32.page_readonly",
+        "win32.page_readwrite",
+        "win32.page_execute_read",
+        "win32.page_guard"
+      ],
+      "remarks": "VirtualProtect operates only on committed pages in the calling process. A range that spans two separately reserved allocations fails, and protection changes do not affect pages that are only reserved. Callers that temporarily change protection should restore the original value when finished.",
+      "maldev_notes": "Protection changes are common in debuggers, run-time patching, and just-in-time compilers, and they also appear in analysis of code that adjusts memory before writing or executing it. Analysts typically compare the old and new protection with the region's type and later access.",
+      "defensive_notes": "Protection-change telemetry can show transitions to writable or executable permissions. Recording the requesting module, old and new values, region type, and subsequent execution or writes is more useful than the change alone.",
+      "references": [
+        {
+          "title": "VirtualProtect function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualprotect",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, range restrictions, and the non-NULL lpflOldProtect requirement checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Change page protection and restore it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE,\n        PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    DWORD old_protect = 0;\n    if (VirtualProtect(memory, 4096, PAGE_READONLY, &old_protect)) {\n        VirtualProtect(memory, 4096, old_protect, &old_protect);\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.virtualquery",
+      "name": "VirtualQuery",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Returns information about a range of pages in the calling process's virtual address space.",
+      "description": "VirtualQuery describes the memory region that contains a given address. It reports the page state (free, reserved, or committed), the protection, the type of backing (image, mapped file, or private), the allocation base, and the size of the region. The result is written to a MEMORY_BASIC_INFORMATION structure supplied by the caller.",
+      "prototype": "SIZE_T VirtualQuery(LPCVOID lpAddress, PMEMORY_BASIC_INFORMATION lpBuffer, SIZE_T dwLength);",
+      "parameters": [
+        {
+          "name": "lpAddress",
+          "type": "LPCVOID",
+          "description": "The address to query. The function rounds the value down to a page boundary before examining the containing region."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "PMEMORY_BASIC_INFORMATION",
+          "description": "A pointer to a MEMORY_BASIC_INFORMATION structure that receives the page information."
+        },
+        {
+          "name": "dwLength",
+          "type": "SIZE_T",
+          "description": "The size of the buffer, in bytes. Use sizeof(MEMORY_BASIC_INFORMATION) for the structure declared by the SDK."
+        }
+      ],
+      "return": {
+        "type": "SIZE_T",
+        "success": "The number of bytes written to the buffer.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.virtualalloc",
+        "win32.virtualqueryex",
+        "win32.virtualprotect",
+        "win32.virtualfree"
+      ],
+      "related_structures": [
+        "win32.memory_basic_information"
+      ],
+      "related_constants": [
+        "win32.mem_commit",
+        "win32.mem_reserve",
+        "win32.page_readwrite"
+      ],
+      "remarks": "Repeated queries can walk the address space: after each successful call, add the returned RegionSize to the queried address to reach the next region. The Type member distinguishes image-backed, mapped, and private memory, which is often the most useful field for analysis.",
+      "maldev_notes": "VirtualQuery is used by memory scanners, debuggers, and inspection tools to map regions in the current process. Its presence is routine; the resulting region types and protections are more informative than the call itself.",
+      "defensive_notes": "Memory maps help explain whether an address belongs to a loaded image, a mapped file, or private memory. This context is valuable when interpreting allocations, protection changes, and execution.",
+      "example": {
+        "language": "cpp",
+        "title": "Query the region containing a global variable",
+        "code": "#include <windows.h>\n#include <cstdio>\n\nstatic int sample = 0;\n\nint main() {\n    MEMORY_BASIC_INFORMATION info{};\n    if (VirtualQuery(&sample, &info, sizeof(info)) == 0) {\n        return static_cast<int>(GetLastError());\n    }\n\n    std::printf(\"state=0x%lx protect=0x%lx region=%zu\\n\",\n                static_cast<unsigned long>(info.State),\n                static_cast<unsigned long>(info.Protect),\n                static_cast<size_t>(info.RegionSize));\n    return 0;\n}\n",
+        "notes": "The example queries the region that contains a global variable in its own process and prints the state, protection, and region size. It allocates nothing and requires no cleanup. It is illustrative and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "VirtualQuery function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Return value and MEMORY_BASIC_INFORMATION reporting checked against Microsoft Learn."
+    },
+    {
+      "id": "win32.virtuallock",
+      "name": "VirtualLock",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Locks a region of committed pages in the process working set so it is not paged to disk.",
+      "description": "VirtualLock asks the memory manager to keep the specified committed pages in physical memory until they are unlocked or the process terminates. Locking does not change protection or make inaccessible memory usable, and it is not a security boundary. It is typically used for small buffers that must avoid paging delays.",
+      "prototype": "BOOL VirtualLock(LPVOID lpAddress, SIZE_T dwSize);",
+      "parameters": [
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The base address of the region to lock. The pages must already be committed in the calling process."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region to lock, in bytes. Every page containing part of the range is locked, so a range that straddles a page boundary affects both pages."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the pages are locked in the working set.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtualunlock",
+        "win32.virtualalloc",
+        "win32.virtualfree"
+      ],
+      "related_constants": [],
+      "remarks": "All pages in the region must be committed, and memory protected with PAGE_NOACCESS cannot be locked. The maximum number of pages a process can lock is derived from its minimum working set size; applications that need to lock more pages must first increase the working-set limits. Locking pages consumes physical memory and can degrade system performance for other processes.",
+      "maldev_notes": "VirtualLock occasionally appears in analysis of code that tries to keep buffers out of the paging file. It does not encrypt data, hide memory from other processes, or prevent memory capture; it only affects paging behavior.",
+      "defensive_notes": "Locking pages is ordinary in performance-sensitive and cryptographic software. Treat it as context rather than as an indicator by itself, and interpret it alongside the buffer's contents and lifetime.",
+      "references": [
+        {
+          "title": "VirtualLock function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtuallock",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Locking semantics and the documented default page limit checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Lock a page in physical memory and unlock it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE,\n        PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    if (VirtualLock(memory, 4096)) {\n        printf(\"Page locked briefly.\\n\");\n        VirtualUnlock(memory, 4096);\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.virtualunlock",
+      "name": "VirtualUnlock",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Unlocks a region of pages previously locked with VirtualLock.",
+      "description": "VirtualUnlock releases pages from the locked working-set state established by VirtualLock. Once unlocked, the pages become eligible to be paged to disk again. The range must correspond to pages that were previously locked; unlocking other memory fails.",
+      "prototype": "BOOL VirtualUnlock(LPVOID lpAddress, SIZE_T dwSize);",
+      "parameters": [
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The base address of the region to unlock. The range must lie within pages previously locked by VirtualLock."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region to unlock, in bytes. Every page containing part of the range is unlocked."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the pages are no longer locked.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtuallock",
+        "win32.virtualalloc"
+      ],
+      "related_constants": [],
+      "remarks": "Virtual pages have no lock count, so a single VirtualUnlock covering the locked range is sufficient; multiple unlock calls are not required. Unlocking a range that was not previously locked is reported as a failure.",
+      "maldev_notes": "VirtualUnlock is ordinary cleanup for code that uses VirtualLock. It is rarely significant on its own and is best read as the end of a buffer's locked lifetime.",
+      "defensive_notes": "Unlock events can help establish when a process stopped protecting a buffer from paging. They are meaningful mainly in relation to the earlier lock and the buffer's use.",
+      "references": [
+        {
+          "title": "VirtualUnlock function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualunlock",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Locked-range requirement and return convention checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate, lock, and unlock a page",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE,\n        PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    if (VirtualLock(memory, 4096)) {\n        VirtualUnlock(memory, 4096);\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.virtualallocex",
+      "name": "VirtualAllocEx",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Reserves, commits, or changes the state of a region of memory in another process's virtual address space.",
+      "description": "VirtualAllocEx performs the same allocation operations as VirtualAlloc, but in the address space of a process identified by a handle. The caller needs PROCESS_VM_OPERATION access to the target. The returned address is valid in the target process and cannot be dereferenced directly by the caller; the region is normally accessed with ReadProcessMemory or WriteProcessMemory.",
+      "prototype": "LPVOID VirtualAllocEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the target process. The handle must have PROCESS_VM_OPERATION access."
+        },
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The requested base address in the target process, or NULL to let the system choose one. The address is interpreted in the target's address space."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region, in bytes. When lpAddress is NULL, the system rounds the size up to the next page boundary; otherwise every page containing part of the range is included."
+        },
+        {
+          "name": "flAllocationType",
+          "type": "DWORD",
+          "description": "The allocation operation, such as MEM_RESERVE, MEM_COMMIT, or both, interpreted as for VirtualAlloc.",
+          "constants": [
+            "MEM_RESERVE",
+            "MEM_COMMIT"
+          ]
+        },
+        {
+          "name": "flProtect",
+          "type": "DWORD",
+          "description": "The protection for the committed pages in the target process, such as PAGE_READWRITE or PAGE_EXECUTE_READ.",
+          "constants": [
+            "PAGE_READWRITE",
+            "PAGE_READONLY",
+            "PAGE_EXECUTE_READ",
+            "PAGE_EXECUTE_READWRITE"
+          ]
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "The base address of the allocated region in the target process's address space.",
+        "failure": "NULL. Call GetLastError."
+      },
+      "tags": [
+        "remote-memory",
+        "memory-management",
+        "maldev-relevant",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtualalloc",
+        "win32.virtualprotectex",
+        "win32.virtualqueryex",
+        "win32.readprocessmemory",
+        "win32.writeprocessmemory",
+        "win32.openprocess"
+      ],
+      "related_constants": [
+        "win32.mem_commit",
+        "win32.mem_reserve",
+        "win32.page_readwrite",
+        "win32.process_vm_operation"
+      ],
+      "remarks": "The returned pointer refers to the target process, not the caller, so it must be passed to APIs that operate on that process rather than dereferenced locally. The region must be released in the target process with VirtualFreeEx, because VirtualFree affects only the calling process. Newly committed pages are zero-initialized.",
+      "maldev_notes": "VirtualAllocEx is used by debuggers, instrumentation, and tools that manage another process's memory, and it also appears in analysis of cross-process memory operations. The call establishes only that a region was reserved or committed in a target process; the requested protection and later use provide the context.",
+      "defensive_notes": "Cross-process allocation can be correlated with the caller's identity, the target process, the requested protection, and subsequent reads, writes, or thread creation. None of those elements alone proves intent.",
+      "references": [
+        {
+          "title": "VirtualAllocEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Access requirement, address-space semantics, and remote release behavior checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate memory in the current process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAllocEx(GetCurrentProcess(), nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    VirtualFreeEx(GetCurrentProcess(), memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "The example operates on its own process handle."
+      }
+    },
+    {
+      "id": "win32.virtualprotectex",
+      "name": "VirtualProtectEx",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Changes the protection of committed pages in another process's virtual address space.",
+      "description": "VirtualProtectEx changes the access protection of committed pages in a target process. The caller must have PROCESS_VM_OPERATION access to that process. As with VirtualProtect, the previous protection is returned so the caller can restore it, and the range must lie within a single reserved allocation in the target.",
+      "prototype": "BOOL VirtualProtectEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the target process. The handle must have PROCESS_VM_OPERATION access."
+        },
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The base address of the region in the target process. The address is rounded down to a page boundary."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region, in bytes. Every page containing part of the range changes protection, and the range must stay within one reserved allocation."
+        },
+        {
+          "name": "flNewProtect",
+          "type": "DWORD",
+          "description": "The new protection for the target pages, such as PAGE_READWRITE, PAGE_EXECUTE_READ, or PAGE_NOACCESS.",
+          "constants": [
+            "PAGE_NOACCESS",
+            "PAGE_READONLY",
+            "PAGE_READWRITE",
+            "PAGE_EXECUTE_READ",
+            "PAGE_EXECUTE_READWRITE",
+            "PAGE_GUARD"
+          ]
+        },
+        {
+          "name": "lpflOldProtect",
+          "type": "PDWORD",
+          "description": "Receives the previous protection of the first page in the region. This parameter must not be NULL."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the protection was changed and lpflOldProtect contains the previous value.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "remote-memory",
+        "memory-protection",
+        "maldev-relevant",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.virtualprotect",
+        "win32.virtualallocex",
+        "win32.virtualqueryex",
+        "win32.writeprocessmemory"
+      ],
+      "related_constants": [
+        "win32.page_readwrite",
+        "win32.page_execute_read",
+        "win32.page_execute_readwrite",
+        "win32.process_vm_operation"
+      ],
+      "remarks": "VirtualProtectEx changes only pages that are committed in the target process. Protection changes do not alter page contents or the allocation's base address. Callers that temporarily relax protection should restore the original value when the operation is complete.",
+      "maldev_notes": "Protection changes in another process are common in debuggers, hooking frameworks, and patching tools, and they are also examined in analysis of cross-process memory modification. Analysts typically pair the change with the region's previous protection and later access.",
+      "defensive_notes": "Record the old and new protection, the target process, and the region type. A protection change is most meaningful when correlated with subsequent writes, reads, or execution in the same region.",
+      "references": [
+        {
+          "title": "VirtualProtectEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualprotectex",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Access requirement and protection semantics checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Change protection in the current process and restore it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAllocEx(GetCurrentProcess(), nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    DWORD old_protect = 0;\n    if (VirtualProtectEx(GetCurrentProcess(), memory, 4096, PAGE_READONLY,\n            &old_protect)) {\n        VirtualProtectEx(GetCurrentProcess(), memory, 4096, old_protect,\n            &old_protect);\n    }\n\n    VirtualFreeEx(GetCurrentProcess(), memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "The example operates on its own process handle."
+      }
+    },
+    {
+      "id": "win32.readprocessmemory",
+      "name": "ReadProcessMemory",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Copies memory from a specified process into the calling process's buffer.",
+      "description": "ReadProcessMemory reads a block of memory from a target process into a buffer owned by the caller. The handle must have PROCESS_VM_READ access. The entire requested range must be accessible in the target; if any part is not, the operation fails rather than returning a partial copy. The current-process pseudo-handle can be used to read the caller's own memory.",
+      "prototype": "BOOL ReadProcessMemory(HANDLE hProcess, LPCVOID lpBaseAddress, LPVOID lpBuffer, SIZE_T nSize, SIZE_T *lpNumberOfBytesRead);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process to read from. The handle must have PROCESS_VM_READ access."
+        },
+        {
+          "name": "lpBaseAddress",
+          "type": "LPCVOID",
+          "description": "The base address in the target process from which to read. The address is interpreted in the target's address space."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "LPVOID",
+          "description": "The buffer in the calling process that receives the data. It must be at least nSize bytes."
+        },
+        {
+          "name": "nSize",
+          "type": "SIZE_T",
+          "description": "The number of bytes to read."
+        },
+        {
+          "name": "lpNumberOfBytesRead",
+          "type": "SIZE_T *",
+          "description": "Optional pointer that receives the number of bytes transferred. It may be NULL when the count is not needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the requested bytes were copied to lpBuffer.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "remote-memory",
+        "maldev-relevant",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.writeprocessmemory",
+        "win32.virtualqueryex",
+        "win32.virtualprotectex",
+        "win32.openprocess"
+      ],
+      "related_constants": [
+        "win32.process_vm_read"
+      ],
+      "remarks": "The function does not return a partial success: if the range crosses an inaccessible page, the call fails. Reading the calling process's own memory through this API is legal but unnecessary; an ordinary memory copy is simpler and faster.",
+      "maldev_notes": "ReadProcessMemory appears in debuggers, memory scanners, crash-analysis tools, and analysis of cross-process data collection. Investigators usually focus on the source process, the address range, and the caller's access rather than on the call alone.",
+      "defensive_notes": "Cross-process read access is visible in handle telemetry and memory-event data. Correlating the reader, the target, the range, and surrounding behavior is more useful than flagging the API by name.",
+      "example": {
+        "language": "cpp",
+        "title": "Read a value from the current process",
+        "code": "#include <windows.h>\n\nint main() {\n    int source = 1234;\n    int copy = 0;\n    SIZE_T transferred = 0;\n\n    HANDLE process = GetCurrentProcess();\n    if (!ReadProcessMemory(process, &source, &copy, sizeof(copy), &transferred)) {\n        return static_cast<int>(GetLastError());\n    }\n\n    // copy now holds the same value as source for ordinary diagnostics.\n    return 0;\n}\n",
+        "notes": "The example reads a local integer through the current-process pseudo-handle, which requires no privileges. The pseudo-handle must not be closed. It is illustrative and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "ReadProcessMemory function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "All-or-nothing range behavior, access requirement and the optional byte-count parameter checked against Microsoft Learn."
+    },
+    {
+      "id": "win32.writeprocessmemory",
+      "name": "WriteProcessMemory",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Copies data from the calling process into a specified process's memory.",
+      "description": "WriteProcessMemory writes a block of data from a caller-owned buffer into a target process. The handle must have PROCESS_VM_WRITE and PROCESS_VM_OPERATION access, and the destination pages must be writable. The entire requested range must be accessible; otherwise the operation fails. The function is used by debuggers, instrumentation, and patching tools.",
+      "prototype": "BOOL WriteProcessMemory(HANDLE hProcess, LPVOID lpBaseAddress, LPCVOID lpBuffer, SIZE_T nSize, SIZE_T *lpNumberOfBytesWritten);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process to write to. The handle must have PROCESS_VM_WRITE and PROCESS_VM_OPERATION access."
+        },
+        {
+          "name": "lpBaseAddress",
+          "type": "LPVOID",
+          "description": "The destination address in the target process. The address is interpreted in the target's address space and must refer to writable memory."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "LPCVOID",
+          "description": "The buffer in the calling process that contains the data to write. It must be at least nSize bytes."
+        },
+        {
+          "name": "nSize",
+          "type": "SIZE_T",
+          "description": "The number of bytes to write."
+        },
+        {
+          "name": "lpNumberOfBytesWritten",
+          "type": "SIZE_T *",
+          "description": "Optional pointer that receives the number of bytes transferred. It may be NULL when the count is not needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the requested bytes were written to the target process.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "remote-memory",
+        "maldev-relevant",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.readprocessmemory",
+        "win32.virtualprotectex",
+        "win32.virtualallocex",
+        "win32.openprocess"
+      ],
+      "related_constants": [
+        "win32.process_vm_write",
+        "win32.process_vm_operation"
+      ],
+      "remarks": "Writing to read-only pages fails; callers that need to modify them must change protection first, for example with VirtualProtectEx, and restore it afterwards. The function copies bytes only and does not synchronize with the target's threads or notify the target process.",
+      "maldev_notes": "WriteProcessMemory is a general-purpose debugger and patching interface. It appears in analysis of code that modifies another process's memory, where the destination region, the origin of the written data, and any subsequent execution are the relevant questions.",
+      "defensive_notes": "Cross-process write activity can be inferred from handle access rights and memory events. Correlate the writing process, the target, the address and size, and whether protection was changed before the write.",
+      "references": [
+        {
+          "title": "WriteProcessMemory function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Access requirements, range behavior, and the writable-destination constraint checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Write to a local buffer through WriteProcessMemory",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char destination[32] = {};\n    const char source[] = \"example\";\n    SIZE_T written = 0;\n\n    if (WriteProcessMemory(GetCurrentProcess(), destination, source,\n            sizeof(source), &written)) {\n        printf(\"Wrote %zu bytes.\\n\", written);\n    }\n    return 0;\n}\n",
+        "notes": "The example writes to its own process memory, not another process."
+      }
+    },
+    {
+      "id": "win32.virtualqueryex",
+      "name": "VirtualQueryEx",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "memoryapi.h",
+      "summary": "Returns information about a range of pages in another process's virtual address space.",
+      "description": "VirtualQueryEx describes the memory region containing an address in a target process. It reports the page state, protection, backing type, allocation base, and region size through a MEMORY_BASIC_INFORMATION structure. The caller must have PROCESS_QUERY_INFORMATION access to the target. For the calling process, VirtualQuery provides the same information without a handle.",
+      "prototype": "SIZE_T VirtualQueryEx(HANDLE hProcess, LPCVOID lpAddress, PMEMORY_BASIC_INFORMATION lpBuffer, SIZE_T dwLength);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the target process. The handle must have PROCESS_QUERY_INFORMATION access."
+        },
+        {
+          "name": "lpAddress",
+          "type": "LPCVOID",
+          "description": "The address to query in the target process. The function rounds the value down to a page boundary."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "PMEMORY_BASIC_INFORMATION",
+          "description": "A pointer to a MEMORY_BASIC_INFORMATION structure that receives the page information."
+        },
+        {
+          "name": "dwLength",
+          "type": "SIZE_T",
+          "description": "The size of the buffer, in bytes. Use sizeof(MEMORY_BASIC_INFORMATION)."
+        }
+      ],
+      "return": {
+        "type": "SIZE_T",
+        "success": "The number of bytes written to the buffer.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "remote-memory",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.virtualquery",
+        "win32.virtualallocex",
+        "win32.virtualprotectex",
+        "win32.openprocess"
+      ],
+      "related_structures": [
+        "win32.memory_basic_information"
+      ],
+      "related_constants": [
+        "win32.process_query_information"
+      ],
+      "remarks": "The allocation base and region size in the result refer to the target process's address space. Repeating the call with address plus RegionSize walks the target's regions. For the calling process, VirtualQuery returns the same information without requiring a process handle.",
+      "maldev_notes": "VirtualQueryEx is used by memory scanners, debuggers, and security tools to enumerate regions in another process. Analysts use its output to distinguish image-backed, mapped, and private memory and to plan or explain later reads and writes.",
+      "defensive_notes": "Region maps provide context for cross-process reads and writes. They are especially useful when paired with the requesting process, the access rights used, and the operations that follow.",
+      "references": [
+        {
+          "title": "VirtualQueryEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualqueryex",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Access requirement and MEMORY_BASIC_INFORMATION reporting checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Inspect a local allocation with VirtualQueryEx",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAllocEx(GetCurrentProcess(), nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    MEMORY_BASIC_INFORMATION info = {};\n    if (VirtualQueryEx(GetCurrentProcess(), memory, &info, sizeof(info))\n            == sizeof(info)) {\n        printf(\"Region size: %zu\\n\", info.RegionSize);\n    }\n\n    VirtualFreeEx(GetCurrentProcess(), memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "The example queries its own process memory."
+      }
+    },
+    {
+      "id": "win32.createfilemappinga",
+      "name": "CreateFileMappingA",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Creates or opens a named or unnamed file mapping object for a specified file.",
+      "description": "Creates or opens a named or unnamed file mapping object for a specified file. To specify the NUMA node for the physical memory, see CreateFileMappingNuma.",
+      "prototype": "HANDLE CreateFileMappingA(HANDLE hFile, LPSECURITY_ATTRIBUTES lpFileMappingAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCSTR lpName);",
+      "parameters": [
+        {
+          "name": "hFile",
+          "type": "HANDLE",
+          "description": "A handle to the file from which to create a file mapping object. The file must be opened with access rights that are compatible with the protection flags that the flProtect parameter specifies. It is not required, but it is recommended that files you intend to map be opened for exclusive access. For more information, see File Security and Access Rights. If hFile is INVALID_HANDLE_VALUE, the calling process must also specify a size for the file mapping object in the dwMaximumSizeHigh and dwMaximumSizeLow parameters. In this scenario, CreateFileMapping creates a file mapping object of a specified size that is backed by the system paging file instead of by a file in the file system."
+        },
+        {
+          "name": "lpFileMappingAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that determines whether a returned handle can be inherited by child processes. The lpSecurityDescriptor member of the SECURITY_ATTRIBUTES structure specifies a security descriptor for a new file mapping object. If lpFileMappingAttributes is NULL, the handle cannot be inherited and the file mapping object gets a default security descriptor. The access control lists (ACL) in the default security descriptor for a file mapping object come from the primary or impersonation token of the creator. For more information, see File Mapping Security and Access Rights."
+        },
+        {
+          "name": "flProtect",
+          "type": "DWORD",
+          "description": "Specifies the page protection of the file mapping object. All mapped views of the object must be compatible with this protection. This parameter can be one of the following values. Value Meaning PAGE_EXECUTE_READ 0x20 Allows views to be mapped for read-only, copy-on-write, or execute access. The file handle specified by the hFile parameter must be created with the GENERIC_READ and GENERIC_EXECUTE access rights. Windows Server 2003 and Windows XP: This value is not available until Windows XP with SP2 and Windows Server 2003 with SP1. PAGE_EXECUTE_READWRITE 0x40 Allows views to be mapped for read-only, copy-on-write, read/write, or execute access. The file handle that the hFile parameter specifies must be created with the GENERIC_READ, GENERIC_WRITE, and GENERIC_EXECUTE access rights. Windows Server 2003 and Windows XP: This value is not available until Windows XP with SP2 and Windows Serv"
+        },
+        {
+          "name": "dwMaximumSizeHigh",
+          "type": "DWORD",
+          "description": "The high-order DWORD of the maximum size of the file mapping object."
+        },
+        {
+          "name": "dwMaximumSizeLow",
+          "type": "DWORD",
+          "description": "The low-order DWORD of the maximum size of the file mapping object. If this parameter and dwMaximumSizeHigh are 0 (zero), the maximum size of the file mapping object is equal to the current size of the file that hFile identifies. An attempt to map a file with a length of 0 (zero) fails with an error code of ERROR_FILE_INVALID. Applications should test for files with a length of 0 (zero) and reject those files."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "The name of the file mapping object. If this parameter matches the name of an existing mapping object, the function requests access to the object with the protection that flProtect specifies. If this parameter is NULL, the file mapping object is created without a name. If lpName matches the name of an existing event, semaphore, mutex, waitable timer, or job object, the function fails, and the GetLastError function returns ERROR_INVALID_HANDLE. This occurs because these objects share the same namespace. The name can have a \"Global\\\" or \"Local\\\" prefix to explicitly create the object in the global or session namespace. The remainder of the name can contain any character except the backslash character (\\). Creating a file mapping object in the global namespace from a session other than session zero requires the SeCreateGlobalPrivilege privilege. For more information, see Kernel Object Name"
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the newly created file mapping object.",
+        "failure": "If the object exists before the function call, the function returns a handle to the existing object (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS. If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "After a file mapping object is created, the size of the file must not exceed the size of the file mapping object; if it does, not all of the file contents are available for sharing. If an application specifies a size for the file mapping object that is larger than the size of the actual named file on disk and if the page protection allows write access (that is, the flProtect parameter specifies PAGE_READWRITE or PAGE_EXECUTE_READWRITE), then the file on disk is increased to match the specified size of the file mapping object. If the file is extended, the contents of the file between the old end of the file and the new end of the file are not guaranteed to be zero; the behavior is defined by the file system. If the file on disk cannot be increased, CreateFileMapping fails and GetLastError returns ERROR_DISK_FULL. The initial contents of the pages in a file mapping object backed by the operating system paging file are 0 (zero). The handle that CreateFileMapping returns has full access to a new file mapping object, and can be used with any function that requires a handle to a file mapping object. Multiple processes can share a view of the same file by either using a single shared file mapping object or creating separate file mapping objects backed by the same file. A single file mapping object can be shared by multiple processes through inheriting the handle at process creation, d",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a file mapping and read it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char temp_path[MAX_PATH] = {};\n    char file_path[MAX_PATH] = {};\n    GetTempPathA(MAX_PATH, temp_path);\n    GetTempFileNameA(temp_path, \"nte\", 0, file_path);\n\n    HANDLE file = CreateFileA(file_path, GENERIC_READ | GENERIC_WRITE, 0,\n        nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);\n    if (file == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    const char text[] = \"example\";\n    DWORD written = 0;\n    WriteFile(file, text, sizeof(text) - 1, &written, nullptr);\n\n    HANDLE mapping = CreateFileMappingA(file, nullptr, PAGE_READWRITE, 0, 0,\n        nullptr);\n    if (mapping != nullptr) {\n        void* view = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);\n        if (view != nullptr) {\n            printf(\"Mapped view: %.7s\\n\", static_cast<char*>(view));\n            UnmapViewOfFile(view);\n        }\n        CloseHandle(mapping);\n    }\n\n    CloseHandle(file);\n    DeleteFileA(file_path);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateFileMappingA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateFileMappingA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-createfilemappinga.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getprocessheap",
+      "name": "GetProcessHeap",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "heapapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Retrieves a handle to the default heap of the calling process.",
+      "description": "Retrieves a handle to the default heap of the calling process. This handle can then be used in subsequent calls to the heap functions.",
+      "prototype": "HANDLE GetProcessHeap(VOID);",
+      "parameters": [],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the calling process's heap.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "The GetProcessHeap function obtains a handle to the default heap for the calling process. A process can use this handle to allocate memory from the process heap without having to first create a private heap using the HeapCreate function. Windows Server 2003 and Windows XP: To enable the low-fragmentation heap for the default heap of the process, call the HeapSetInformation function with the handle returned by GetProcessHeap. #### Examples For an example, see Getting Process Heaps.",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate and free memory from the process heap",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE heap = GetProcessHeap();\n    void* memory = HeapAlloc(heap, 0, 128);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    memcpy(memory, \"example\", 8);\n    HeapFree(heap, 0, memory);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetProcessHeap function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-getprocessheap",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetProcessHeap - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/heapapi/nf-heapapi-getprocessheap.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (heapapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getprocessheaps",
+      "name": "GetProcessHeaps",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "heapapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Returns the number of active heaps and retrieves handles to all of the active heaps for the calling process.",
+      "description": "Returns the number of active heaps and retrieves handles to all of the active heaps for the calling process.",
+      "prototype": "DWORD GetProcessHeaps(DWORD NumberOfHeaps, PHANDLE ProcessHeaps);",
+      "parameters": [
+        {
+          "name": "NumberOfHeaps",
+          "type": "DWORD",
+          "description": "The maximum number of heap handles that can be stored into the buffer pointed to by ProcessHeaps."
+        },
+        {
+          "name": "ProcessHeaps",
+          "type": "PHANDLE",
+          "description": "A pointer to a buffer that receives an array of heap handles."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The return value is the number of handles to heaps that are active for the calling process. If the return value is greater than NumberOfHeaps, the buffer pointed to by ProcessHeaps is too small to hold all the heap handles for the calling process, and the function stores NumberOfHeaps handles in the buffer. Use the return value to allocate a buffer that is large enough to receive all of the handles, and call the function again. If the return value is zero, the function has failed because every process has at least one active heap, the default heap for the process. To get extended error information, call GetLastError.",
+        "failure": "If the return value is less than or equal to NumberOfHeaps, the function has stored that number of heap handles in the buffer pointed to by ProcessHeaps."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "The GetProcessHeaps function obtains a handle to the default heap of the calling process, plus handles to any additional private heaps created by calling the HeapCreate function on any thread in the process. The GetProcessHeaps function is primarily useful for debugging, because some of the private heaps retrieved by the function may have been created by other code running in the process and may be destroyed after GetProcessHeaps returns. Destroying a heap invalidates the handle to the heap, and continued use of such handles can cause undefined behavior in the application. Heap functions should be called only on the default heap of the calling process and on private heaps that the process creates and manages. To obtain a handle to the process heap of the calling process, use the GetProcessHeap function. #### Examples For an example, see Getting Process Heaps.",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "List the heaps owned by the current process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    DWORD count = GetProcessHeaps(0, nullptr);\n    if (count == 0) {\n        return 1;\n    }\n\n    auto heaps = static_cast<PHANDLE>(HeapAlloc(GetProcessHeap(), 0,\n        count * sizeof(HANDLE)));\n    if (heaps == nullptr) {\n        return 1;\n    }\n\n    DWORD filled = GetProcessHeaps(count, heaps);\n    printf(\"Process heaps: %lu\\n\", filled);\n\n    HeapFree(GetProcessHeap(), 0, heaps);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetProcessHeaps function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-getprocessheaps",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetProcessHeaps - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/heapapi/nf-heapapi-getprocessheaps.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (heapapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.globalalloc",
+      "name": "GlobalAlloc",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Allocates the specified number of bytes from the heap.",
+      "description": "Allocates the specified number of bytes from the heap. Note The global functions have greater overhead and provide fewer features than other memory management functions. New applications should use the heap functions unless documentation states that a global function should be used. For more information, see Global and Local Functions.",
+      "prototype": "DECLSPEC_ALLOCATOR HGLOBAL GlobalAlloc(UINT uFlags, SIZE_T dwBytes);",
+      "parameters": [
+        {
+          "name": "uFlags",
+          "type": "UINT",
+          "description": "The memory allocation attributes. If zero is specified, the default is GMEM_FIXED. This parameter can be one or more of the following values, except for the incompatible combinations that are specifically noted. Value Meaning GHND 0x0042 Combines GMEM_MOVEABLE and GMEM_ZEROINIT. GMEM_FIXED 0x0000 Allocates fixed memory. The return value is a pointer. GMEM_MOVEABLE 0x0002 Allocates movable memory. Memory blocks are never moved in physical memory, but they can be moved within the default heap. The return value is a handle to the memory object. To translate the handle into a pointer, use the GlobalLock function. This value cannot be combined with GMEM_FIXED. GMEM_ZEROINIT 0x0040 Initializes memory contents to zero. GPTR 0x0040 Combines GMEM_FIXED and GMEM_ZEROINIT. The following values are obsolete, but are provided for compatibility with 16-bit Windows. They are ignored. GMEM_DDESHARE GMEM"
+        },
+        {
+          "name": "dwBytes",
+          "type": "SIZE_T",
+          "description": "The number of bytes to allocate. If this parameter is zero and the uFlags parameter specifies GMEM_MOVEABLE, the function returns a handle to a memory object that is marked as discarded."
+        }
+      ],
+      "return": {
+        "type": "HGLOBAL",
+        "success": "If the function succeeds, the return value is a handle to the newly allocated memory object.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "Windows memory management does not provide a separate local heap and global heap. Therefore, the GlobalAlloc and LocalAlloc functions are essentially the same. The movable-memory flags GHND and GMEM_MOVABLE add unnecessary overhead and require locking to be used safely. They should be avoided unless documentation specifically states that they should be used. New applications should use the heap functions to allocate and manage memory unless the documentation specifically states that a global function should be used. For example, the global functions are still used with Dynamic Data Exchange (DDE), the clipboard functions, and OLE data objects. If the GlobalAlloc function succeeds, it allocates at least the amount of memory requested. If the actual amount allocated is greater than the amount requested, the process can use the entire amount. To determine the actual number of bytes allocated, use the GlobalSize function. If the heap does not contain sufficient free space to satisfy the request, GlobalAlloc returns NULL. Because NULL is used to indicate an error, virtual address zero is never allocated. It is, therefore, easy to detect the use of a NULL pointer. Memory allocated with this function is guaranteed to be aligned on an 8-byte boundary. To execute dynamically generated code, use the VirtualAlloc function to allocate memory and the VirtualProtect function to grant PAGE_EX",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate and free a global memory block",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HGLOBAL block = GlobalAlloc(GMEM_FIXED, 128);\n    if (block == nullptr) {\n        return 1;\n    }\n\n    memcpy(block, \"example\", 8);\n    GlobalFree(block);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GlobalAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-globalalloc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GlobalAlloc - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-globalalloc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.heapalloc",
+      "name": "HeapAlloc",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "heapapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Allocates a block of memory from a heap.",
+      "description": "Allocates a block of memory from a heap. The allocated memory is not movable.",
+      "prototype": "DECLSPEC_ALLOCATOR LPVOID HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);",
+      "parameters": [
+        {
+          "name": "hHeap",
+          "type": "HANDLE",
+          "description": "A handle to the heap from which the memory will be allocated. This handle is returned by the HeapCreate or GetProcessHeap function."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The heap allocation options. Specifying any of these values will override the corresponding value specified when the heap was created with HeapCreate. This parameter can be one or more of the following values. Value Meaning HEAP_GENERATE_EXCEPTIONS 0x00000004 The system will raise an exception to indicate a function failure, such as an out-of-memory condition, instead of returning NULL. To ensure that exceptions are generated for all calls to this function, specify HEAP_GENERATE_EXCEPTIONS in the call to HeapCreate. In this case, it is not necessary to additionally specify HEAP_GENERATE_EXCEPTIONS in this function call. HEAP_NO_SERIALIZE 0x00000001 Serialized access will not be used for this allocation. For more information, see Remarks. To ensure that serialized access is disabled for all calls to this function, specify HEAP_NO_SERIALIZE in the call to HeapCreate. In this case, it is no"
+        },
+        {
+          "name": "dwBytes",
+          "type": "SIZE_T",
+          "description": "The number of bytes to be allocated. If the heap specified by the hHeap parameter is a \"non-growable\" heap, dwBytes must be less than 0x7FFF8. You create a non-growable heap by calling the HeapCreate function with a nonzero value."
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "If the function succeeds, the return value is a pointer to the allocated memory block. Exception code Description STATUS_NO_MEMORY The allocation attempt failed because of a lack of available memory or heap corruption. STATUS_ACCESS_VIOLATION The allocation attempt failed because of heap corruption or improper function parameters.",
+        "failure": "If the function fails and you have not specified HEAP_GENERATE_EXCEPTIONS, the return value is NULL. If the function fails and you have specified HEAP_GENERATE_EXCEPTIONS, the function may generate either of the exceptions listed in the following table. The particular exception depends upon the nature of the heap corruption. For more information, see GetExceptionCode. If the function fails, it does not call SetLastError. An application cannot call GetLastError for extended error information."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "If the HeapAlloc function succeeds, it allocates at least the amount of memory requested. To allocate memory from the process's default heap, use HeapAlloc with the handle returned by the GetProcessHeap function. To free a block of memory allocated by HeapAlloc, use the HeapFree function. Memory allocated by HeapAlloc is not movable. The address returned by HeapAlloc is valid until the memory block is freed or reallocated; the memory block does not need to be locked. Because the system cannot compact a private heap, it can become fragmented. The alignment of memory returned by HeapAlloc is MEMORY_ALLOCATION_ALIGNMENT in WinNT.h: cpp #if defined(_WIN64) || defined(_M_ALPHA) #define MEMORY_ALLOCATION_ALIGNMENT 16 #else #define MEMORY_ALLOCATION_ALIGNMENT 8 #endif Applications that allocate large amounts of memory in various allocation sizes can use the low-fragmentation heap to reduce heap fragmentation. Serialization ensures mutual exclusion when two or more threads attempt to simultaneously allocate or free blocks from the same heap. There is a small performance cost to serialization, but it must be used whenever multiple threads allocate and free memory from the same heap. Setting the HEAP_NO_SERIALIZE value eliminates mutual exclusion on the heap. Without serialization, two or more threads that use the same heap handle might attempt to allocate or free memory simultaneously, ",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate and free memory from the process heap",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE heap = GetProcessHeap();\n    void* memory = HeapAlloc(heap, HEAP_ZERO_MEMORY, 128);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    HeapFree(heap, 0, memory);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "HeapAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapalloc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "HeapAlloc - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/heapapi/nf-heapapi-heapalloc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (heapapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.heapcreate",
+      "name": "HeapCreate",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "heapapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Creates a private heap object that can be used by the calling process.",
+      "description": "Creates a private heap object that can be used by the calling process. The function reserves space in the virtual address space of the process and allocates physical storage for a specified initial portion of this block.",
+      "prototype": "HANDLE HeapCreate(DWORD flOptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize);",
+      "parameters": [
+        {
+          "name": "flOptions",
+          "type": "DWORD",
+          "description": "The heap allocation options. These options affect subsequent access to the new heap through calls to the heap functions. This parameter can be 0 or one or more of the following values. Value Meaning HEAP_CREATE_ENABLE_EXECUTE 0x00040000 All memory blocks that are allocated from this heap allow code execution, if the hardware enforces data execution prevention. Use this flag heap in applications that run code from the heap. If HEAP_CREATE_ENABLE_EXECUTE is not specified and an application attempts to run code from a protected page, the application receives an exception with the status code STATUS_ACCESS_VIOLATION. HEAP_GENERATE_EXCEPTIONS 0x00000004 The system raises an exception to indicate failure (for example, an out-of-memory condition) for calls to HeapAlloc and HeapReAlloc instead of returning NULL. HEAP_NO_SERIALIZE 0x00000001 Serialized access is not used when the heap functions a"
+        },
+        {
+          "name": "dwInitialSize",
+          "type": "SIZE_T",
+          "description": "The initial size of the heap, in bytes. This value determines the initial amount of memory that is committed for the heap. The value is rounded up to a multiple of the system page size. The value must be smaller than dwMaximumSize. If this parameter is 0, the function commits one page. To determine the size of a page on the host computer, use the GetSystemInfo function."
+        },
+        {
+          "name": "dwMaximumSize",
+          "type": "SIZE_T",
+          "description": "The maximum size of the heap, in bytes. The HeapCreate function rounds dwMaximumSize up to a multiple of the system page size and then reserves a block of that size in the process's virtual address space for the heap. If allocation requests made by the HeapAlloc or HeapReAlloc functions exceed the size specified by dwInitialSize, the system commits additional pages of memory for the heap, up to the heap's maximum size. If dwMaximumSize is not zero, the heap size is fixed and cannot grow beyond the maximum size. Also, the largest memory block that can be allocated from the heap is slightly less than 512 KB for a 32-bit process and slightly less than 1,024 KB for a 64-bit process. Requests to allocate larger blocks fail, even if the maximum size of the heap is large enough to contain the block. If dwMaximumSize is 0, the heap can grow in size. The heap's size is limited only by the availab"
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the newly created heap.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "The HeapCreate function creates a private heap object from which the calling process can allocate memory blocks by using the HeapAlloc function. The initial size determines the number of committed pages that are allocated initially for the heap. The maximum size determines the total number of reserved pages. These pages create a block in the process's virtual address space into which the heap can grow. If requests by HeapAlloc exceed the current size of committed pages, additional pages are automatically committed from this reserved space, if the physical storage is available. Windows Server 2003 and Windows XP: By default, the newly created private heap is a standard heap. To enable the low-fragmentation heap, call the HeapSetInformation function with a handle to the private heap. The memory of a private heap object is accessible only to the process that created it. If a dynamic-link library (DLL) creates a private heap, the heap is created in the address space of the process that calls the DLL, and it is accessible only to that process. The system uses memory from the private heap to store heap support structures, so not all of the specified heap size is available to the process. For example, if the HeapAlloc function requests 64 kilobytes (K) from a heap with a maximum size of 64K, the request may fail because of system overhead. If HEAP_NO_SERIALIZE is not specified (the si",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Create, use, and destroy a private heap",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE heap = HeapCreate(0, 0, 0);\n    if (heap == nullptr) {\n        return 1;\n    }\n\n    void* memory = HeapAlloc(heap, 0, 128);\n    if (memory != nullptr) {\n        HeapFree(heap, 0, memory);\n    }\n\n    HeapDestroy(heap);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "HeapCreate function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapcreate",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "HeapCreate - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/heapapi/nf-heapapi-heapcreate.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (heapapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.heaprealloc",
+      "name": "HeapReAlloc",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "heapapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Reallocates a block of memory from a heap.",
+      "description": "Reallocates a block of memory from a heap. This function enables you to resize a memory block and change other memory block properties. The allocated memory is not movable.",
+      "prototype": "DECLSPEC_ALLOCATOR LPVOID HeapReAlloc(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes);",
+      "parameters": [
+        {
+          "name": "hHeap",
+          "type": "HANDLE",
+          "description": "A handle to the heap from which the memory is to be reallocated. This handle is a returned by either the HeapCreate or GetProcessHeap function."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The heap reallocation options. Specifying a value overrides the corresponding value specified in the flOptions parameter when the heap was created by using the HeapCreate function. This parameter can be one or more of the following values. Value Meaning HEAP_GENERATE_EXCEPTIONS 0x00000004 The operating-system raises an exception to indicate a function failure, such as an out-of-memory condition, instead of returning NULL. To ensure that exceptions are generated for all calls to this function, specify HEAP_GENERATE_EXCEPTIONS in the call to HeapCreate. In this case, it is not necessary to additionally specify HEAP_GENERATE_EXCEPTIONS in this function call. HEAP_NO_SERIALIZE 0x00000001 Serialized access will not be used. For more information, see Remarks. To ensure that serialized access is disabled for all calls to this function, specify HEAP_NO_SERIALIZE in the call to HeapCreate. In thi"
+        },
+        {
+          "name": "lpMem",
+          "type": "LPVOID",
+          "description": "A pointer to the block of memory that the function reallocates. This pointer is returned by an earlier call to the HeapAlloc or HeapReAlloc function."
+        },
+        {
+          "name": "dwBytes",
+          "type": "SIZE_T",
+          "description": "The new size of the memory block, in bytes. A memory block's size can be increased or decreased by using this function. If the heap specified by the hHeap parameter is a \"non-growable\" heap, dwBytes must be less than 0x7FFF8. You create a non-growable heap by calling the HeapCreate function with a nonzero value."
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "If the function succeeds, the return value is a pointer to the reallocated memory block. Exception code Description STATUS_NO_MEMORY The allocation attempt failed because of a lack of available memory or heap corruption. STATUS_ACCESS_VIOLATION The allocation attempt failed because of heap corruption or improper function parameters. The alignment of memory returned by HeapReAlloc is MEMORY_ALLOCATION_ALIGNMENT in WinNT.h: cpp #if defined(_WIN64) || defined(_M_ALPHA) #define MEMORY_ALLOCATION_ALIGNMENT 16 #else #define MEMORY_ALLOCATION_ALIGNMENT 8 #endif",
+        "failure": "If the function fails and you have not specified HEAP_GENERATE_EXCEPTIONS, the return value is NULL. If the function fails and you have specified HEAP_GENERATE_EXCEPTIONS, the function may generate either of the exceptions listed in the following table. For more information, see GetExceptionCode. If the function fails, it does not call SetLastError. An application cannot call GetLastError for extended error information."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "If HeapReAlloc succeeds, it allocates at least the amount of memory requested. If HeapReAlloc fails, the original memory is not freed, and the original handle and pointer are still valid. HeapReAlloc is guaranteed to preserve the content of the memory being reallocated, even if the new memory is allocated at a different location. The process of preserving the memory content involves a memory copy operation that is potentially very time-consuming. To free a block of memory allocated by HeapReAlloc, use the HeapFree function. Serialization ensures mutual exclusion when two or more threads attempt to simultaneously allocate or free blocks from the same heap. There is a small performance cost to serialization, but it must be used whenever multiple threads allocate and free memory from the same heap. Setting the HEAP_NO_SERIALIZE value eliminates mutual exclusion on the heap. Without serialization, two or more threads that use the same heap handle might attempt to allocate or free memory simultaneously, likely causing corruption in the heap. The HEAP_NO_SERIALIZE value can, therefore, be safely used only in the following situations: - The process has only one thread. - The process has multiple threads, but only one thread calls the heap functions for a specific heap. - The process has multiple threads, and the application provides its own mechanism for mutual exclusion to a specific",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Grow a heap allocation and release it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE heap = GetProcessHeap();\n    void* memory = HeapAlloc(heap, 0, 64);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    void* larger = HeapReAlloc(heap, 0, memory, 128);\n    if (larger != nullptr) {\n        HeapFree(heap, 0, larger);\n    } else {\n        HeapFree(heap, 0, memory);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "HeapReAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heaprealloc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "HeapReAlloc - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/heapapi/nf-heapapi-heaprealloc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (heapapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.localalloc",
+      "name": "LocalAlloc",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Allocates the specified number of bytes from the heap.",
+      "description": "Allocates the specified number of bytes from the heap. Note The local functions have greater overhead and provide fewer features than other memory management functions. New applications should use the heap functions unless documentation states that a local function should be used. For more information, see Global and Local Functions.",
+      "prototype": "DECLSPEC_ALLOCATOR HLOCAL LocalAlloc(UINT uFlags, SIZE_T uBytes);",
+      "parameters": [
+        {
+          "name": "uFlags",
+          "type": "UINT",
+          "description": "The memory allocation attributes. The default is the LMEM_FIXED value. This parameter can be one or more of the following values, except for the incompatible combinations that are specifically noted. Value Meaning LHND 0x0042 Combines LMEM_MOVEABLE and LMEM_ZEROINIT. LMEM_FIXED 0x0000 Allocates fixed memory. The return value is a pointer to the memory object. LMEM_MOVEABLE 0x0002 Allocates movable memory. Memory blocks are never moved in physical memory, but they can be moved within the default heap. The return value is a handle to the memory object. To translate the handle to a pointer, use the LocalLock function. This value cannot be combined with LMEM_FIXED. LMEM_ZEROINIT 0x0040 Initializes memory contents to zero. LPTR 0x0040 Combines LMEM_FIXED and LMEM_ZEROINIT. NONZEROLHND Same as LMEM_MOVEABLE. NONZEROLPTR Same as LMEM_FIXED. The following values are obsolete, but are provided fo"
+        },
+        {
+          "name": "uBytes",
+          "type": "SIZE_T",
+          "description": "The number of bytes to allocate. If this parameter is zero and the uFlags parameter specifies LMEM_MOVEABLE, the function returns a handle to a memory object that is marked as discarded."
+        }
+      ],
+      "return": {
+        "type": "HLOCAL",
+        "success": "If the function succeeds, the return value is a handle to the newly allocated memory object.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "heap-management"
+      ],
+      "remarks": "Windows memory management does not provide a separate local heap and global heap. Therefore, the LocalAlloc and GlobalAlloc functions are essentially the same. The movable-memory flags LHND, LMEM_MOVABLE, and NONZEROLHND add unnecessary overhead and require locking to be used safely. They should be avoided unless documentation specifically states that they should be used. New applications should use the heap functions unless the documentation specifically states that a local function should be used. For example, some Windows functions allocate memory that must be freed with LocalFree. If the heap does not contain sufficient free space to satisfy the request, LocalAlloc returns NULL. Because NULL is used to indicate an error, virtual address zero is never allocated. It is, therefore, easy to detect the use of a NULL pointer. If the LocalAlloc function succeeds, it allocates at least the amount requested. If the amount allocated is greater than the amount requested, the process can use the entire amount. To determine the actual number of bytes allocated, use the LocalSize function. To free the memory, use the LocalFree function. It is not safe to free memory allocated with LocalAlloc using GlobalFree. #### Examples The following code shows a simple use of LocalAlloc and LocalFree. cpp #include #include #include void _cdecl _tmain() { LPTSTR pszBuf=NULL; pszBuf = (LPTSTR)LocalAllo",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate and free a local memory block",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HLOCAL block = LocalAlloc(LMEM_FIXED, 128);\n    if (block == nullptr) {\n        return 1;\n    }\n\n    memcpy(block, \"example\", 8);\n    LocalFree(block);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "LocalAlloc function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-localalloc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LocalAlloc - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-localalloc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.mapviewoffile",
+      "name": "MapViewOfFile",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Maps a view of a file mapping into the address space of a calling process.",
+      "description": "Maps a view of a file mapping into the address space of a calling process. To specify a suggested base address for the view, use the MapViewOfFileEx function. However, this practice is not recommended.",
+      "prototype": "LPVOID MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, SIZE_T dwNumberOfBytesToMap);",
+      "parameters": [
+        {
+          "name": "hFileMappingObject",
+          "type": "HANDLE",
+          "description": "A handle to a file mapping object. The CreateFileMapping and OpenFileMapping functions return this handle."
+        },
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The type of access to a file mapping object, which determines the page protection of the pages. This parameter can be one of the following values, or a bitwise OR combination of multiple values where appropriate. Value Meaning FILE_MAP_ALL_ACCESS A read/write view of the file is mapped. The file mapping object must have been created with PAGE_READWRITE or PAGE_EXECUTE_READWRITE protection. When used with the MapViewOfFile function, FILE_MAP_ALL_ACCESS is equivalent to FILE_MAP_WRITE. FILE_MAP_READ A read-only view of the file is mapped. An attempt to write to the file view results in an access violation. The file mapping object must have been created with PAGE_READONLY, PAGE_READWRITE, PAGE_EXECUTE_READ, or PAGE_EXECUTE_READWRITE protection. FILE_MAP_WRITE A read/write view of the file is mapped. The file mapping object must have been created with PAGE_READWRITE or PAGE_EXECUTE_READWRITE"
+        },
+        {
+          "name": "dwFileOffsetHigh",
+          "type": "DWORD",
+          "description": "A high-order DWORD of the file offset where the view begins."
+        },
+        {
+          "name": "dwFileOffsetLow",
+          "type": "DWORD",
+          "description": "A low-order DWORD of the file offset where the view is to begin. The combination of the high and low offsets must specify an offset within the file mapping. They must also match the virtual memory allocation granularity of the system. That is, the offset must be a multiple of the VirtualAlloc allocation granularity. To obtain the VirtualAlloc memory allocation granularity of the system, use the GetSystemInfo function, which fills in the members of a SYSTEM_INFO structure."
+        },
+        {
+          "name": "dwNumberOfBytesToMap",
+          "type": "SIZE_T",
+          "description": "The number of bytes of a file mapping to map to the view. All bytes must be within the maximum size specified by CreateFileMapping. If this parameter is 0 (zero), the mapping extends from the specified offset to the end of the file mapping."
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "If the function succeeds, the return value is the starting address of the mapped view.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "Mapping a file makes the specified portion of a file visible in the address space of the calling process. For files that are larger than the address space, you can only map a small portion of the file data at one time. When the first view is complete, you can unmap it and map a new view. To obtain the size of a view, use the VirtualQuery function. Multiple views of a file (or a file mapping object and its mapped file) are coherent if they contain identical data at a specified time. This occurs if the file views are derived from any file mapping object that is backed by the same file. A process can duplicate a file mapping object handle into another process by using the DuplicateHandle function, or another process can open a file mapping object by name by using the OpenFileMapping function. With one important exception, file views derived from any file mapping object that is backed by the same file are coherent or identical at a specific time. Coherency is guaranteed for views within a process and for views that are mapped by different processes. The exception is related to remote files. Although MapViewOfFile works with remote files, it does not keep them coherent. For example, if two computers both map a file as writable, and both change the same page, each computer only sees its own writes to the page. When the data gets updated on the disk, it is not merged. A mapped view of",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a file and unmap it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char temp_path[MAX_PATH] = {};\n    char file_path[MAX_PATH] = {};\n    GetTempPathA(MAX_PATH, temp_path);\n    GetTempFileNameA(temp_path, \"nte\", 0, file_path);\n\n    HANDLE file = CreateFileA(file_path, GENERIC_READ | GENERIC_WRITE, 0,\n        nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);\n    if (file == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    const char text[] = \"example\";\n    DWORD written = 0;\n    WriteFile(file, text, sizeof(text) - 1, &written, nullptr);\n\n    HANDLE mapping = CreateFileMappingA(file, nullptr, PAGE_READWRITE, 0, 0,\n        nullptr);\n    if (mapping != nullptr) {\n        void* view = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);\n        if (view != nullptr) {\n            printf(\"Mapped view: %.7s\\n\", static_cast<char*>(view));\n            UnmapViewOfFile(view);\n        }\n        CloseHandle(mapping);\n    }\n\n    CloseHandle(file);\n    DeleteFileA(file_path);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "MapViewOfFile function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "MapViewOfFile - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-mapviewoffile.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.mapviewoffile2",
+      "name": "MapViewOfFile2",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows 10, version 1703 [desktop apps only]",
+      "summary": "Maps a view of a file or a pagefile-backed section into the address space of the specified process.",
+      "description": "Maps a view of a file or a pagefile-backed section into the address space of the specified process.",
+      "prototype": "PVOID MapViewOfFile2(HANDLE FileMappingHandle, HANDLE ProcessHandle, ULONG64 Offset, PVOID BaseAddress, SIZE_T ViewSize, ULONG AllocationType, ULONG PageProtection);",
+      "parameters": [
+        {
+          "name": "FileMappingHandle",
+          "type": "HANDLE",
+          "description": "A HANDLE to a section that is to be mapped into the address space of the specified process."
+        },
+        {
+          "name": "ProcessHandle",
+          "type": "HANDLE",
+          "description": "A HANDLE to a process into which the section will be mapped. The handle must have the PROCESS_VM_OPERATION access mask."
+        },
+        {
+          "name": "Offset",
+          "type": "ULONG64",
+          "description": "The offset from the beginning of the section. This must be 64k aligned."
+        },
+        {
+          "name": "BaseAddress",
+          "type": "PVOID",
+          "description": "The desired base address of the view. The address is rounded down to the nearest 64k boundary. If this parameter is NULL, the system picks the base address."
+        },
+        {
+          "name": "ViewSize",
+          "type": "SIZE_T",
+          "description": "The number of bytes to map. A value of zero (0) specifies that the entire section is to be mapped."
+        },
+        {
+          "name": "AllocationType",
+          "type": "ULONG",
+          "description": "The type of allocation. This parameter can be zero (0) or one of the following constant values: MEM_RESERVE - Maps a reserved view. MEM_LARGE_PAGES - Maps a large page view. This flag specifies that the view should be mapped using large page support. The size of the view must be a multiple of the size of a large page reported by the GetLargePageMinimum function, and the file-mapping object must have been created using the SEC_LARGE_PAGES option. If you provide a non-null value for the BaseAddress parameter, then the value must be a multiple of GetLargePageMinimum."
+        },
+        {
+          "name": "PageProtection",
+          "type": "ULONG",
+          "description": "The desired page protection. For file-mapping objects created with the SEC_IMAGE attribute, the PageProtection parameter has no effect, and should be set to any valid value such as PAGE_READONLY."
+        }
+      ],
+      "return": {
+        "type": "PVOID",
+        "success": "See the reference for the documented success value.",
+        "failure": "Returns the base address of the mapped view, if successful. Otherwise, returns NULL and extended error status is available using GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "This function is implemented as an inline function in the header and can't be found in any export library or DLL. It's the same as calling MapViewOfFileNuma2 with the last parameter set to NUMA_NO_PREFERRED_NODE.",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a pagefile-backed section into the current process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE mapping = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr,\n        PAGE_READWRITE, 0, 4096, nullptr);\n    if (mapping == nullptr) {\n        return 1;\n    }\n\n    void* view = MapViewOfFile2(mapping, GetCurrentProcess(), 0, nullptr,\n        4096, 0, PAGE_READWRITE);\n    if (view != nullptr) {\n        UnmapViewOfFile(view);\n    }\n\n    CloseHandle(mapping);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "MapViewOfFile2 function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile2",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "MapViewOfFile2 - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-mapviewoffile2.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.mapviewoffile3",
+      "name": "MapViewOfFile3",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows 10, version 1803 [desktop apps only]",
+      "summary": "Maps a view of a file or a pagefile-backed section into the address space of the specified process.",
+      "description": "Maps a view of a file or a pagefile-backed section into the address space of the specified process.",
+      "prototype": "PVOID MapViewOfFile3(HANDLE FileMapping, HANDLE Process, PVOID BaseAddress, ULONG64 Offset, SIZE_T ViewSize, ULONG AllocationType, ULONG PageProtection, MEM_EXTENDED_PARAMETER* ExtendedParameters, ULONG ParameterCount);",
+      "parameters": [
+        {
+          "name": "FileMapping",
+          "type": "HANDLE",
+          "description": "A HANDLE to a section that is to be mapped into the address space of the specified process."
+        },
+        {
+          "name": "Process",
+          "type": "HANDLE",
+          "description": "A HANDLE to a process into which the section will be mapped."
+        },
+        {
+          "name": "BaseAddress",
+          "type": "PVOID",
+          "description": "The desired base address of the view (the address is rounded down to the nearest 64k boundary). If this parameter is NULL, the system picks the base address. If BaseAddress is not NULL, then any provided MEM_ADDRESS_REQUIREMENTS must consist of all zeroes."
+        },
+        {
+          "name": "Offset",
+          "type": "ULONG64",
+          "description": "The offset from the beginning of the section. The offset must be 64k aligned or aligned to GetLargePageMinimum when MEM_LARGE_PAGES is used in AllocationType. Furthermore, the offset must be page-aligned to the underlying page size granted by VirtualAlloc2 when MEM_REPLACE_PLACEHOLDER is used in AllocationType."
+        },
+        {
+          "name": "ViewSize",
+          "type": "SIZE_T",
+          "description": "The number of bytes to map. A value of zero (0) specifies that the entire section is to be mapped. The size must always be a multiple of the page size."
+        },
+        {
+          "name": "AllocationType",
+          "type": "ULONG",
+          "description": "The type of memory allocation. This parameter can be zero (0) or one of the following values. Value Meaning MEM_RESERVE 0x00002000 Maps a reserved view. MEM_REPLACE_PLACEHOLDER 0x00004000 Replaces a placeholder with a mapped view. Only data/pf-backed section views are supported (no images, physical memory, etc.). When you replace a placeholder, BaseAddress and ViewSize must exactly match those of the placeholder, and any provided MEM_ADDRESS_REQUIREMENTS structure must consist of all zeroes. After you replace a placeholder with a mapped view, to free that mapped view back to a placeholder, see the UnmapFlags parameter of UnmapViewOfFileEx and UnmapViewOfFile2. A placeholder is a type of reserved memory region. The 64k alignment requirements on Offset and BaseAddress do not apply when this flag is specified. MEM_LARGE_PAGES 0x20000000 Maps a large page view. This flag specifies that the v"
+        },
+        {
+          "name": "PageProtection",
+          "type": "ULONG",
+          "description": "The desired page protection. For file-mapping objects created with the SEC_IMAGE attribute, the PageProtection parameter has no effect, and should be set to any valid value such as PAGE_READONLY."
+        },
+        {
+          "name": "ExtendedParameters",
+          "type": "MEM_EXTENDED_PARAMETER*",
+          "description": "An optional pointer to one or more extended parameters of type MEM_EXTENDED_PARAMETER. Each of those extended parameter values can itself have a Type field of either MemExtendedParameterAddressRequirements or MemExtendedParameterNumaNode. If no MemExtendedParameterNumaNode extended parameter is provided, then the behavior is the same as for the VirtualAlloc/MapViewOfFile functions (that is, the preferred NUMA node for the physical pages is determined based on the ideal processor of the thread that first accesses the memory)."
+        },
+        {
+          "name": "ParameterCount",
+          "type": "ULONG",
+          "description": "The number of extended parameters pointed to by ExtendedParameters."
+        }
+      ],
+      "return": {
+        "type": "PVOID",
+        "success": "See the reference for the documented success value.",
+        "failure": "Returns the base address of the mapped view, if successful. Otherwise, returns NULL and extended error status is available using GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "This API helps support high-performance games, and server applications, which have particular requirements around managing their virtual address space. For example, mapping memory on top of a previously reserved region; this is useful for implementing an automatically wrapping ring buffer. And allocating memory with specific alignment; for example, to enable your application to commit large/huge page-mapped regions on demand. Using this function for new allocations, you can: - specify a range of virtual address space and a power-of-2 alignment restriction - specify an arbitrary number of extended parameters - specify a preferred NUMA node for the physical memory as an extended parameter - specify a placeholder operation (specifically, replacement). To specify the NUMA node, see the ExtendedParameters parameter. #### Examples For a code example, see Scenario 1 in VirtualAlloc2.",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a section with extended parameters",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE mapping = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr,\n        PAGE_READWRITE, 0, 4096, nullptr);\n    if (mapping == nullptr) {\n        return 1;\n    }\n\n    void* view = MapViewOfFile3(mapping, GetCurrentProcess(), nullptr, 0,\n        4096, 0, PAGE_READWRITE, nullptr, 0);\n    if (view != nullptr) {\n        UnmapViewOfFile(view);\n    }\n\n    CloseHandle(mapping);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "MapViewOfFile3 function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile3",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "MapViewOfFile3 - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-mapviewoffile3.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.mapviewoffileex",
+      "name": "MapViewOfFileEx",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Maps a view of a file mapping into the address space of a calling process.",
+      "description": "Maps a view of a file mapping into the address space of a calling process. A caller can optionally specify a suggested base memory address for the view. To specify the NUMA node for the physical memory, see MapViewOfFileExNuma.",
+      "prototype": "LPVOID MapViewOfFileEx(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, SIZE_T dwNumberOfBytesToMap, LPVOID lpBaseAddress);",
+      "parameters": [
+        {
+          "name": "hFileMappingObject",
+          "type": "HANDLE",
+          "description": "A handle to a file mapping object. The CreateFileMapping and OpenFileMapping functions return this handle."
+        },
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The type of access to a file mapping object, which determines the page protection of the pages. This parameter can be one of the following values, or a bitwise OR combination of multiple values where appropriate. Value Meaning FILE_MAP_ALL_ACCESS A read/write view of the file is mapped. The file mapping object must have been created with PAGE_READWRITE or PAGE_EXECUTE_READWRITE protection. When used with the MapViewOfFileEx function, FILE_MAP_ALL_ACCESS is equivalent to FILE_MAP_WRITE. FILE_MAP_READ A read-only view of the file is mapped. An attempt to write to the file view results in an access violation. The file mapping object must have been created with PAGE_READONLY, PAGE_READWRITE, PAGE_EXECUTE_READ, or PAGE_EXECUTE_READWRITE protection. FILE_MAP_WRITE A read/write view of the file is mapped. The file mapping object must have been created with PAGE_READWRITE or PAGE_EXECUTE_READWRI"
+        },
+        {
+          "name": "dwFileOffsetHigh",
+          "type": "DWORD",
+          "description": "The high-order DWORD of the file offset where the view is to begin."
+        },
+        {
+          "name": "dwFileOffsetLow",
+          "type": "DWORD",
+          "description": "The low-order DWORD of the file offset where the view is to begin. The combination of the high and low offsets must specify an offset within the file mapping. They must also match the memory allocation granularity of the system. That is, the offset must be a multiple of the allocation granularity. To obtain the memory allocation granularity of the system, use the GetSystemInfo function, which fills in the members of a SYSTEM_INFO structure."
+        },
+        {
+          "name": "dwNumberOfBytesToMap",
+          "type": "SIZE_T",
+          "description": "The number of bytes of a file mapping to map to a view. All bytes must be within the maximum size specified by CreateFileMapping. If this parameter is 0 (zero), the mapping extends from the specified offset to the end of the file mapping."
+        },
+        {
+          "name": "lpBaseAddress",
+          "type": "LPVOID",
+          "description": "A pointer to the memory address in the calling process address space where mapping begins. This must be a multiple of the system's memory allocation granularity, or the function fails. To determine the memory allocation granularity of the system, use the GetSystemInfo function. If there is not enough address space at the specified address, the function fails. If lpBaseAddress is NULL, the operating system chooses the mapping address. In this scenario, the function is equivalent to the MapViewOfFile function. While it is possible to specify an address that is safe now (not used by the operating system), there is no guarantee that the address will remain safe over time. Therefore, it is better to let the operating system choose the address. In this case, you would not store pointers in the memory mapped file, you would store offsets from the base of the file mapping so that the mapping can"
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "If the function succeeds, the return value is the starting address of the mapped view.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "Mapping a file makes the specified portion of the file visible in the address space of the calling process. For files that are larger than the address space, you can only map a small portion of the file data at one time. When the first view is complete, then you unmap it and map a new view. To obtain the size of a view, use the VirtualQueryEx function. The initial contents of the pages in a file mapping object backed by the page file are 0 (zero). Typically, the suggested address is used to specify that a file should be mapped at the same address in multiple processes. This requires the region of address space to be available in all involved processes. No other memory allocation can take place in the region that is used for mapping, including the use of the VirtualAlloc or VirtualAllocEx function to reserve memory. If the lpBaseAddress parameter specifies a base offset, the function succeeds if the specified memory region is not already in use by the calling process. The system does not ensure that the same memory region is available for the memory mapped file in other 32-bit processes. Multiple views of a file (or a file mapping object and its mapped file) are coherent if they contain identical data at a specified time. This occurs if the file views are derived from the same file mapping object. A process can duplicate a file mapping object handle into another process by using",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a file at a preferred address",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char temp_path[MAX_PATH] = {};\n    char file_path[MAX_PATH] = {};\n    GetTempPathA(MAX_PATH, temp_path);\n    GetTempFileNameA(temp_path, \"nte\", 0, file_path);\n\n    HANDLE file = CreateFileA(file_path, GENERIC_READ | GENERIC_WRITE, 0,\n        nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);\n    if (file == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    HANDLE mapping = CreateFileMappingA(file, nullptr, PAGE_READWRITE, 0,\n        4096, nullptr);\n    if (mapping != nullptr) {\n        void* view = MapViewOfFileEx(mapping, FILE_MAP_READ, 0, 0, 4096,\n            nullptr);\n        if (view != nullptr) {\n            UnmapViewOfFile(view);\n        }\n        CloseHandle(mapping);\n    }\n\n    CloseHandle(file);\n    DeleteFileA(file_path);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "MapViewOfFileEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffileex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "MapViewOfFileEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-mapviewoffileex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.openfilemappinga",
+      "name": "OpenFileMappingA",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Opens a named file mapping object.",
+      "description": "Opens a named file mapping object.",
+      "prototype": "HANDLE OpenFileMappingA(DWORD dwDesiredAccess, BOOL bInheritHandle, LPCSTR lpName);",
+      "parameters": [
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access to the file mapping object. This access is checked against any security descriptor on the target file mapping object. For a list of values, see File Mapping Security and Access Rights."
+        },
+        {
+          "name": "bInheritHandle",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, a process created by the CreateProcess function can inherit the handle; otherwise, the handle cannot be inherited."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "The name of the file mapping object to be opened. If there is an open handle to a file mapping object by this name and the security descriptor on the mapping object does not conflict with the dwDesiredAccess parameter, the open operation succeeds. The name can have a \"Global\\\" or \"Local\\\" prefix to explicitly open an object in the global or session namespace. The remainder of the name can contain any character except the backslash character (\\). For more information, see Kernel Object Namespaces. Fast user switching is implemented using Terminal Services sessions. The first user to log on uses session 0, the next user to log on uses session 1, and so on. Kernel object names must follow the guidelines outlined for Terminal Services so that applications can support multiple users."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is an open handle to the specified file mapping object.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "The handle that OpenFileMapping returns can be used with any function that requires a handle to a file mapping object. When modifying a file through a mapped view, the last modification timestamp may not be updated automatically. If required, the caller should use SetFileTime to set the timestamp. When it is no longer needed, the caller should release the handle returned by OpenFileMapping with a call to CloseHandle. In Windows Server 2012, this function is supported by the following technologies. Technology Supported Server Message Block (SMB) 3.0 protocol Yes SMB 3.0 Transparent Failover (TFO) Yes SMB 3.0 with Scale-out File Shares (SO) Yes Cluster Shared Volume File System (CsvFS) Yes Resilient File System (ReFS) Yes #### Examples For an example, see Creating Named Shared Memory.",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Open a named mapping and unmap it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE created = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr,\n        PAGE_READWRITE, 0, 4096, \"NtExplorerExampleMapping\");\n    if (created == nullptr) {\n        return 1;\n    }\n\n    HANDLE opened = OpenFileMappingA(FILE_MAP_READ, FALSE,\n        \"NtExplorerExampleMapping\");\n    if (opened != nullptr) {\n        void* view = MapViewOfFile(opened, FILE_MAP_READ, 0, 0, 4096);\n        if (view != nullptr) {\n            UnmapViewOfFile(view);\n        }\n        CloseHandle(opened);\n    }\n\n    CloseHandle(created);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "OpenFileMappingA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-openfilemappinga",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "OpenFileMappingA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-openfilemappinga.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.unmapviewoffile",
+      "name": "UnmapViewOfFile",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Unmaps a mapped view of a file from the calling process's address space.",
+      "description": "Unmaps a mapped view of a file from the calling process's address space.",
+      "prototype": "BOOL UnmapViewOfFile(LPCVOID lpBaseAddress);",
+      "parameters": [
+        {
+          "name": "lpBaseAddress",
+          "type": "LPCVOID",
+          "description": "A pointer to the base address of the mapped view of a file that is to be unmapped. This value must be identical to the value returned by a previous call to one of the functions in the MapViewOfFile family."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "file-mapping",
+        "memory-management"
+      ],
+      "remarks": "Unmapping a mapped view of a file invalidates the range occupied by the view in the address space of the process and makes the range available for other allocations. It removes the working set entry for each unmapped virtual page that was part of the working set of the process and reduces the working set size of the process. It also decrements the share count of the corresponding physical page. Modified pages in the unmapped view are not written to disk until their share count reaches zero, or in other words, until they are unmapped or trimmed from the working sets of all processes that share the pages. Even then, the modified pages are written \"lazily\" to disk; that is, modifications may be cached in memory and written to disk at a later time. To minimize the risk of data loss in the event of a power failure or a system crash, applications should explicitly flush modified pages using the FlushViewOfFile function. Although an application may close the file handle used to create a file mapping object, the system holds the corresponding file open until the last view of the file is unmapped. Files for which the last view has not yet been unmapped are held open with no sharing restrictions. In Windows Server 2012, this function is supported by the following technologies. Technology Supported Server Message Block (SMB) 3.0 protocol Yes SMB 3.0 Transparent Failover (TFO) Yes SMB 3.0 ",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a file and unmap it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char temp_path[MAX_PATH] = {};\n    char file_path[MAX_PATH] = {};\n    GetTempPathA(MAX_PATH, temp_path);\n    GetTempFileNameA(temp_path, \"nte\", 0, file_path);\n\n    HANDLE file = CreateFileA(file_path, GENERIC_READ | GENERIC_WRITE, 0,\n        nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);\n    if (file == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    const char text[] = \"example\";\n    DWORD written = 0;\n    WriteFile(file, text, sizeof(text) - 1, &written, nullptr);\n\n    HANDLE mapping = CreateFileMappingA(file, nullptr, PAGE_READWRITE, 0, 0,\n        nullptr);\n    if (mapping != nullptr) {\n        void* view = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);\n        if (view != nullptr) {\n            printf(\"Mapped view: %.7s\\n\", static_cast<char*>(view));\n            UnmapViewOfFile(view);\n        }\n        CloseHandle(mapping);\n    }\n\n    CloseHandle(file);\n    DeleteFileA(file_path);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "UnmapViewOfFile function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "UnmapViewOfFile - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-unmapviewoffile.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.virtualalloc2",
+      "name": "VirtualAlloc2",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "KernelBase.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows 10 [desktop apps only]",
+      "summary": "Reserves, commits, or changes the state of a region of memory within the virtual address space of a specified process.",
+      "description": "Reserves, commits, or changes the state of a region of memory within the virtual address space of a specified process (allocated memory is initialized to zero).",
+      "prototype": "PVOID VirtualAlloc2(HANDLE Process, PVOID BaseAddress, SIZE_T Size, ULONG AllocationType, ULONG PageProtection, MEM_EXTENDED_PARAMETER* ExtendedParameters, ULONG ParameterCount);",
+      "parameters": [
+        {
+          "name": "Process",
+          "type": "HANDLE",
+          "description": "The handle to a process. The function allocates memory within the virtual address space of this process. The handle must have the PROCESS_VM_OPERATION access right. For more information, see Process Security and Access Rights. If Process is NULL, the function allocates memory for the calling process."
+        },
+        {
+          "name": "BaseAddress",
+          "type": "PVOID",
+          "description": "The pointer that specifies a desired starting address for the region of pages that you want to allocate. If BaseAddress is NULL, the function determines where to allocate the region. If BaseAddress is not NULL, then any provided MEM_ADDRESS_REQUIREMENTS structure must consist of all zeroes, and the base address must be a multiple of the system allocation granularity. To determine the allocation granularity, use the GetSystemInfo function. If this address is within an enclave that you have not initialized by calling InitializeEnclave, VirtualAlloc2 allocates a page of zeros for the enclave at that address. The page must be previously uncommitted, and will not be measured with the EEXTEND instruction of the Intel Software Guard Extensions programming model. If the address is within an enclave that you initialized, then the allocation operation fails with the ERROR_INVALID_ADDRESS error. Th"
+        },
+        {
+          "name": "Size",
+          "type": "SIZE_T",
+          "description": "The size of the region of memory to allocate, in bytes. The size must always be a multiple of the page size. If BaseAddress is not NULL, the function allocates all pages that contain one or more bytes in the range from BaseAddress to BaseAddress+Size. This means, for example, that a 2-byte range that straddles a page boundary causes the function to allocate both pages."
+        },
+        {
+          "name": "AllocationType",
+          "type": "ULONG",
+          "description": "The type of memory allocation. This parameter must contain one of the following values. Value Meaning MEM_COMMIT 0x00001000 Allocates memory charges (from the overall size of memory and the paging files on disk) for the specified reserved memory pages. The function also guarantees that when the caller later initially accesses the memory, the contents will be zero. Actual physical pages are not allocated unless/until the virtual addresses are actually accessed. To reserve and commit pages in one step, call VirtualAlloc2 with MEM_COMMIT | MEM_RESERVE. Attempting to commit a specific address range by specifying MEM_COMMIT without MEM_RESERVE and a non-NULL BaseAddress fails unless the entire range has already been reserved. The resulting error code is ERROR_INVALID_ADDRESS. An attempt to commit a page that is already committed does not cause the function to fail. This means that you can com"
+        },
+        {
+          "name": "PageProtection",
+          "type": "ULONG",
+          "description": "The memory protection for the region of pages to be allocated. If the pages are being committed, you can specify any one of the memory protection constants. If _BaseAddress_ specifies an address within an enclave, _PageProtection_ cannot be any of the following values: - PAGE_NOACCESS - PAGE_GUARD - PAGE_NOCACHE - PAGE_WRITECOMBINE When allocating dynamic memory for an enclave, the _PageProtection_ parameter must be PAGE_READWRITE or PAGE_EXECUTE_READWRITE."
+        },
+        {
+          "name": "ExtendedParameters",
+          "type": "MEM_EXTENDED_PARAMETER*",
+          "description": "An optional pointer to one or more extended parameters of type MEM_EXTENDED_PARAMETER. Each of those extended parameter values can itself have a Type field of either MemExtendedParameterAddressRequirements or MemExtendedParameterNumaNode. If no MemExtendedParameterNumaNode extended parameter is provided, then the behavior is the same as for the VirtualAlloc/MapViewOfFile functions (that is, the preferred NUMA node for the physical pages is determined based on the ideal processor of the thread that first accesses the memory)."
+        },
+        {
+          "name": "ParameterCount",
+          "type": "ULONG",
+          "description": "The number of extended parameters pointed to by ExtendedParameters."
+        }
+      ],
+      "return": {
+        "type": "PVOID",
+        "success": "If the function succeeds, the return value is the base address of the allocated region of pages.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "virtual-memory"
+      ],
+      "remarks": "This function lets you specify: - a range of virtual address space and a power-of-2 alignment restriction for new allocations - an arbitrary number of extended parameters - a preferred NUMA node for the physical memory as an extended parameter (see the ExtendedParameters parameter) - a placeholder operation (specifically, replacement). This API provides specialized techniques for managing virtual memory in support of high-performance games and server applications. For example, placeholders allow a reserved memory range to be explicitly partitioned, overlaid, and re-mapped; this can be used to implement arbitrarily extendable regions or virtual memory ring buffers. VirtualAlloc2 also allows for allocating memory with a specific memory-alignment. Each page has an associated page state. The VirtualAlloc2 function can perform the following operations: Commit a region of reserved pages Reserve a region of free pages Simultaneously reserve and commit a region of free pages VirtualAlloc2 can commit pages that are already committed, but cannot reserve pages that are already reserved. This means you can commit a range of pages, regardless of whether they have already been committed, and the function will not fail. In general however, only a minimal range of mostly uncommitted pages should be specified, because committing a large number of pages that are already committed can cause the V",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate a page with VirtualAlloc2",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    PVOID memory = VirtualAlloc2(GetCurrentProcess(), nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, nullptr, 0);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "VirtualAlloc2 function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc2",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "VirtualAlloc2 - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-virtualalloc2.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.virtualalloc2fromapp",
+      "name": "VirtualAlloc2FromApp",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "WindowsApp.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows 10 [desktop apps only]",
+      "summary": "Reserves, commits, or changes the state of a region of pages in the virtual address space of the calling process.",
+      "description": "Reserves, commits, or changes the state of a region of pages in the virtual address space of the calling process. Memory allocated by this function is automatically initialized to zero. Using this function, you can: for new allocations, specify a range of virtual address space and a power-of-2 alignment restriction; specify an arbitrary number of extended parameters; specify a preferred NUMA node for the physical memory as an extended parameter; and specify a placeholder operation (specifically, replacement). To specify the NUMA node, see the ExtendedParameters parameter.",
+      "prototype": "PVOID VirtualAlloc2FromApp(HANDLE Process, PVOID BaseAddress, SIZE_T Size, ULONG AllocationType, ULONG PageProtection, MEM_EXTENDED_PARAMETER* ExtendedParameters, ULONG ParameterCount);",
+      "parameters": [
+        {
+          "name": "Process",
+          "type": "HANDLE",
+          "description": "The handle to a process. The function allocates memory within the virtual address space of this process. The handle must have the PROCESS_VM_OPERATION access right. For more information, see Process Security and Access Rights."
+        },
+        {
+          "name": "BaseAddress",
+          "type": "PVOID",
+          "description": "The pointer that specifies a desired starting address for the region of pages that you want to allocate. If BaseAddress is NULL, the function determines where to allocate the region. If BaseAddress is not NULL, then any provided MEM_ADDRESS_REQUIREMENTS structure must consist of all zeroes, and the base address must be a multiple of the system allocation granularity. To determine the allocation granularity, use the GetSystemInfo function."
+        },
+        {
+          "name": "Size",
+          "type": "SIZE_T",
+          "description": "The size of the region of memory to allocate, in bytes. The size must always be a multiple of the page size. If BaseAddress is not NULL, the function allocates all pages that contain one or more bytes in the range from BaseAddress to BaseAddress+Size. This means, for example, that a 2-byte range that straddles a page boundary causes the function to allocate both pages."
+        },
+        {
+          "name": "AllocationType",
+          "type": "ULONG",
+          "description": "The type of memory allocation. This parameter must contain one of the following values. Value Meaning MEM_COMMIT 0x00001000 Allocates memory charges (from the overall size of memory and the paging files on disk) for the specified reserved memory pages. The function also guarantees that when the caller later initially accesses the memory, the contents will be zero. Actual physical pages are not allocated unless/until the virtual addresses are actually accessed. To reserve and commit pages in one step, call Virtual2AllocFromApp with MEM_COMMIT | MEM_RESERVE. Attempting to commit a specific address range by specifying MEM_COMMIT without MEM_RESERVE and a non-NULL BaseAddress fails unless the entire range has already been reserved. The resulting error code is ERROR_INVALID_ADDRESS. An attempt to commit a page that is already committed does not cause the function to fail. This means that you"
+        },
+        {
+          "name": "PageProtection",
+          "type": "ULONG",
+          "description": "The memory protection for the region of pages to be allocated. If the pages are being committed, you can specify one of the memory protection constants. The following constants generate an error: PAGE_EXECUTE PAGE_EXECUTE_READ PAGE_EXECUTE_READWRITE PAGE_EXECUTE_WRITECOPY"
+        },
+        {
+          "name": "ExtendedParameters",
+          "type": "MEM_EXTENDED_PARAMETER*",
+          "description": "An optional pointer to one or more extended parameters of type MEM_EXTENDED_PARAMETER. Each of those extended parameter values can itself have a Type field of either MemExtendedParameterAddressRequirements or MemExtendedParameterNumaNode. If no MemExtendedParameterNumaNode extended parameter is provided, then the behavior is the same as for the VirtualAlloc/MapViewOfFile functions (that is, the preferred NUMA node for the physical pages is determined based on the ideal processor of the thread that first accesses the memory)."
+        },
+        {
+          "name": "ParameterCount",
+          "type": "ULONG",
+          "description": "The number of extended parameters pointed to by ExtendedParameters."
+        }
+      ],
+      "return": {
+        "type": "PVOID",
+        "success": "If the function succeeds, the return value is the base address of the allocated region of pages.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "virtual-memory"
+      ],
+      "remarks": "This API helps support high-performance games, and server applications, which have particular requirements around managing their virtual address space. For example, mapping memory on top of a previously reserved region; this is useful for implementing an automatically wrapping ring buffer. And allocating memory with specific alignment; for example, to enable your application to commit large/huge page-mapped regions on demand. You can call Virtual2AllocFromApp from Windows Store apps with just-in-time (JIT) capabilities to use JIT functionality. The app must include the codeGeneration capability in the app manifest file to use JIT capabilities. Each page has an associated page state. The Virtual2AllocFromApp function can perform the following operations: Commit a region of reserved pages Reserve a region of free pages Simultaneously reserve and commit a region of free pages Virtual2AllocFromApp cannot reserve a reserved page. It can commit a page that is already committed. This means you can commit a range of pages, regardless of whether they have already been committed, and the function will not fail. You can use Virtual2AllocFromApp to reserve a block of pages and then make additional calls to Virtual2AllocFromApp to commit individual pages from the reserved block. This enables a process to reserve a range of its virtual address space without consuming physical storage until i",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate a page with the app-container variant",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    PVOID memory = VirtualAlloc2FromApp(GetCurrentProcess(), nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, nullptr, 0);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "VirtualAlloc2FromApp function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc2fromapp",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "VirtualAlloc2FromApp - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-virtualalloc2fromapp.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.virtualallocfromapp",
+      "name": "VirtualAllocFromApp",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "WindowsApp.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows 10 [desktop apps \\| UWP apps]",
+      "summary": "Reserves, commits, or changes the state of a region of pages in the virtual address space of the calling process.",
+      "description": "Reserves, commits, or changes the state of a region of pages in the virtual address space of the calling process. Memory allocated by this function is automatically initialized to zero.",
+      "prototype": "PVOID VirtualAllocFromApp(PVOID BaseAddress, SIZE_T Size, ULONG AllocationType, ULONG Protection);",
+      "parameters": [
+        {
+          "name": "BaseAddress",
+          "type": "PVOID",
+          "description": "The starting address of the region to allocate. If the memory is being reserved, the specified address is rounded down to the nearest multiple of the allocation granularity. If the memory is already reserved and is being committed, the address is rounded down to the next page boundary. To determine the size of a page and the allocation granularity on the host computer, use the GetSystemInfo function. If this parameter is NULL, the system determines where to allocate the region."
+        },
+        {
+          "name": "Size",
+          "type": "SIZE_T",
+          "description": "The size of the region, in bytes. If the BaseAddress parameter is NULL, this value is rounded up to the next page boundary. Otherwise, the allocated pages include all pages containing one or more bytes in the range from BaseAddress to BaseAddress+Size. This means that a 2-byte range straddling a page boundary causes both pages to be included in the allocated region."
+        },
+        {
+          "name": "AllocationType",
+          "type": "ULONG",
+          "description": "The type of memory allocation. This parameter must contain one of the following values. Value Meaning MEM_COMMIT 0x00001000 Allocates memory charges (from the overall size of memory and the paging files on disk) for the specified reserved memory pages. The function also guarantees that when the caller later initially accesses the memory, the contents will be zero. Actual physical pages are not allocated unless/until the virtual addresses are actually accessed. To reserve and commit pages in one step, call VirtualAllocFromApp with MEM_COMMIT | MEM_RESERVE. Attempting to commit a specific address range by specifying MEM_COMMIT without MEM_RESERVE and a non-NULL BaseAddress fails unless the entire range has already been reserved. The resulting error code is ERROR_INVALID_ADDRESS. An attempt to commit a page that is already committed does not cause the function to fail. This means that you c"
+        },
+        {
+          "name": "Protection",
+          "type": "ULONG",
+          "description": "The memory protection for the region of pages to be allocated. If the pages are being committed, you can specify one of the memory protection constants. The following constants generate an error: PAGE_EXECUTE PAGE_EXECUTE_READ PAGE_EXECUTE_READWRITE PAGE_EXECUTE_WRITECOPY"
+        }
+      ],
+      "return": {
+        "type": "PVOID",
+        "success": "If the function succeeds, the return value is the base address of the allocated region of pages.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "virtual-memory"
+      ],
+      "remarks": "You can call VirtualAllocFromApp from Windows Store apps with just-in-time (JIT) capabilities to use JIT functionality. The app must include the codeGeneration capability in the app manifest file to use JIT capabilities. Each page has an associated page state. The VirtualAllocFromApp function can perform the following operations: Commit a region of reserved pages Reserve a region of free pages Simultaneously reserve and commit a region of free pages VirtualAllocFromApp cannot reserve a reserved page. It can commit a page that is already committed. This means you can commit a range of pages, regardless of whether they have already been committed, and the function will not fail. You can use VirtualAllocFromApp to reserve a block of pages and then make additional calls to VirtualAllocFromApp to commit individual pages from the reserved block. This enables a process to reserve a range of its virtual address space without consuming physical storage until it is needed. If the BaseAddress parameter is not NULL, the function uses the BaseAddress and Size parameters to compute the region of pages to be allocated. The current state of the entire range of pages must be compatible with the type of allocation specified by the AllocationType parameter. Otherwise, the function fails and none of the pages are allocated. This compatibility requirement does not preclude committing an already com",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate a page with VirtualAllocFromApp",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    PVOID memory = VirtualAllocFromApp(nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "VirtualAllocFromApp function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocfromapp",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "VirtualAllocFromApp - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-virtualallocfromapp.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.virtualprotectfromapp",
+      "name": "VirtualProtectFromApp",
+      "aliases": [],
+      "category": "Memory Management",
+      "dll": "Kernel32.dll",
+      "library": "WindowsApp.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows 10 [desktop apps \\| UWP apps]",
+      "summary": "Changes the protection on a region of committed pages in the virtual address space of the calling process.",
+      "description": "Changes the protection on a region of committed pages in the virtual address space of the calling process.",
+      "prototype": "BOOL VirtualProtectFromApp(PVOID Address, SIZE_T Size, ULONG NewProtection, PULONG OldProtection);",
+      "parameters": [
+        {
+          "name": "Address",
+          "type": "PVOID",
+          "description": "A pointer an address that describes the starting page of the region of pages whose access protection attributes are to be changed. All pages in the specified region must be within the same reserved region allocated when calling the VirtualAlloc, VirtualAllocFromApp, or VirtualAllocEx function using MEM_RESERVE. The pages cannot span adjacent reserved regions that were allocated by separate calls to VirtualAlloc, VirtualAllocFromApp, or VirtualAllocEx using MEM_RESERVE."
+        },
+        {
+          "name": "Size",
+          "type": "SIZE_T",
+          "description": "The size of the region whose access protection attributes are to be changed, in bytes. The region of affected pages includes all pages containing one or more bytes in the range from the Address parameter to (Address+Size). This means that a 2-byte range straddling a page boundary causes the protection attributes of both pages to be changed."
+        },
+        {
+          "name": "NewProtection",
+          "type": "ULONG",
+          "description": "The memory protection option. This parameter can be one of the memory protection constants. For mapped views, this value must be compatible with the access protection specified when the view was mapped (see MapViewOfFile, MapViewOfFileEx, and MapViewOfFileExNuma). The following constants generate an error: PAGE_EXECUTE_READWRITE PAGE_EXECUTE_WRITECOPY The following constants are allowed only for apps that have the codeGeneration capability: PAGE_EXECUTE PAGE_EXECUTE_READ"
+        },
+        {
+          "name": "OldProtection",
+          "type": "PULONG",
+          "description": "A pointer to a variable that receives the previous access protection value of the first page in the specified region of pages. If this parameter is NULL or does not point to a valid variable, the function fails."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "memory-management",
+        "virtual-memory"
+      ],
+      "remarks": "You can call VirtualProtectFromApp from Windows Store apps with just-in-time (JIT) capabilities to use JIT functionality. The app must include the codeGeneration capability in the app manifest file to use JIT capabilities. You can set the access protection value on committed pages only. If the state of any page in the specified region is not committed, the function fails and returns without modifying the access protection of any pages in the specified region. The PAGE_GUARD protection modifier establishes guard pages. Guard pages act as one-shot access alarms. For more information, see Creating Guard Pages. It is best to avoid using VirtualProtectFromApp to change page protections on memory blocks allocated by GlobalAlloc, HeapAlloc, or LocalAlloc, because multiple memory blocks can exist on a single page. The heap manager assumes that all pages in the heap grant at least read and write access. VirtualProtectFromApp allows you to mark pages as executable, but does not allow you to set both write and execute permissions at the same time. When protecting a region that will be executable, the calling program bears responsibility for ensuring cache coherency via an appropriate call to FlushInstructionCache once the code has been set in place. Otherwise attempts to execute code out of the newly executable region may produce unpredictable results.",
+      "maldev_notes": "Virtual-memory and heap APIs are ubiquitous in allocators, runtimes, and ordinary application code. Analysts compare allocation protection, backing, and ownership with the process image and expected software behavior.",
+      "defensive_notes": "Memory telemetry can record protection changes, private allocations, and mapped images. Protection transitions and executable private memory are commonly reviewed together with call stacks.",
+      "example": {
+        "language": "cpp",
+        "title": "Change app-container page protection and restore it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    PVOID memory = VirtualAllocFromApp(nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    ULONG old_protection = 0;\n    if (VirtualProtectFromApp(memory, 4096, PAGE_READONLY, &old_protection)) {\n        VirtualProtectFromApp(memory, 4096, old_protection, &old_protection);\n    }\n\n    VirtualFree(memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "VirtualProtectFromApp function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualprotectfromapp",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "VirtualProtectFromApp - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-virtualprotectfromapp.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createremotethread",
+      "name": "CreateRemoteThread",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Creates a thread that runs in the virtual address space of another process.",
+      "description": "Creates a thread that runs in the virtual address space of another process. Use the CreateRemoteThreadEx function to create a thread that runs in the virtual address space of another process and optionally specify extended attributes.",
+      "prototype": "HANDLE CreateRemoteThread(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process in which the thread is to be created. The handle must have the PROCESS_CREATE_THREAD, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_WRITE, and PROCESS_VM_READ access rights, and may fail without these rights on certain platforms. For more information, see Process Security and Access Rights."
+        },
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that specifies a security descriptor for the new thread and determines whether child processes can inherit the returned handle. If *lpThreadAttributes* is NULL, the thread gets a default security descriptor and the handle cannot be inherited. The access control lists (ACL) in the default security descriptor for a thread come from the primary token of the creator."
+        },
+        {
+          "name": "dwStackSize",
+          "type": "SIZE_T",
+          "description": "The initial size of the stack, in bytes. The system rounds this value to the nearest page. If this parameter is 0 (zero), the new thread uses the default size for the executable. For more information, see Thread Stack Size."
+        },
+        {
+          "name": "lpStartAddress",
+          "type": "LPTHREAD_START_ROUTINE",
+          "description": "A pointer to the application-defined function of type LPTHREAD_START_ROUTINE to be executed by the thread and represents the starting address of the thread in the remote process. The function must exist in the remote process. For more information, see ThreadProc."
+        },
+        {
+          "name": "lpParameter",
+          "type": "LPVOID",
+          "description": "A pointer to a variable to be passed to the thread function."
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "The flags that control the creation of the thread. Value Meaning 0 The thread runs immediately after creation. CREATE_SUSPENDED 0x00000004 The thread is created in a suspended state, and does not run until the ResumeThread function is called. STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000 The dwStackSize parameter specifies the initial reserve size of the stack. If this flag is not specified, dwStackSize specifies the commit size."
+        },
+        {
+          "name": "lpThreadId",
+          "type": "LPDWORD",
+          "description": "A pointer to a variable that receives the thread identifier. If this parameter is NULL, the thread identifier is not returned."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the new thread. Note that CreateRemoteThread may succeed even if lpStartAddress points to data, code, or is not accessible. If the start address is invalid when the thread runs, an exception occurs, and the thread terminates. Thread termination due to a invalid start address is handled as an error exit for the thread's process. This behavior is similar to the asynchronous nature of CreateProcess, where the process is created even if it refers to invalid or missing dynamic-link libraries (DLL).",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "remote-process-memory"
+      ],
+      "remarks": "The CreateRemoteThread function causes a new thread of execution to begin in the address space of the specified process. The thread has access to all objects that the process opens. Prior to Windows 8, Terminal Services isolates each terminal session by design. Therefore, CreateRemoteThread fails if the target process is in a different session than the calling process. The new thread handle is created with full access to the new thread. If a security descriptor is not provided, the handle may be used in any function that requires a thread object handle. When a security descriptor is provided, an access check is performed on all subsequent uses of the handle before access is granted. If the access check denies access, the requesting process cannot use the handle to gain access to the thread. If the thread is created in a runnable state (that is, if the CREATE_SUSPENDED flag is not used), the thread can start running before CreateThread returns and, in particular, before the caller receives the handle and identifier of the created thread. The thread is created with a thread priority of THREAD_PRIORITY_NORMAL. Use the GetThreadPriority and SetThreadPriority functions to get and set the priority value of a thread. When a thread terminates, the thread object attains a signaled state, which satisfies the threads that are waiting for the object. The thread object remains in the system",
+      "maldev_notes": "Cross-process memory APIs are used by debuggers, profilers, accessibility tools, and management software. The same operations can also be relevant during analysis of code that manipulates another process, so context and authorization matter.",
+      "defensive_notes": "Cross-process handle use, memory reads/writes, and thread creation are high-value telemetry. Analysts establish whether the source process is a debugger, installer, security product, or unexpected code.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a worker thread through the remote-thread API",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    return 0;\n}\n\nint main() {\n    // Using the current process makes this equivalent to CreateThread.\n    HANDLE thread = CreateRemoteThread(GetCurrentProcess(), nullptr, 0,\n        Worker, nullptr, 0, nullptr);\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example creates a thread in its own process, not in another process."
+      },
+      "references": [
+        {
+          "title": "CreateRemoteThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createremotethread",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateRemoteThread - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-createremotethread.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createremotethreadex",
+      "name": "CreateRemoteThreadEx",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows 7 [desktop apps only]",
+      "summary": "Creates a thread that runs in the virtual address space of another process and optionally specifies extended attributes such as processor group affinity.",
+      "description": "Creates a thread that runs in the virtual address space of another process and optionally specifies extended attributes such as processor group affinity.",
+      "prototype": "HANDLE CreateRemoteThreadEx(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList, LPDWORD lpThreadId);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process in which the thread is to be created. The handle must have the PROCESS_CREATE_THREAD, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_WRITE, and PROCESS_VM_READ access rights. In Windows 10, version 1607, your code must obtain these access rights for the new handle. However, starting in Windows 10, version 1703, if the new handle is entitled to these access rights, the system obtains them for you. For more information, see Process Security and Access Rights."
+        },
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that specifies a security descriptor for the new thread and determines whether child processes can inherit the returned handle. If lpThreadAttributes is NULL, the thread gets a default security descriptor and the handle cannot be inherited. The access control lists (ACL) in the default security descriptor for a thread come from the primary token of the creator."
+        },
+        {
+          "name": "dwStackSize",
+          "type": "SIZE_T",
+          "description": "The initial size of the stack, in bytes. The system rounds this value to the nearest page. If this parameter is 0 (zero), the new thread uses the default size for the executable. For more information, see Thread Stack Size."
+        },
+        {
+          "name": "lpStartAddress",
+          "type": "LPTHREAD_START_ROUTINE",
+          "description": "A pointer to the application-defined function of type LPTHREAD_START_ROUTINE to be executed by the thread and represents the starting address of the thread in the remote process. The function must exist in the remote process. For more information, see ThreadProc."
+        },
+        {
+          "name": "lpParameter",
+          "type": "LPVOID",
+          "description": "A pointer to a variable to be passed to the thread function pointed to by lpStartAddress. This parameter can be NULL."
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "The flags that control the creation of the thread. Value Meaning 0 The thread runs immediately after creation. CREATE_SUSPENDED 0x00000004 The thread is created in a suspended state and does not run until the ResumeThread function is called. STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000 The dwStackSize parameter specifies the initial reserve size of the stack. If this flag is not specified, dwStackSize specifies the commit size."
+        },
+        {
+          "name": "lpAttributeList",
+          "type": "LPPROC_THREAD_ATTRIBUTE_LIST",
+          "description": "An attribute list that contains additional parameters for the new thread. This list is created by the InitializeProcThreadAttributeList function."
+        },
+        {
+          "name": "lpThreadId",
+          "type": "LPDWORD",
+          "description": "A pointer to a variable that receives the thread identifier. If this parameter is NULL, the thread identifier is not returned."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the new thread.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "remote-process-memory"
+      ],
+      "remarks": "The CreateRemoteThreadEx function causes a new thread of execution to begin in the address space of the specified process. The thread has access to all objects that the process opens. The lpAttribute parameter can be used to specify extended attributes such as processor group affinity for the new thread. If lpAttribute is NULL, the function's behavior is the same as CreateRemoteThread. Prior to Windows 8, Terminal Services isolates each terminal session by design. Therefore, CreateRemoteThread fails if the target process is in a different session than the calling process. The new thread handle is created with full access to the new thread. If a security descriptor is not provided, the handle may be used in any function that requires a thread object handle. When a security descriptor is provided, an access check is performed on all subsequent uses of the handle before access is granted. If the access check denies access, the requesting process cannot use the handle to gain access to the thread. If the thread is created in a runnable state (that is, if the CREATE_SUSPENDED flag is not used), the thread can start running before CreateThread returns and, in particular, before the caller receives the handle and identifier of the created thread. The thread is created with a thread priority of THREAD_PRIORITY_NORMAL. To get and set the priority value of a thread, use the GetThreadPrio",
+      "maldev_notes": "Cross-process memory APIs are used by debuggers, profilers, accessibility tools, and management software. The same operations can also be relevant during analysis of code that manipulates another process, so context and authorization matter.",
+      "defensive_notes": "Cross-process handle use, memory reads/writes, and thread creation are high-value telemetry. Analysts establish whether the source process is a debugger, installer, security product, or unexpected code.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a worker thread through the extended remote-thread API",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    return 0;\n}\n\nint main() {\n    // Targeting the current process keeps the example local.\n    DWORD thread_id = 0;\n    HANDLE thread = CreateRemoteThreadEx(GetCurrentProcess(), nullptr, 0,\n        Worker, nullptr, 0, nullptr, &thread_id);\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example creates a thread in its own process, not in another process."
+      },
+      "references": [
+        {
+          "title": "CreateRemoteThreadEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createremotethreadex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateRemoteThreadEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-createremotethreadex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.queueuserapc",
+      "name": "QueueUserAPC",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Adds a user-mode asynchronous procedure call (APC) object to the APC queue of the specified thread.",
+      "description": "Adds a user-mode asynchronous procedure call (APC) object to the APC queue of the specified thread.",
+      "prototype": "DWORD QueueUserAPC(PAPCFUNC pfnAPC, HANDLE hThread, ULONG_PTR dwData);",
+      "parameters": [
+        {
+          "name": "pfnAPC",
+          "type": "PAPCFUNC",
+          "description": "A pointer to the application-supplied APC function to be called when the specified thread performs an alertable wait operation. For more information, see PAPCFUNC callback function."
+        },
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread. The handle must have the THREAD_SET_CONTEXT access right. For more information, see Synchronization Object Security and Access Rights."
+        },
+        {
+          "name": "dwData",
+          "type": "ULONG_PTR",
+          "description": "A single value that is passed to the APC function pointed to by the *pfnAPC* parameter."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError. Windows Server 2003 and Windows XP: There are no error values defined for this function that can be retrieved by calling GetLastError."
+      },
+      "tags": [
+        "remote-process-memory"
+      ],
+      "remarks": "See QueueUserAPC2 function for information on special user-mode APCs. The APC support provided in the operating system allows an application to queue an APC object to a thread. To ensure successful execution of functions used by the APC, APCs should be queued only to threads in the caller's process. >> Queuing APCs to threads outside the caller's process is not recommended for a number of reasons. DLL rebasing can cause the addresses of functions used by the APC to be incorrect when the functions are executed outside the caller's process. Similarly, if a 64-bit process queues an APC to a 32-bit process or vice versa, addresses will be incorrect and the application will crash. Other factors can prevent successful function execution, even if the address is known. Each thread has its own APC queue. The queuing of an APC is a request for the thread to call the APC function. The operating system issues a software interrupt to direct the thread to call the APC function. When a user-mode APC is queued, the thread is not directed to call the APC function unless it is in an alertable state. After the thread is in an alertable state, the thread handles all pending APCs in first in, first out (FIFO) order, and the wait operation returns WAIT_IO_COMPLETION. A thread enters an alertable state by using SleepEx function, SignalObjectAndWait function, WaitForSingleObjectEx function, WaitForMul",
+      "maldev_notes": "Cross-process memory APIs are used by debuggers, profilers, accessibility tools, and management software. The same operations can also be relevant during analysis of code that manipulates another process, so context and authorization matter.",
+      "defensive_notes": "Cross-process handle use, memory reads/writes, and thread creation are high-value telemetry. Analysts establish whether the source process is a debugger, installer, security product, or unexpected code.",
+      "example": {
+        "language": "cpp",
+        "title": "Queue a benign APC to the current thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic void CALLBACK Apc(ULONG_PTR data) {\n    printf(\"APC ran with value %llu\\n\",\n        static_cast<unsigned long long>(data));\n}\n\nint main() {\n    if (QueueUserAPC(Apc, GetCurrentThread(), 1) == 0) {\n        return 1;\n    }\n\n    // SleepEx with alertable TRUE allows the queued APC to run.\n    SleepEx(0, TRUE);\n    return 0;\n}\n",
+        "notes": "The APC is queued to the calling thread and only prints a value."
+      },
+      "references": [
+        {
+          "title": "QueueUserAPC function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-queueuserapc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "QueueUserAPC - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-queueuserapc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.toolhelp32readprocessmemory",
+      "name": "Toolhelp32ReadProcessMemory",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Copies memory allocated to another process into an application-supplied buffer.",
+      "description": "Copies memory allocated to another process into an application-supplied buffer.",
+      "prototype": "BOOL Toolhelp32ReadProcessMemory(DWORD th32ProcessID, LPCVOID lpBaseAddress, LPVOID lpBuffer, SIZE_T cbRead, SIZE_T* lpNumberOfBytesRead);",
+      "parameters": [
+        {
+          "name": "th32ProcessID",
+          "type": "DWORD",
+          "description": "The identifier of the process whose memory is being copied. This parameter can be zero to copy the memory of the current process."
+        },
+        {
+          "name": "lpBaseAddress",
+          "type": "LPCVOID",
+          "description": "The base address in the specified process to read. Before transferring any data, the system verifies that all data in the base address and memory of the specified size is accessible for read access. If this is the case, the function proceeds. Otherwise, the function fails."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "LPVOID",
+          "description": "A pointer to a buffer that receives the contents of the address space of the specified process."
+        },
+        {
+          "name": "cbRead",
+          "type": "SIZE_T",
+          "description": "The number of bytes to read from the specified process."
+        },
+        {
+          "name": "lpNumberOfBytesRead",
+          "type": "SIZE_T*",
+          "description": "The number of bytes copied to the specified buffer. If this parameter is NULL, it is ignored."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if successful.",
+        "failure": ""
+      },
+      "tags": [
+        "remote-process-memory"
+      ],
+      "remarks": "This function opens a handle to the target process and closes it once the read operation has completed. If you're planning to perform several reads, use ReadProcessMemory instead.",
+      "maldev_notes": "Cross-process memory APIs are used by debuggers, profilers, accessibility tools, and management software. The same operations can also be relevant during analysis of code that manipulates another process, so context and authorization matter.",
+      "defensive_notes": "Cross-process handle use, memory reads/writes, and thread creation are high-value telemetry. Analysts establish whether the source process is a debugger, installer, security product, or unexpected code.",
+      "example": {
+        "language": "cpp",
+        "title": "Read a local buffer with the tool-help helper",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    char source[] = \"example\";\n    char destination[32] = {};\n    SIZE_T read = 0;\n\n    if (Toolhelp32ReadProcessMemory(GetCurrentProcessId(), source,\n            destination, sizeof(source), &read)) {\n        printf(\"Read %zu bytes.\\n\", read);\n    }\n    return 0;\n}\n",
+        "notes": "The example reads its own process memory."
+      },
+      "references": [
+        {
+          "title": "Toolhelp32ReadProcessMemory function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-toolhelp32readprocessmemory",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Toolhelp32ReadProcessMemory - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-toolhelp32readprocessmemory.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.virtualallocexnuma",
+      "name": "VirtualAllocExNuma",
+      "aliases": [],
+      "category": "Remote Process Memory",
+      "dll": "Kernel32.dll",
+      "library": "onecore.lib",
+      "header": "memoryapi.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Reserves, commits, or changes the state of a region of memory within the virtual address space of the specified process, and specifies the NUMA node for the physical memory.",
+      "description": "Reserves, commits, or changes the state of a region of memory within the virtual address space of the specified process, and specifies the NUMA node for the physical memory.",
+      "prototype": "LPVOID VirtualAllocExNuma(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect, DWORD nndPreferred);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "The handle to a process. The function allocates memory within the virtual address space of this process. The handle must have the PROCESS_VM_OPERATION access right. For more information, see Process Security and Access Rights."
+        },
+        {
+          "name": "lpAddress",
+          "type": "LPVOID",
+          "description": "The pointer that specifies a desired starting address for the region of pages that you want to allocate. If you are reserving memory, the function rounds this address down to the nearest multiple of the allocation granularity. If you are committing memory that is already reserved, the function rounds this address down to the nearest page boundary. To determine the size of a page and the allocation granularity on the host computer, use the GetSystemInfo function. If lpAddress is NULL, the function determines where to allocate the region."
+        },
+        {
+          "name": "dwSize",
+          "type": "SIZE_T",
+          "description": "The size of the region of memory to be allocated, in bytes. If lpAddress is NULL, the function rounds dwSize up to the next page boundary. If lpAddress is not NULL, the function allocates all pages that contain one or more bytes in the range from lpAddress to (lpAddress+dwSize). This means, for example, that a 2-byte range that straddles a page boundary causes the function to allocate both pages."
+        },
+        {
+          "name": "flAllocationType",
+          "type": "DWORD",
+          "description": "The type of memory allocation. This parameter must contain one of the following values. Value Meaning MEM_COMMIT 0x00001000 Allocates memory charges (from the overall size of memory and the paging files on disk) for the specified reserved memory pages. The function also guarantees that when the caller later initially accesses the memory, the contents will be zero. Actual physical pages are not allocated unless/until the virtual addresses are actually accessed. To reserve and commit pages in one step, call the function with MEM_COMMIT | MEM_RESERVE. Attempting to commit a specific address range by specifying MEM_COMMIT without MEM_RESERVE and a non-NULL lpAddress fails unless the entire range has already been reserved. The resulting error code is ERROR_INVALID_ADDRESS. An attempt to commit a page that is already committed does not cause the function to fail. This means that you can commit"
+        },
+        {
+          "name": "flProtect",
+          "type": "DWORD",
+          "description": "The memory protection for the region of pages to be allocated. If the pages are being committed, you can specify any one of the memory protection constants. Protection attributes specified when protecting a page cannot conflict with those specified when allocating a page."
+        },
+        {
+          "name": "nndPreferred",
+          "type": "DWORD",
+          "description": "The NUMA node where the physical memory should reside. Used only when allocating a new VA region (either committed or reserved). Otherwise this parameter is ignored when the API is used to commit pages in a region that already exists"
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "If the function succeeds, the return value is the base address of the allocated region of pages.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "virtual-memory",
+        "remote-process-memory"
+      ],
+      "remarks": "Each page has an associated page state. The VirtualAllocExNuma function can perform the following operations: Commit a region of reserved pages Reserve a region of free pages Simultaneously reserve and commit a region of free pages VirtualAllocExNuma cannot reserve a reserved page. It can commit a page that is already committed. This means you can commit a range of pages, regardless of whether they have already been committed, and the function will not fail. You can use VirtualAllocExNuma to reserve a block of pages and then make additional calls to VirtualAllocExNuma to commit individual pages from the reserved block. This enables a process to reserve a range of its virtual address space without consuming physical storage until it is needed. If the lpAddress parameter is not NULL, the function uses the lpAddress and dwSize parameters to compute the region of pages to be allocated. The current state of the entire range of pages must be compatible with the type of allocation specified by the flAllocationType parameter. Otherwise, the function fails and none of the pages is allocated. This compatibility requirement does not preclude committing an already committed page; see the preceding list. Because VirtualAllocExNuma does not allocate any physical pages, it will succeed whether or not the pages are available on that node or elsewhere in the system. The physical pages are alloc",
+      "maldev_notes": "Cross-process memory APIs are used by debuggers, profilers, accessibility tools, and management software. The same operations can also be relevant during analysis of code that manipulates another process, so context and authorization matter.",
+      "defensive_notes": "Cross-process handle use, memory reads/writes, and thread creation are high-value telemetry. Analysts establish whether the source process is a debugger, installer, security product, or unexpected code.",
+      "example": {
+        "language": "cpp",
+        "title": "Allocate memory in the current process with a NUMA hint",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    void* memory = VirtualAllocExNuma(GetCurrentProcess(), nullptr, 4096,\n        MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, 0);\n    if (memory == nullptr) {\n        return 1;\n    }\n\n    VirtualFreeEx(GetCurrentProcess(), memory, 0, MEM_RELEASE);\n    return 0;\n}\n",
+        "notes": "The example operates on its own process handle."
+      },
+      "references": [
+        {
+          "title": "VirtualAllocExNuma function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocexnuma",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "VirtualAllocExNuma - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/memoryapi/nf-memoryapi-virtualallocexnuma.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (memoryapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

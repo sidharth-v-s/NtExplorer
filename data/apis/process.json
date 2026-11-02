@@ -1,0 +1,1220 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.createprocessw",
+      "name": "CreateProcessW",
+      "aliases": [
+        "CreateProcess"
+      ],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Creates a new process and its primary thread.",
+      "description": "CreateProcessW starts a new process from an executable image. The caller supplies the image name or a command line, security attributes, creation flags, an optional environment block and working directory, and STARTUPINFOW settings. On success the function returns handles to the new process and its primary thread together with their process and thread identifiers. The new process runs independently of the caller; CreateProcessW does not wait for it to finish.",
+      "prototype": "BOOL CreateProcessW(LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);",
+      "parameters": [
+        {
+          "name": "lpApplicationName",
+          "type": "LPCWSTR",
+          "description": "The module to execute. It may be a full path or a partial name. When NULL, the module name must be the first token in lpCommandLine. The system applies its documented search order when the name is not fully qualified."
+        },
+        {
+          "name": "lpCommandLine",
+          "type": "LPWSTR",
+          "description": "The command line for the new process, including the program name when lpApplicationName is NULL. The buffer may be modified by the function and must be writable; a string literal must not be passed directly."
+        },
+        {
+          "name": "lpProcessAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the new process object. NULL gives the process a default security descriptor and a non-inheritable handle."
+        },
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the primary thread object. NULL gives the thread a default security descriptor and a non-inheritable handle."
+        },
+        {
+          "name": "bInheritHandles",
+          "type": "BOOL",
+          "description": "If TRUE, the new process inherits inheritable handles from the calling process. Inheritance is not selective: every inheritable handle is inherited unless handle-list attributes are used."
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "Creation flags that control the new process, such as CREATE_SUSPENDED, CREATE_NEW_CONSOLE, CREATE_NO_WINDOW, and priority class flags. Some flags require additional privileges or specific parent state."
+        },
+        {
+          "name": "lpEnvironment",
+          "type": "LPVOID",
+          "description": "An optional environment block for the new process. NULL causes the new process to inherit the caller's environment. A custom Unicode block requires CREATE_UNICODE_ENVIRONMENT."
+        },
+        {
+          "name": "lpCurrentDirectory",
+          "type": "LPCWSTR",
+          "description": "The full path to the new process's current directory. NULL causes the new process to inherit the caller's current directory."
+        },
+        {
+          "name": "lpStartupInfo",
+          "type": "LPSTARTUPINFOW",
+          "description": "A STARTUPINFOW structure that specifies window station, desktop, standard handles, and startup appearance. The cb member must be set to sizeof(STARTUPINFOW) before the call."
+        },
+        {
+          "name": "lpProcessInformation",
+          "type": "LPPROCESS_INFORMATION",
+          "description": "Receives PROCESS_INFORMATION with handles to the new process and primary thread plus their identifiers. The caller must close both handles when they are no longer needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value. lpProcessInformation contains the new process and thread information.",
+        "failure": "Zero. Call GetLastError for the error code."
+      },
+      "tags": [
+        "process-creation",
+        "execution-flow",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.openprocess",
+        "win32.getprocessid",
+        "win32.terminateprocess",
+        "win32.closehandle"
+      ],
+      "related_structures": [
+        "win32.startupinfow",
+        "win32.startupinfoexw",
+        "win32.process_information",
+        "win32.security_attributes"
+      ],
+      "related_constants": [],
+      "maldev_notes": "CreateProcessW is fundamental to ordinary Windows software and also appears in analysis of launchers and loaders. Investigators usually focus on the executable path, command line, parent process, creation flags, and inherited handles rather than on the call alone.",
+      "defensive_notes": "Process creation telemetry commonly records the image path, command line, parent process, user, and token context. Comparing those fields with expected software behavior is more informative than treating process creation as suspicious by itself.",
+      "example": {
+        "language": "cpp",
+        "title": "Start a short-lived child process with wide strings",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    STARTUPINFOW startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    wchar_t command[] = L\"cmd.exe /c exit 0\";\n\n    if (!CreateProcessW(nullptr, command, nullptr, nullptr, FALSE,\n            CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) {\n        return 1;\n    }\n\n    WaitForSingleObject(process.hProcess, 5000);\n    CloseHandle(process.hThread);\n    CloseHandle(process.hProcess);\n    return 0;\n}\n",
+        "notes": "The example starts a hidden child process that exits immediately, waits for it, and closes both handles."
+      },
+      "references": [
+        {
+          "title": "CreateProcessW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, parameter semantics and handle-lifetime notes checked against Microsoft Learn (processthreadsapi.h)."
+    },
+    {
+      "id": "win32.openprocess",
+      "name": "OpenProcess",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Opens an existing process object and returns a handle with the requested access rights.",
+      "description": "OpenProcess obtains a handle to a process identified by its process identifier. The requested access rights determine what the caller can do with the process, such as querying information, reading or writing its memory, or terminating it. The operating system checks the caller's token against the process object's security descriptor, so some access rights require elevated or specially granted privileges.",
+      "prototype": "HANDLE OpenProcess(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwProcessId);",
+      "parameters": [
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access rights to request, such as PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_VM_READ, PROCESS_VM_WRITE, PROCESS_CREATE_THREAD, or PROCESS_TERMINATE. Request only the rights the task needs."
+        },
+        {
+          "name": "bInheritHandle",
+          "type": "BOOL",
+          "description": "If TRUE, processes created by the caller can inherit the returned handle. The handle must also be marked inheritable for inheritance to occur."
+        },
+        {
+          "name": "dwProcessId",
+          "type": "DWORD",
+          "description": "The identifier of the process to open. Process identifiers are reused over time, so a stale identifier can refer to a different process."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "A handle to the process with the granted access rights. Close it with CloseHandle when finished.",
+        "failure": "NULL. Call GetLastError; ERROR_ACCESS_DENIED is common when rights are not permitted."
+      },
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.getprocessid",
+        "win32.getcurrentprocess",
+        "win32.terminateprocess",
+        "win32.closehandle"
+      ],
+      "related_constants": [],
+      "maldev_notes": "OpenProcess is required before many cross-process operations, but the API itself only obtains a handle. Analysis usually considers the requested access mask together with the source process, target process, and subsequent handle use.",
+      "defensive_notes": "Handle-opening telemetry can expose unusual access masks or cross-process access between unrelated applications. Interpret access requests in context and compare them with the software's documented purpose.",
+      "example": {
+        "language": "cpp",
+        "title": "Open the current process for a limited query",
+        "code": "#include <windows.h>\n\nint main() {\n    DWORD pid = GetCurrentProcessId();\n    HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);\n    if (process == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    WCHAR image[MAX_PATH];\n    DWORD size = MAX_PATH;\n    if (QueryFullProcessImageNameW(process, 0, image, &size)) {\n        // Inspect image path for ordinary diagnostics.\n    }\n\n    CloseHandle(process);\n    return 0;\n}\n",
+        "notes": "The example queries its own image path. PROCESS_QUERY_LIMITED_INFORMATION is the least-privilege query right for many diagnostic tasks. NtExplorer only displays this snippet."
+      },
+      "references": [
+        {
+          "title": "OpenProcess function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Access-right and identifier-reuse behavior checked against Microsoft Learn."
+    },
+    {
+      "id": "win32.getcurrentprocess",
+      "name": "GetCurrentProcess",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Returns a pseudo-handle for the calling process.",
+      "description": "GetCurrentProcess returns a special constant that always refers to the calling process. It is not a real kernel handle: it does not need to be closed, and closing it does not affect the process. Functions that accept process handles can use the pseudo-handle when they should operate on the caller.",
+      "prototype": "HANDLE GetCurrentProcess(void);",
+      "parameters": [],
+      "return": {
+        "type": "HANDLE",
+        "success": "A pseudo-handle for the current process, equal to the constant (HANDLE)-1.",
+        "failure": "This function cannot fail."
+      },
+      "tags": [
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getcurrentprocessid",
+        "win32.getprocessid"
+      ],
+      "related_constants": [],
+      "remarks": "Do not pass the pseudo-handle to CloseHandle. The value is process-specific and is not valid in another process after being transferred.",
+      "maldev_notes": "Self-references through GetCurrentProcess appear in ordinary software and in analysis of code that operates on its own address space. The call is a convenience, not a behavioral signal by itself.",
+      "defensive_notes": "When reviewing cross-process activity, the presence of the current-process pseudo-handle can help distinguish self-operations from operations on another process.",
+      "references": [
+        {
+          "title": "GetCurrentProcess function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocess",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Pseudo-handle semantics checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Use the pseudo-handle for the current process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE process = GetCurrentProcess();\n    DWORD exit_code = 0;\n    if (GetExitCodeProcess(process, &exit_code)) {\n        printf(\"Exit code: %lu\\n\", exit_code);\n    }\n    // The pseudo-handle does not need to be closed.\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.getcurrentprocessid",
+      "name": "GetCurrentProcessId",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Returns the process identifier of the calling process.",
+      "description": "GetCurrentProcessId returns the system-wide identifier assigned to the calling process. The identifier is unique while the process exists, but the system can reuse it after the process ends. It is commonly used for logging, naming objects, and for operations that need a process identifier rather than a handle.",
+      "prototype": "DWORD GetCurrentProcessId(void);",
+      "parameters": [],
+      "return": {
+        "type": "DWORD",
+        "success": "The process identifier of the calling process.",
+        "failure": "This function cannot fail."
+      },
+      "tags": [
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getcurrentprocess",
+        "win32.getprocessid",
+        "win32.openprocess"
+      ],
+      "related_constants": [],
+      "remarks": "A process identifier is not a stable identity: it can be reused after the process terminates. Use a handle, or verify the process creation time, when identity matters.",
+      "maldev_notes": "Process identifiers are used for logging, mutex naming, and locating a process. Their presence is not suspicious; the important context is what the program does with the identifier.",
+      "defensive_notes": "PID reuse means historical records should be correlated with process start time, image path, and parent information rather than the identifier alone.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current process identifier",
+        "code": "#include <windows.h>\n#include <cstdio>\n\nint main() {\n    DWORD pid = GetCurrentProcessId();\n    std::printf(\"current process id: %lu\\n\", static_cast<unsigned long>(pid));\n    return 0;\n}\n",
+        "notes": "A minimal diagnostic use of the identifier. No privileges are required."
+      },
+      "references": [
+        {
+          "title": "GetCurrentProcessId function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentprocessid",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Return type and identifier-reuse caveat checked against Microsoft Learn."
+    },
+    {
+      "id": "win32.getprocessid",
+      "name": "GetProcessId",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Returns the process identifier associated with a process handle.",
+      "description": "GetProcessId maps an open process handle to the process identifier assigned by the system. The handle must have PROCESS_QUERY_INFORMATION or PROCESS_QUERY_LIMITED_INFORMATION access. The identifier remains valid only while the process exists.",
+      "prototype": "DWORD GetProcessId(HANDLE Process);",
+      "parameters": [
+        {
+          "name": "Process",
+          "type": "HANDLE",
+          "description": "A handle to the process. It must have query access. The current-process pseudo-handle is also accepted by many call paths."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The process identifier.",
+        "failure": "Zero. Call GetLastError; process identifiers are never legitimately zero for a running process."
+      },
+      "tags": [
+        "process-enumeration",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.openprocess",
+        "win32.getcurrentprocessid",
+        "win32.getcurrentprocess"
+      ],
+      "related_constants": [],
+      "remarks": "Check the return value against zero rather than assuming every failure is distinguishable from a valid identifier.",
+      "maldev_notes": "Converting handles to identifiers is common when logging process relationships. On its own it does not indicate malicious behavior.",
+      "defensive_notes": "Correlating handles and identifiers can help explain which process an event refers to, especially when handles were inherited or duplicated.",
+      "references": [
+        {
+          "title": "GetProcessId function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocessid",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Required access and zero-return convention checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve a process handle to its identifier",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE,\n        GetCurrentProcessId());\n    if (process == nullptr) {\n        return 1;\n    }\n\n    printf(\"PID: %lu\\n\", GetProcessId(process));\n    CloseHandle(process);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.terminateprocess",
+      "name": "TerminateProcess",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Forces a process to terminate and sets its exit code.",
+      "description": "TerminateProcess requests termination of a process without giving its threads a chance to run cleanup code. The caller needs PROCESS_TERMINATE access to the target. The function initiates termination and returns; the target process may continue running briefly while the system tears it down. Use cooperative shutdown mechanisms when the target supports them.",
+      "prototype": "BOOL TerminateProcess(HANDLE hProcess, UINT uExitCode);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process to terminate, opened with PROCESS_TERMINATE access."
+        },
+        {
+          "name": "uExitCode",
+          "type": "UINT",
+          "description": "The exit code recorded for the process and all of its threads."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; termination has been initiated.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.openprocess",
+        "win32.exitprocess",
+        "win32.closehandle"
+      ],
+      "related_constants": [],
+      "remarks": "TerminateProcess does not run C++ destructors or allow the target to flush application state. It also does not guarantee that the process has fully exited when the call returns.",
+      "maldev_notes": "Forced termination appears in installers, security software, and analysis of disruptive behavior. The relevant context is the target, the caller's access, and whether cooperative shutdown was possible.",
+      "defensive_notes": "Process termination events can show the acting process and the target. Unexpected termination of security or monitoring processes deserves investigation, but termination alone is not proof of malicious intent.",
+      "references": [
+        {
+          "title": "TerminateProcess function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Asynchronous termination and access requirements checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Terminate a child process created by the example",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    STARTUPINFOA startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    char command[] = \"cmd.exe /c timeout /t 30 /nobreak >nul\";\n\n    if (!CreateProcessA(nullptr, command, nullptr, nullptr, FALSE,\n            CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) {\n        return 1;\n    }\n\n    WaitForSingleObject(process.hProcess, 200);\n    TerminateProcess(process.hProcess, 0);\n    WaitForSingleObject(process.hProcess, 5000);\n\n    CloseHandle(process.hThread);\n    CloseHandle(process.hProcess);\n    return 0;\n}\n",
+        "notes": "The process terminated is the child created by the example, not a system process."
+      }
+    },
+    {
+      "id": "win32.exitprocess",
+      "name": "ExitProcess",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Ends the calling process and all of its threads.",
+      "description": "ExitProcess terminates the calling process after notifying loaded DLLs through their detach routines. It does not return to the caller. Threads of the process are terminated, and the supplied exit code is recorded for the process and its threads.",
+      "prototype": "void ExitProcess(UINT uExitCode);",
+      "parameters": [
+        {
+          "name": "uExitCode",
+          "type": "UINT",
+          "description": "The exit code to record for the process and all of its threads."
+        }
+      ],
+      "return": {
+        "type": "void",
+        "failure": "This function does not return."
+      },
+      "tags": [
+        "execution-flow",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.terminateprocess",
+        "win32.exitthread",
+        "win32.getcurrentprocess"
+      ],
+      "related_constants": [],
+      "remarks": "Prefer returning from the entry point or calling ExitThread for a single thread. ExitProcess can skip normal stack unwinding, so automatic C++ destructors and other cleanup in the exiting thread may not run.",
+      "maldev_notes": "Explicit process exit is ordinary behavior. In analysis, the exit path matters mainly for understanding control flow and cleanup, not as an indicator by itself.",
+      "defensive_notes": "Exit codes and termination paths can help correlate process lifetime with other telemetry, but they rarely establish intent on their own.",
+      "references": [
+        {
+          "title": "ExitProcess function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Non-returning behavior and DLL detach notification checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Exit the current process with a status code",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    printf(\"Exiting the example process.\\n\");\n    ExitProcess(0);\n}\n",
+        "notes": "The example terminates only its own process and has no resources to release."
+      }
+    },
+    {
+      "id": "win32.createprocessa",
+      "name": "CreateProcessA",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Creates a new process and its primary thread.",
+      "description": "Creates a new process and its primary thread. The new process runs in the security context of the calling process. If the calling process is impersonating another user, the new process uses the token for the calling process, not the impersonation token. To run the new process in the security context of the user represented by the impersonation token, use the CreateProcessAsUserA function or CreateProcessWithLogonW function.",
+      "prototype": "BOOL CreateProcessA(LPCSTR lpApplicationName, LPSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);",
+      "parameters": [
+        {
+          "name": "lpApplicationName",
+          "type": "LPCSTR",
+          "description": "The name of the module to be executed. This module can be a Windows-based application. It can be some other type of module (for example, MS-DOS or OS/2) if the appropriate subsystem is available on the local computer. The string can specify the full path and file name of the module to execute or it can specify a partial name. In the case of a partial name, the function uses the current drive and current directory to complete the specification. The function will not use the search path. This parameter must include the file name extension; no default extension is assumed. The *lpApplicationName* parameter can be NULL. In that case, the module name must be the first white space–delimited token in the *lpCommandLine* string. If you are using a long file name that contains a space, use quoted strings to indicate where the file name ends and the arguments begin; otherwise, the file name is amb"
+        },
+        {
+          "name": "lpCommandLine",
+          "type": "LPSTR",
+          "description": "The command line to be executed. The maximum length of this string is 32,767 characters, including the Unicode terminating null character. If *lpApplicationName* is NULL, the module name portion of *lpCommandLine* is limited to MAX_PATH characters. The Unicode version of this function, CreateProcessW, can modify the contents of this string. Therefore, this parameter cannot be a pointer to read-only memory (such as a const variable or a literal string). If this parameter is a constant string, the function may cause an access violation. The *lpCommandLine* parameter can be NULL. In that case, the function uses the string pointed to by *lpApplicationName* as the command line. If both *lpApplicationName* and *lpCommandLine* are non-NULL, the null-terminated string pointed to by *lpApplicationName* specifies the module to execute, and the null-terminated string pointed to by *lpCommandLine* s"
+        },
+        {
+          "name": "lpProcessAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that determines whether the returned handle to the new process object can be inherited by child processes. If lpProcessAttributes is NULL, the handle cannot be inherited. The lpSecurityDescriptor member of the structure specifies a security descriptor for the new process. If *lpProcessAttributes* is NULL or lpSecurityDescriptor is NULL, the process gets a default security descriptor. The ACLs in the default security descriptor for a process come from the primary token of the creator. Windows XP: The ACLs in the default security descriptor for a process come from the primary or impersonation token of the creator. This behavior changed with Windows XP with SP2 and Windows Server 2003."
+        },
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that specifies a security descriptor for the new thread and determines whether child processes can inherit the returned handle. If *lpThreadAttributes* is NULL, the thread gets a default security descriptor and the handle cannot be inherited. The access control lists (ACL) in the default security descriptor for a thread come from the primary token of the creator."
+        },
+        {
+          "name": "bInheritHandles",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, each inheritable handle in the calling process is inherited by the new process. If the parameter is FALSE, the handles are not inherited. Note that inherited handles have the same value and access rights as the original handles. For additional discussion of inheritable handles, see Remarks. Terminal Services: You cannot inherit handles across sessions. Additionally, if this parameter is TRUE, you must create the process in the same session as the caller. Protected Process Light (PPL) processes: The generic handle inheritance is blocked when a PPL process creates a non-PPL process since PROCESS_DUP_HANDLE is not allowed from a non-PPL process to a PPL process. See Process Security and Access Rights Windows 7: STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, and STD_ERROR_HANDLE are inherited, even when the parameter is FALSE."
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "The flags that control the priority class and the creation of the process. For a list of values, see Process Creation Flags. This parameter also controls the new process's priority class, which is used to determine the scheduling priorities of the process's threads. For a list of values, see GetPriorityClass. If none of the priority class flags is specified, the priority class defaults to NORMAL_PRIORITY_CLASS unless the priority class of the creating process is IDLE_PRIORITY_CLASS or BELOW_NORMAL_PRIORITY_CLASS. In this case, the child process receives the default priority class of the calling process. If the dwCreationFlags parameter has a value of 0: - The process inherits both the error mode of the caller and the parent's console. - The environment block for the new process is assumed to contain ANSI characters (see *lpEnvironment* parameter for additional information). - A 16-bit Wi"
+        },
+        {
+          "name": "lpEnvironment",
+          "type": "LPVOID",
+          "description": "A pointer to the environment block for the new process. If this parameter is NULL, the new process uses the environment of the calling process. An environment block consists of a null-terminated block of null-terminated strings. Each string is in the following form: *name*=*value*\\0 Because the equal sign is used as a separator, it must not be used in the name of an environment variable. An environment block can contain either Unicode or ANSI characters. If the environment block pointed to by *lpEnvironment* contains Unicode characters, be sure that *dwCreationFlags* includes CREATE_UNICODE_ENVIRONMENT. The ANSI version of this function, CreateProcessA fails if the total size of the environment block for the process exceeds 32,767 characters. Note that an ANSI environment block is terminated by two zero bytes: one for the last string, one more to terminate the block. A Unicode environmen"
+        },
+        {
+          "name": "lpCurrentDirectory",
+          "type": "LPCSTR",
+          "description": "The full path to the current directory for the process. The string can also specify a UNC path. If this parameter is NULL, the new process will have the same current drive and directory as the calling process. (This feature is provided primarily for shells that need to start an application and specify its initial drive and working directory.)"
+        },
+        {
+          "name": "lpStartupInfo",
+          "type": "LPSTARTUPINFOA",
+          "description": "A pointer to a STARTUPINFO or STARTUPINFOEX structure. To set extended attributes, use a STARTUPINFOEX structure and specify EXTENDED_STARTUPINFO_PRESENT in the *dwCreationFlags* parameter. Handles in STARTUPINFO or STARTUPINFOEX must be closed with CloseHandle when they are no longer needed. > > The caller is responsible for ensuring that the standard handle fields in STARTUPINFO contain valid handle values. These fields are copied unchanged to the child process without validation, even when the dwFlags member specifies STARTF_USESTDHANDLES. Incorrect values can cause the child process to misbehave or crash. Use the Application Verifier runtime verification tool to detect invalid handles."
+        },
+        {
+          "name": "lpProcessInformation",
+          "type": "LPPROCESS_INFORMATION",
+          "description": "A pointer to a PROCESS_INFORMATION structure that receives identification information about the new process. Handles in PROCESS_INFORMATION must be closed with CloseHandle when they are no longer needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. Note that the function returns before the process has finished initialization. If a required DLL cannot be located or fails to initialize, the process is terminated. To get the termination status of a process, call GetExitCodeProcess.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "process-management"
+      ],
+      "remarks": "The process is assigned a process identifier. The identifier is valid until the process terminates. It can be used to identify the process, or specified in the OpenProcess function to open a handle to the process. The initial thread in the process is also assigned a thread identifier. It can be specified in the OpenThread function to open a handle to the thread. The identifier is valid until the thread terminates and can be used to uniquely identify the thread within the system. These identifiers are returned in the PROCESS_INFORMATION structure. The name of the executable in the command line that the operating system provides to a process is not necessarily identical to that in the command line that the calling process gives to the CreateProcess function. The operating system may prepend a fully qualified path to an executable name that is provided without a fully qualified path. The calling thread can use the WaitForInputIdle function to wait until the new process has finished its initialization and is waiting for user input with no input pending. This can be useful for synchronization between parent and child processes, because CreateProcess returns without waiting for the new process to finish its initialization. For example, the creating process would use WaitForInputIdle before trying to find a window associated with the new process. The preferred way to shut down a proce",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Start a short-lived child process and close its handles",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    STARTUPINFOA startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    char command[] = \"cmd.exe /c exit 0\";\n\n    if (!CreateProcessA(nullptr, command, nullptr, nullptr, FALSE,\n            CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) {\n        printf(\"CreateProcessA failed: %lu\\n\", GetLastError());\n        return 1;\n    }\n\n    WaitForSingleObject(process.hProcess, 5000);\n    CloseHandle(process.hThread);\n    CloseHandle(process.hProcess);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateProcessA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateProcessA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-createprocessa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createprocessasusera",
+      "name": "CreateProcessAsUserA",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Creates a new process and its primary thread.",
+      "description": "Creates a new process and its primary thread. The new process runs in the security context of the user represented by the specified token. Typically, the process that calls the CreateProcessAsUser function must have the SE_INCREASE_QUOTA_NAME privilege and may require the SE_ASSIGNPRIMARYTOKEN_NAME privilege if the token is not assignable. If this function fails with ERROR_PRIVILEGE_NOT_HELD (1314), use the CreateProcessWithLogonW function instead. CreateProcessWithLogonW requires no special privileges, but the specified user account must be allowed to log on interactively. Generally, it is best to use CreateProcessWithLogonW to create a process with alternate credentials.",
+      "prototype": "BOOL CreateProcessAsUserA(HANDLE hToken, LPCSTR lpApplicationName, LPSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCSTR lpCurrentDirectory, LPSTARTUPINFOA lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);",
+      "parameters": [
+        {
+          "name": "hToken",
+          "type": "HANDLE",
+          "description": "A handle to the primary token that represents a user. The handle must have the TOKEN_QUERY, TOKEN_DUPLICATE, and TOKEN_ASSIGN_PRIMARY access rights. For more information, see Access Rights for Access-Token Objects. The user represented by the token must have read and execute access to the application specified by the lpApplicationName or the lpCommandLine parameter. To get a primary token that represents the specified user, call the LogonUser function. Alternatively, you can call the DuplicateTokenEx function to convert an impersonation token into a primary token. This allows a server application that is impersonating a client to create a process that has the security context of the client. If hToken is a restricted version of the caller's primary token, the SE_ASSIGNPRIMARYTOKEN_NAME privilege is not required. If the necessary privileges are not already enabled, CreateProcessAsUser enab"
+        },
+        {
+          "name": "lpApplicationName",
+          "type": "LPCSTR",
+          "description": "The name of the module to be executed. This module can be a Windows-based application. It can be some other type of module (for example, MS-DOS or OS/2) if the appropriate subsystem is available on the local computer. The string can specify the full path and file name of the module to execute or it can specify a partial name. In the case of a partial name, the function uses the current drive and current directory to complete the specification. The function will not use the search path. This parameter must include the file name extension; no default extension is assumed. The lpApplicationName parameter can be NULL. In that case, the module name must be the first white space–delimited token in the lpCommandLine string. If you are using a long file name that contains a space, use quoted strings to indicate where the file name ends and the arguments begin; otherwise, the file name is ambiguo"
+        },
+        {
+          "name": "lpCommandLine",
+          "type": "LPSTR",
+          "description": "The command line to be executed. The maximum length of this string is 32K characters. If lpApplicationName is NULL, the module name portion of lpCommandLine is limited to MAX_PATH characters. The Unicode version of this function, CreateProcessAsUserW, can modify the contents of this string. Therefore, this parameter cannot be a pointer to read-only memory (such as a const variable or a literal string). If this parameter is a constant string, the function may cause an access violation. The lpCommandLine parameter can be NULL. In that case, the function uses the string pointed to by lpApplicationName as the command line. If both lpApplicationName and lpCommandLine are non-NULL, *lpApplicationName specifies the module to execute, and *lpCommandLine specifies the command line. The new process can use GetCommandLine to retrieve the entire command line. Console processes written in C can use t"
+        },
+        {
+          "name": "lpProcessAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that specifies a security descriptor for the new process object and determines whether child processes can inherit the returned handle to the process. If lpProcessAttributes is NULL or lpSecurityDescriptor is NULL, the process gets a default security descriptor and the handle cannot be inherited. The default security descriptor is that of the user referenced in the hToken parameter. This security descriptor may not allow access for the caller, in which case the process may not be opened again after it is run. The process handle is valid and will continue to have full access rights."
+        },
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "A pointer to a SECURITY_ATTRIBUTES structure that specifies a security descriptor for the new thread and determines whether child processes can inherit the returned handle. If lpThreadAttributes is NULL or lpSecurityDescriptor is NULL, the thread gets a default security descriptor and the handle cannot be inherited. The default security descriptor is that of the user referenced in the hToken parameter. This security descriptor may not allow access for the caller."
+        },
+        {
+          "name": "bInheritHandles",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, each inheritable handle in the calling process is inherited by the new process. If the parameter is FALSE, the handles are not inherited. Note that inherited handles have the same value and access rights as the original handles. For additional discussion of inheritable handles, see Remarks. Terminal Services: You cannot inherit handles across sessions. Additionally, if this parameter is TRUE, you must create the process in the same session as the caller. Protected Process Light (PPL) processes: The generic handle inheritance is blocked when a PPL process creates a non-PPL process since PROCESS_DUP_HANDLE is not allowed from a non-PPL process to a PPL process. See Process Security and Access Rights"
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "The flags that control the priority class and the creation of the process. For a list of values, see Process Creation Flags. This parameter also controls the new process's priority class, which is used to determine the scheduling priorities of the process's threads. For a list of values, see GetPriorityClass. If none of the priority class flags is specified, the priority class defaults to NORMAL_PRIORITY_CLASS unless the priority class of the creating process is IDLE_PRIORITY_CLASS or BELOW_NORMAL_PRIORITY_CLASS. In this case, the child process receives the default priority class of the calling process. If the dwCreationFlags parameter has a value of 0: - The process inherits both the error mode of the caller and the parent's console. - The environment block for the new process is assumed to contain ANSI characters (see *lpEnvironment* parameter for additional information). - A 16-bit Wi"
+        },
+        {
+          "name": "lpEnvironment",
+          "type": "LPVOID",
+          "description": "A pointer to an environment block for the new process. If this parameter is NULL, the new process uses the environment of the calling process. An environment block consists of a null-terminated block of null-terminated strings. Each string is in the following form: name=value\\0 Because the equal sign is used as a separator, it must not be used in the name of an environment variable. An environment block can contain either Unicode or ANSI characters. If the environment block pointed to by lpEnvironment contains Unicode characters, be sure that dwCreationFlags includes CREATE_UNICODE_ENVIRONMENT. The ANSI version of this function, CreateProcessAsUserA fails if the total size of the environment block for the process exceeds 32,767 characters. Note that an ANSI environment block is terminated by two zero bytes: one for the last string, one more to terminate the block. A Unicode environment b"
+        },
+        {
+          "name": "lpCurrentDirectory",
+          "type": "LPCSTR",
+          "description": "The full path to the current directory for the process. The string can also specify a UNC path. If this parameter is NULL, the new process will have the same current drive and directory as the calling process. (This feature is provided primarily for shells that need to start an application and specify its initial drive and working directory.)"
+        },
+        {
+          "name": "lpStartupInfo",
+          "type": "LPSTARTUPINFOA",
+          "description": "A pointer to a STARTUPINFO or STARTUPINFOEX structure. The user must have full access to both the specified window station and desktop. If you want the process to be interactive, specify winsta0\\default. If the lpDesktop member is NULL, the new process inherits the desktop and window station of its parent process. If this member is an empty string, \"\", the new process connects to a window station using the rules described in Process Connection to a Window Station. To set extended attributes, use a STARTUPINFOEX structure and specify EXTENDED_STARTUPINFO_PRESENT in the dwCreationFlags parameter. Handles in STARTUPINFO or STARTUPINFOEX must be closed with CloseHandle when they are no longer needed. Important The caller is responsible for ensuring that the standard handle fields in STARTUPINFO contain valid handle values. These fields are copied unchanged to the child process without valida"
+        },
+        {
+          "name": "lpProcessInformation",
+          "type": "LPPROCESS_INFORMATION",
+          "description": "A pointer to a PROCESS_INFORMATION structure that receives identification information about the new process. Handles in PROCESS_INFORMATION must be closed with CloseHandle when they are no longer needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. Note that the function returns before the process has finished initialization. If a required DLL cannot be located or fails to initialize, the process is terminated. To get the termination status of a process, call GetExitCodeProcess.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "process-management"
+      ],
+      "remarks": "CreateProcessAsUser must be able to open the primary token of the calling process with the TOKEN_DUPLICATE and TOKEN_IMPERSONATE access rights. By default, CreateProcessAsUser creates the new process on a noninteractive window station with a desktop that is not visible and cannot receive user input. To enable user interaction with the new process, you must specify the name of the default interactive window station and desktop, \"winsta0\\default\", in the lpDesktop member of the STARTUPINFO structure. In addition, before calling CreateProcessAsUser, you must change the discretionary access control list (DACL) of both the default interactive window station and the default desktop. The DACLs for the window station and desktop must grant access to the user or the logon session represented by the hToken parameter. CreateProcessAsUser does not load the specified user's profile into the HKEY_USERS registry key. Therefore, to access the information in the HKEY_CURRENT_USER registry key, you must load the user's profile information into HKEY_USERS with the LoadUserProfile function before calling CreateProcessAsUser. Be sure to call UnloadUserProfile after the new process exits. If the lpEnvironment parameter is NULL, the new process inherits the environment of the calling process. CreateProcessAsUser does not automatically modify the environment block to include environment variables spec",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a token-based process creation without running it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating a process under another token requires an existing token and\n    // privileges such as SeAssignPrimaryTokenPrivilege. The example shows the\n    // startup structures only and deliberately does not create a process.\n    STARTUPINFOA startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    printf(\"Token-based process creation is not performed by this example.\\n\");\n    return 0;\n}\n",
+        "notes": "Token-based process creation is privileged; the snippet is setup-only and does not start a process."
+      },
+      "references": [
+        {
+          "title": "CreateProcessAsUserA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessasusera",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateProcessAsUserA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-createprocessasusera.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createprocessinternal",
+      "name": "CreateProcessInternal",
+      "aliases": [
+        "CreateProcessInternalW"
+      ],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "kernel32.dll (internal export)",
+      "minimum_windows": "Windows 2000 and later",
+      "summary": "Internal process-creation routine exported by Kernel32 and used by the Win32 CreateProcess family.",
+      "description": "CreateProcessInternal is an undocumented Kernel32 export that implements the common process-creation path used by CreateProcessA, CreateProcessW, and related wrappers. It accepts a user token and an additional output token handle. The prototype shown here is the widely used ReactOS/Wine-compatible form; Microsoft does not publish a stable contract for this export.",
+      "prototype": "BOOL CreateProcessInternalW(HANDLE hUserToken, LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation, PHANDLE hNewToken);",
+      "parameters": [
+        {
+          "name": "hUserToken",
+          "type": "HANDLE",
+          "description": "Optional token that supplies the security context for the new process."
+        },
+        {
+          "name": "lpApplicationName",
+          "type": "LPCWSTR",
+          "description": "The image to execute, or NULL when the command line supplies it."
+        },
+        {
+          "name": "lpCommandLine",
+          "type": "LPWSTR",
+          "description": "The mutable command line for the new process."
+        },
+        {
+          "name": "lpProcessAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the process object."
+        },
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional security attributes for the initial thread."
+        },
+        {
+          "name": "bInheritHandles",
+          "type": "BOOL",
+          "description": "Whether the new process inherits inheritable handles."
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "Process creation flags and priority class."
+        },
+        {
+          "name": "lpEnvironment",
+          "type": "LPVOID",
+          "description": "Optional environment block."
+        },
+        {
+          "name": "lpCurrentDirectory",
+          "type": "LPCWSTR",
+          "description": "Optional current directory for the new process."
+        },
+        {
+          "name": "lpStartupInfo",
+          "type": "LPSTARTUPINFOW",
+          "description": "Startup information for the new process."
+        },
+        {
+          "name": "lpProcessInformation",
+          "type": "LPPROCESS_INFORMATION",
+          "description": "Receives process and thread handles and identifiers."
+        },
+        {
+          "name": "hNewToken",
+          "type": "PHANDLE",
+          "description": "Optional output handle for a new restricted token."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE when the process is created.",
+        "failure": "Returns FALSE. Call GetLastError for the error code."
+      },
+      "tags": [
+        "process-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a token-based process creation without running it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating a process under another token requires an existing token and\n    // privileges such as SeAssignPrimaryTokenPrivilege. The example shows the\n    // startup structures only and deliberately does not create a process.\n    STARTUPINFOA startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    printf(\"Token-based process creation is not performed by this example.\\n\");\n    return 0;\n}\n",
+        "notes": "Token-based process creation is privileged; the snippet is setup-only and does not start a process."
+      },
+      "references": [
+        {
+          "title": "ReactOS CreateProcessInternalW implementation",
+          "url": "https://github.com/reactos/reactos/blob/master/dll/win32/kernel32/client/proc.c",
+          "source_type": "community-documentation"
+        },
+        {
+          "title": "CreateProcessW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "This export is not documented in the Microsoft sdk-api Markdown or NtDoc. Its prototype is a community ReactOS/Wine-compatible declaration; treat the contract as unverified and check it against the Windows version you target."
+    },
+    {
+      "id": "win32.createprocesswithtokenw",
+      "name": "CreateProcessWithTokenW",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Creates a new process and its primary thread.",
+      "description": "Creates a new process and its primary thread. The new process runs in the security context of the specified token. It can optionally load the user profile for the specified user. The process that calls CreateProcessWithTokenW must have the SE_IMPERSONATE_NAME privilege. If this function fails with ERROR_PRIVILEGE_NOT_HELD (1314), use the CreateProcessAsUser or CreateProcessWithLogonW function instead. Typically, the process that calls CreateProcessAsUser must have the SE_INCREASE_QUOTA_NAME privilege and may require the SE_ASSIGNPRIMARYTOKEN_NAME privilege if the token is not assignable. CreateProcessWithLogonW requires no special privileges, but the specified user account must be allowed to log on interactively. Generally, it is best to use CreateProcessWithLogonW to create a process with alternate credentials.",
+      "prototype": "BOOL CreateProcessWithTokenW(HANDLE hToken, DWORD dwLogonFlags, LPCWSTR lpApplicationName, LPWSTR lpCommandLine, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation);",
+      "parameters": [
+        {
+          "name": "hToken",
+          "type": "HANDLE",
+          "description": "A handle to the primary token that represents a user. The handle must have the TOKEN_QUERY, TOKEN_DUPLICATE, and TOKEN_ASSIGN_PRIMARY access rights. For more information, see Access Rights for Access-Token Objects. The user represented by the token must have read and execute access to the application specified by the lpApplicationName or the lpCommandLine parameter. To get a primary token that represents the specified user, call the LogonUser function. Alternatively, you can call the DuplicateTokenEx function to convert an impersonation token into a primary token. This allows a server application that is impersonating a client to create a process that has the security context of the client. Terminal Services: The caller's process always runs in the caller's session, not in the session specified in the token. To run a process in the session specified in the token, use the CreateProcessAsU"
+        },
+        {
+          "name": "dwLogonFlags",
+          "type": "DWORD",
+          "description": "The logon option. This parameter can be zero or one of the following values. Value Meaning LOGON_WITH_PROFILE 0x00000001 Log on, then load the user's profile in the HKEY_USERS registry key. The function returns after the profile has been loaded. Loading the profile can be time-consuming, so it is best to use this value only if you must access the information in the HKEY_CURRENT_USER registry key. Windows Server 2003: The profile is unloaded after the new process has been terminated, regardless of whether it has created child processes. LOGON_NETCREDENTIALS_ONLY 0x00000002 Log on, but use the specified credentials on the network only. The new process uses the same token as the caller, but the system creates a new logon session within LSA, and the process uses the specified credentials as the default credentials. This value can be used to create a process that uses a different set of crede"
+        },
+        {
+          "name": "lpApplicationName",
+          "type": "LPCWSTR",
+          "description": "The name of the module to be executed. This module can be a Windows-based application. It can be some other type of module (for example, MS-DOS or OS/2) if the appropriate subsystem is available on the local computer. The string can specify the full path and file name of the module to execute or it can specify a partial name. In the case of a partial name, the function uses the current drive and current directory to complete the specification. The function will not use the search path. This parameter must include the file name extension; no default extension is assumed. The lpApplicationName parameter can be NULL. In that case, the module name must be the first white space–delimited token in the lpCommandLine string. If you are using a long file name that contains a space, use quoted strings to indicate where the file name ends and the arguments begin; otherwise, the file name is ambiguo"
+        },
+        {
+          "name": "lpCommandLine",
+          "type": "LPWSTR",
+          "description": "The command line to be executed. The maximum length of this string is 1024 characters. If lpApplicationName is NULL, the module name portion of lpCommandLine is limited to MAX_PATH characters. The function can modify the contents of this string. Therefore, this parameter cannot be a pointer to read-only memory (such as a const variable or a literal string). If this parameter is a constant string, the function may cause an access violation. The lpCommandLine parameter can be NULL. In that case, the function uses the string pointed to by lpApplicationName as the command line. If both lpApplicationName and lpCommandLine are non-NULL, *lpApplicationName specifies the module to execute, and *lpCommandLine specifies the command line. The new process can use GetCommandLine to retrieve the entire command line. Console processes written in C can use the argc and argv arguments to parse the comman"
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "The flags that control how the process is created. The CREATE_DEFAULT_ERROR_MODE, CREATE_NEW_CONSOLE, and CREATE_NEW_PROCESS_GROUP flags are enabled by default. For a list of values, see Process Creation Flags. This parameter also controls the new process's priority class, which is used to determine the scheduling priorities of the process's threads. For a list of values, see GetPriorityClass. If none of the priority class flags is specified, the priority class defaults to NORMAL_PRIORITY_CLASS unless the priority class of the creating process is IDLE_PRIORITY_CLASS or BELOW_NORMAL_PRIORITY_CLASS. In this case, the child process receives the default priority class of the calling process. If the dwCreationFlags parameter has a value of 0: - The process gets the default error mode, creates a new console and creates a new process group. - The environment block for the new process is assumed"
+        },
+        {
+          "name": "lpEnvironment",
+          "type": "LPVOID",
+          "description": "A pointer to an environment block for the new process. If this parameter is NULL, the new process uses an environment created from the profile of the user specified by lpUsername. An environment block consists of a null-terminated block of null-terminated strings. Each string is in the following form: name=value Because the equal sign (=) is used as a separator, it must not be used in the name of an environment variable. An environment block can contain Unicode or ANSI characters. If the environment block pointed to by lpEnvironment contains Unicode characters, be sure that dwCreationFlags includes CREATE_UNICODE_ENVIRONMENT. An ANSI environment block is terminated by two zero bytes: one for the last string, one more to terminate the block. A Unicode environment block is terminated by four zero bytes: two for the last string and two more to terminate the block. To retrieve a copy of the"
+        },
+        {
+          "name": "lpCurrentDirectory",
+          "type": "LPCWSTR",
+          "description": "The full path to the current directory for the process. The string can also specify a UNC path. If this parameter is NULL, the new process will have the same current drive and directory as the calling process. (This feature is provided primarily for shells that need to start an application and specify its initial drive and working directory.)"
+        },
+        {
+          "name": "lpStartupInfo",
+          "type": "LPSTARTUPINFOW",
+          "description": "A pointer to a STARTUPINFO or STARTUPINFOEX structure. If the lpDesktop member is NULL or an empty string, the new process inherits the desktop and window station of its parent process. The function adds permission for the specified user account to the inherited window station and desktop. Otherwise, if this member specifies a desktop, it is the responsibility of the application to add permission for the specified user account to the specified window station and desktop, even for WinSta0\\Default. Handles in STARTUPINFO or STARTUPINFOEX must be closed with CloseHandle when they are no longer needed. Important If the dwFlags member of the STARTUPINFO structure specifies STARTF_USESTDHANDLES, the standard handle fields are copied unchanged to the child process without validation. The caller is responsible for ensuring that these fields contain valid handle values. Incorrect values can cause"
+        },
+        {
+          "name": "lpProcessInformation",
+          "type": "LPPROCESS_INFORMATION",
+          "description": "A pointer to a PROCESS_INFORMATION structure that receives identification information for the new process, including a handle to the process. Handles in PROCESS_INFORMATION must be closed with the CloseHandle function when they are no longer needed."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. Note that the function returns before the process has finished initialization. If a required DLL cannot be located or fails to initialize, the process is terminated. To get the termination status of a process, call GetExitCodeProcess.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "process-management"
+      ],
+      "remarks": "By default, CreateProcessWithTokenW does not load the specified user's profile into the HKEY_USERS registry key. This means that access to information in the HKEY_CURRENT_USER registry key may not produce results consistent with a normal interactive logon. It is your responsibility to load the user's registry hive into HKEY_USERS by either using LOGON_WITH_PROFILE, or by calling the LoadUserProfile function before calling this function. If the lpEnvironment parameter is NULL, the new process uses an environment block created from the profile of the user specified by lpUserName. If the HOMEDRIVE and HOMEPATH variables are not set, CreateProcessWithTokenW modifies the environment block to use the drive and path of the user's working directory. When created, the new process and thread handles receive full access rights (PROCESS_ALL_ACCESS and THREAD_ALL_ACCESS). For either handle, if a security descriptor is not provided, the handle can be used in any function that requires an object handle of that type. When a security descriptor is provided, an access check is performed on all subsequent uses of the handle before access is granted. If access is denied, the requesting process cannot use the handle to gain access to the process or thread. To retrieve a security token, pass the process handle in the PROCESS_INFORMATION structure to the OpenProcessToken function. The process is assi",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a token-based process creation without running it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating a process under another token requires an existing token and\n    // privileges such as SeAssignPrimaryTokenPrivilege. The example shows the\n    // startup structures only and deliberately does not create a process.\n    STARTUPINFOA startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    printf(\"Token-based process creation is not performed by this example.\\n\");\n    return 0;\n}\n",
+        "notes": "Token-based process creation is privileged; the snippet is setup-only and does not start a process."
+      },
+      "references": [
+        {
+          "title": "CreateProcessWithTokenW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createprocesswithtokenw",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateProcessWithTokenW - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-createprocesswithtokenw.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createtoolhelp32snapshot",
+      "name": "CreateToolhelp32Snapshot",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Takes a snapshot of the specified processes, as well as the heaps, modules, and threads used by these processes.",
+      "description": "Takes a snapshot of the specified processes, as well as the heaps, modules, and threads used by these processes.",
+      "prototype": "HANDLE CreateToolhelp32Snapshot(DWORD dwFlags, DWORD th32ProcessID);",
+      "parameters": [
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The portions of the system to be included in the snapshot. This parameter can be one or more of the following values. Value Meaning TH32CS_INHERIT 0x80000000 Indicates that the snapshot handle is to be inheritable. TH32CS_SNAPALL Includes all processes and threads in the system, plus the heaps and modules of the process specified in th32ProcessID. Equivalent to specifying the TH32CS_SNAPHEAPLIST, TH32CS_SNAPMODULE, TH32CS_SNAPPROCESS, and TH32CS_SNAPTHREAD values combined using an OR operation ('|'). TH32CS_SNAPHEAPLIST 0x00000001 Includes all heaps of the process specified in th32ProcessID in the snapshot. To enumerate the heaps, see Heap32ListFirst. TH32CS_SNAPMODULE 0x00000008 Includes all modules of the process specified in th32ProcessID in the snapshot. To enumerate the modules, see Module32First. If the function fails with ERROR_BAD_LENGTH, retry the function until it succeeds. 64-"
+        },
+        {
+          "name": "th32ProcessID",
+          "type": "DWORD",
+          "description": "The process identifier of the process to be included in the snapshot. This parameter can be zero to indicate the current process. This parameter is used when the TH32CS_SNAPHEAPLIST, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, or TH32CS_SNAPALL value is specified. Otherwise, it is ignored and all processes are included in the snapshot. If the specified process is the Idle process or one of the CSRSS processes, this function fails and the last error code is ERROR_ACCESS_DENIED because their access restrictions prevent user-level code from opening them. If the specified process is a 64-bit process and the caller is a 32-bit process, this function fails and the last error code is ERROR_PARTIAL_COPY (299)."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, it returns an open handle to the specified snapshot.",
+        "failure": "If the function fails, it returns INVALID_HANDLE_VALUE. To get extended error information, call GetLastError. Possible error codes include ERROR_BAD_LENGTH."
+      },
+      "tags": [
+        "process-management",
+        "process-enumeration"
+      ],
+      "remarks": "The snapshot taken by this function is examined by the other tool help functions to provide their results. Access to the snapshot is read only. The snapshot handle acts as an object handle and is subject to the same rules regarding which processes and threads it is valid in. To enumerate the heap or module states for all processes, specify TH32CS_SNAPALL and set th32ProcessID to zero. Then, for each additional process in the snapshot, call CreateToolhelp32Snapshot again, specifying its process identifier and the TH32CS_SNAPHEAPLIST or TH32_SNAPMODULE value. When taking snapshots that include heaps and modules for a process other than the current process, the CreateToolhelp32Snapshot function can fail or return incorrect information for a variety of reasons. For example, if the loader data table in the target process is corrupted or not initialized, or if the module list changes during the function call as a result of DLLs being loaded or unloaded, the function might fail with ERROR_BAD_LENGTH or other error code. Ensure that the target process was not started in a suspended state, and try calling the function again. If the function fails with ERROR_BAD_LENGTH when called with TH32CS_SNAPMODULE or TH32CS_SNAPMODULE32, call the function again until it succeeds. The TH32CS_SNAPMODULE and TH32CS_SNAPMODULE32 flags do not retrieve handles for modules that were loaded with the LOAD_L",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Take a process snapshot and close it",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    PROCESSENTRY32 entry = { sizeof(entry) };\n    if (Process32First(snapshot, &entry)) {\n        printf(\"First process: %s\\n\", entry.szExeFile);\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateToolhelp32Snapshot function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateToolhelp32Snapshot - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumprocesses",
+      "name": "EnumProcesses",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "library": "Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "header": "psapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the process identifier for each process object in the system.",
+      "description": "Retrieves the process identifier for each process object in the system.",
+      "prototype": "BOOL EnumProcesses(DWORD* lpidProcess, DWORD cb, LPDWORD lpcbNeeded);",
+      "parameters": [
+        {
+          "name": "lpidProcess",
+          "type": "DWORD*",
+          "description": "A pointer to an array that receives the list of process identifiers."
+        },
+        {
+          "name": "cb",
+          "type": "DWORD",
+          "description": "The size of the pProcessIds array, in bytes."
+        },
+        {
+          "name": "lpcbNeeded",
+          "type": "LPDWORD",
+          "description": "The number of bytes returned in the pProcessIds array."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "process-management",
+        "process-enumeration"
+      ],
+      "remarks": "It is a good idea to use a large array, because it is hard to predict how many processes there will be at the time you call EnumProcesses. To determine how many processes were enumerated, divide the lpcbNeeded value by sizeof(DWORD). There is no indication given when the buffer is too small to store all process identifiers. Therefore, if lpcbNeeded equals cb, consider retrying the call with a larger array. To obtain process handles for the processes whose identifiers you have just obtained, call the OpenProcess function. Starting with Windows 7 and Windows Server 2008 R2, Psapi.h establishes version numbers for the PSAPI functions. The PSAPI version number affects the name used to call the function and the library that a program must load. If PSAPI_VERSION is 2 or greater, this function is defined as K32EnumProcesses in Psapi.h and exported in Kernel32.lib and Kernel32.dll. If PSAPI_VERSION is 1, this function is defined as EnumProcesses in Psapi.h and exported in Psapi.lib and Psapi.dll as a wrapper that calls K32EnumProcesses. Programs that must run on earlier versions of Windows as well as Windows 7 and later versions should always call this function as EnumProcesses. To ensure correct resolution of symbols, add Psapi.lib to the TARGETLIBS macro and compile the program with –DPSAPI_VERSION=1. To use run-time dynamic linking, load Psapi.dll. #### Examples For an example, see ",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate running process identifiers",
+        "code": "#include <windows.h>\n#include <psapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"psapi.lib\")\n\nint main() {\n    DWORD ids[1024] = {};\n    DWORD needed = 0;\n    if (EnumProcesses(ids, sizeof(ids), &needed)) {\n        DWORD count = needed / sizeof(DWORD);\n        printf(\"Processes: %lu\\n\", count);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumProcesses function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocesses",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumProcesses - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/psapi/nf-psapi-enumprocesses.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (psapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.process32first",
+      "name": "Process32First",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "The Process32First function (tlhelp32.h) retrieves information about the first process encountered in a system snapshot.",
+      "description": "Retrieves information about the first process encountered in a system snapshot.",
+      "prototype": "BOOL Process32First(HANDLE hSnapshot, LPPROCESSENTRY32 lppe);",
+      "parameters": [
+        {
+          "name": "hSnapshot",
+          "type": "HANDLE",
+          "description": "A handle to the snapshot returned from a previous call to the CreateToolhelp32Snapshot function."
+        },
+        {
+          "name": "lppe",
+          "type": "LPPROCESSENTRY32",
+          "description": "A pointer to a PROCESSENTRY32 structure. It contains process information such as the name of the executable file, the process identifier, and the process identifier of the parent process."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if the first entry of the process list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no processes exist or the snapshot does not contain process information.",
+        "failure": ""
+      },
+      "tags": [
+        "process-management",
+        "process-enumeration"
+      ],
+      "remarks": "The calling application must set the dwSize member of PROCESSENTRY32 to the size, in bytes, of the structure. To retrieve information about other processes recorded in the same snapshot, use the Process32Next function. #### Examples For an example, see Taking a Snapshot and Viewing Processes.",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Walk a few entries in a process snapshot",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    PROCESSENTRY32 entry = { sizeof(entry) };\n    if (Process32First(snapshot, &entry)) {\n        int shown = 0;\n        do {\n            printf(\"Process: %s\\n\", entry.szExeFile);\n        } while (++shown < 3 && Process32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Process32First function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32first",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Process32First - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-process32first.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.process32next",
+      "name": "Process32Next",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "The Process32Next function (tlhelp32.h) retrieves information about the next process recorded in a system snapshot.",
+      "description": "Retrieves information about the next process recorded in a system snapshot.",
+      "prototype": "BOOL Process32Next(HANDLE hSnapshot, LPPROCESSENTRY32 lppe);",
+      "parameters": [
+        {
+          "name": "hSnapshot",
+          "type": "HANDLE",
+          "description": "A handle to the snapshot returned from a previous call to the CreateToolhelp32Snapshot function."
+        },
+        {
+          "name": "lppe",
+          "type": "LPPROCESSENTRY32",
+          "description": "A pointer to a PROCESSENTRY32 structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if the next entry of the process list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no processes exist or the snapshot does not contain process information.",
+        "failure": ""
+      },
+      "tags": [
+        "process-management",
+        "process-enumeration"
+      ],
+      "remarks": "To retrieve information about the first process recorded in a snapshot, use the Process32First function. #### Examples For an example, see Taking a Snapshot and Viewing Processes.",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Walk a few entries in a process snapshot",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    PROCESSENTRY32 entry = { sizeof(entry) };\n    if (Process32First(snapshot, &entry)) {\n        int shown = 0;\n        do {\n            printf(\"Process: %s\\n\", entry.szExeFile);\n        } while (++shown < 3 && Process32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Process32Next function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32next",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Process32Next - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-process32next.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.shellexecutea",
+      "name": "ShellExecuteA",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Shell32.dll (version 3.51 or later)",
+      "library": "Shell32.lib",
+      "header": "shellapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Performs an operation on a specified file.",
+      "description": "Performs an operation on a specified file.",
+      "prototype": "HINSTANCE ShellExecuteA(HWND hwnd, LPCSTR lpOperation, LPCSTR lpFile, LPCSTR lpParameters, LPCSTR lpDirectory, INT nShowCmd);",
+      "parameters": [
+        {
+          "name": "hwnd",
+          "type": "HWND",
+          "description": "This value can be NULL if the operation is not associated with a window."
+        },
+        {
+          "name": "lpOperation",
+          "type": "LPCSTR",
+          "description": "The set of available verbs depends on the particular file or folder. Generally, the actions available from an object's shortcut menu are available verbs. The following verbs are commonly used: :::no-loc text=\"edit\"::: Launches an editor and opens the document for editing. If lpFile is not a document file, the function will fail. :::no-loc text=\"explore\"::: Explores a folder specified by lpFile. :::no-loc text=\"find\"::: Initiates a search beginning in the directory specified by lpDirectory. :::no-loc text=\"open\"::: Opens the item specified by the lpFile parameter. The item can be a file or folder. :::no-loc text=\"print\"::: Prints the file specified by lpFile. If lpFile is not a document file, the function fails. runas Launches an application as Administrator. User Account Control (UAC) will prompt the user for consent to run the application elevated or enter"
+        },
+        {
+          "name": "lpFile",
+          "type": "LPCSTR",
+          "description": "To specify a Shell namespace object, pass the fully qualified parse name. Note that not all verbs are supported on all objects. For example, not all document types support the \":::no-loc text=\"print\":::\" verb. If a relative path is used for the lpDirectory parameter do not use a relative path for lpFile."
+        },
+        {
+          "name": "lpParameters",
+          "type": "LPCSTR",
+          "description": "The format of this string is determined by the verb that is to be invoked. If lpFile specifies a document file, lpParameters should be NULL."
+        },
+        {
+          "name": "lpDirectory",
+          "type": "LPCSTR",
+          "description": "If this value is NULL, the current working directory is used. If a relative path is provided at lpFile, do not use a relative path for lpDirectory."
+        },
+        {
+          "name": "nShowCmd",
+          "type": "INT",
+          "description": "If lpFile specifies a document file, the flag is simply passed to the associated application. It is up to the application to decide how to handle it. It can be any of the values that can be specified in the nCmdShow parameter for the ShowWindow function."
+        }
+      ],
+      "return": {
+        "type": "HINSTANCE",
+        "success": "If the function succeeds, it returns a value greater than 32. If the function fails, it returns an error value that indicates the cause of the failure. The return value is cast as an HINSTANCE for backward compatibility with 16-bit Windows applications. It is not a true HINSTANCE, however. It can be cast only to an INT_PTR and compared to either 32 or the following error codes below. 0 The operating system is out of memory or resources. ERROR_FILE_NOT_FOUND The specified file was not found. ERROR_PATH_NOT_FOUND The specified path was not found. ERROR_BAD_FORMAT The .exe file is invalid (non-Win32 .exe or error in .exe image). SE_ERR_ACCESSDENIED The operating system denied access to the specified file. SE_ERR_ASSOCINCOMPLETE The file name association is incomplete or invalid. SE_ERR_DDEBUSY The DDE transaction could not be completed because other DDE transactions were bei",
+        "failure": "Return code Description"
+      },
+      "tags": [
+        "process-management",
+        "shell-integration"
+      ],
+      "remarks": "Because ShellExecute can delegate execution to Shell extensions (data sources, context menu handlers, verb implementations) that are activated using Component Object Model (COM), COM should be initialized before ShellExecute is called. Some Shell extensions require the COM single-threaded apartment (STA) type. In that case, COM should be initialized as shown here: CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) There are certainly instances where ShellExecute does not use one of these types of Shell extension and those instances would not require COM to be initialized at all. Nonetheless, it is good practice to always initialize COM before using this function. This method allows you to execute any commands in a folder's shortcut menu or stored in the registry. To open a folder, use either of the following calls: ShellExecute(handle, NULL, , NULL, NULL, SW_SHOWNORMAL); or ShellExecute(handle, \"open\", , NULL, NULL, SW_SHOWNORMAL); To explore a folder, use the following call: ShellExecute(handle, \"explore\", , NULL, NULL, SW_SHOWNORMAL); To launch the Shell's Find utility for a directory, use the following call. ShellExecute(handle, \"find\", , NULL, NULL, 0); If lpOperation is NULL, the function opens the file specified by lpFile. If lpOperation is \":::no-loc text=\"open\":::\" or \":::no-loc text=\"explore\":::\", the function attempts to open or explore the folder",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Launch a short-lived child process through the shell",
+        "code": "#include <windows.h>\n#include <shellapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"shell32.lib\")\n\nint main() {\n    HINSTANCE result = ShellExecuteA(nullptr, \"open\", \"cmd.exe\", \"/c exit 0\",\n        nullptr, SW_HIDE);\n    if (reinterpret_cast<INT_PTR>(result) <= 32) {\n        printf(\"ShellExecuteA failed: %lld\\n\",\n            static_cast<long long>(reinterpret_cast<INT_PTR>(result)));\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "ShellExecuteA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ShellExecuteA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/shellapi/nf-shellapi-shellexecutea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (shellapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.shellexecuteexa",
+      "name": "ShellExecuteExA",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Shell32.dll (version 3.51 or later)",
+      "library": "Shell32.lib",
+      "header": "shellapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Performs an operation on a specified file.",
+      "description": "Performs an operation on a specified file.",
+      "prototype": "BOOL ShellExecuteExA(SHELLEXECUTEINFOA* pExecInfo);",
+      "parameters": [
+        {
+          "name": "pExecInfo",
+          "type": "SHELLEXECUTEINFOA*",
+          "description": "The pExecInfo parameter for ShellExecuteExA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "See the reference for the documented success value.",
+        "failure": "Returns TRUE if successful; otherwise, FALSE. Call GetLastError for extended error information."
+      },
+      "tags": [
+        "process-management",
+        "shell-integration"
+      ],
+      "remarks": "Because ShellExecuteEx can delegate execution to Shell extensions (data sources, context menu handlers, verb implementations) that are activated using Component Object Model (COM), COM should be initialized before ShellExecuteEx is called. Some Shell extensions require the COM single-threaded apartment (STA) type. In that case, COM should be initialized as shown here: syntax CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) There are instances where ShellExecuteEx does not use one of these types of Shell extension and those instances would not require COM to be initialized at all. Nonetheless, it is good practice to always initialize COM before using this function. When DLLs are loaded into your process, you acquire a lock known as a loader lock. The DllMain function always executes under the loader lock. It is important that you do not call ShellExecuteEx while you hold a loader lock. Because ShellExecuteEx is extensible, you could load code that does not function properly in the presence of a loader lock, risking a deadlock and therefore an unresponsive thread. With multiple monitors, if you specify an HWND and set the lpVerb member of the SHELLEXECUTEINFO structure pointed to by lpExecInfo to \"Properties\", any windows created by ShellExecuteEx might not appear in the correct position. If the function succeeds, it sets the hInstApp member of the SHELLEXE",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Run a short-lived child and wait for it",
+        "code": "#include <windows.h>\n#include <shellapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"shell32.lib\")\n\nint main() {\n    SHELLEXECUTEINFOA info = { sizeof(info) };\n    info.fMask = SEE_MASK_NOCLOSEPROCESS;\n    info.lpVerb = \"open\";\n    info.lpFile = \"cmd.exe\";\n    info.lpParameters = \"/c exit 0\";\n    info.nShow = SW_HIDE;\n\n    if (!ShellExecuteExA(&info)) {\n        return 1;\n    }\n\n    if (info.hProcess != nullptr) {\n        WaitForSingleObject(info.hProcess, 5000);\n        CloseHandle(info.hProcess);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "ShellExecuteExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecuteexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ShellExecuteExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/shellapi/nf-shellapi-shellexecuteexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (shellapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.winexec",
+      "name": "WinExec",
+      "aliases": [],
+      "category": "Process Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Runs the specified application.",
+      "description": "Runs the specified application. Note This function is provided only for compatibility with 16-bit Windows. Applications should use the CreateProcess function.",
+      "prototype": "UINT WinExec(LPCSTR lpCmdLine, UINT uCmdShow);",
+      "parameters": [
+        {
+          "name": "lpCmdLine",
+          "type": "LPCSTR",
+          "description": "The command line (file name plus optional parameters) for the application to be executed. If the name of the executable file in the lpCmdLine parameter does not contain a directory path, the system searches for the executable file in this sequence: The directory from which the application loaded. The current directory. The Windows system directory. The GetSystemDirectory function retrieves the path of this directory. The Windows directory. The GetWindowsDirectory function retrieves the path of this directory. The directories listed in the PATH environment variable."
+        },
+        {
+          "name": "uCmdShow",
+          "type": "UINT",
+          "description": "The display options. For a list of the acceptable values, see the description of the nCmdShow parameter of the ShowWindow function."
+        }
+      ],
+      "return": {
+        "type": "UINT",
+        "success": "If the function succeeds, the return value is greater than 31. Return code/value Description 0 The system is out of memory or resources. ERROR_BAD_FORMAT The .exe file is invalid. ERROR_FILE_NOT_FOUND The specified file was not found. ERROR_PATH_NOT_FOUND The specified path was not found.",
+        "failure": "If the function fails, the return value is one of the following error values."
+      },
+      "tags": [
+        "process-management"
+      ],
+      "remarks": "The WinExec function returns when the started process calls the GetMessage function or a time-out limit is reached. To avoid waiting for the time out delay, call the GetMessage function as soon as possible in any process started by a call to WinExec. Security Remarks The executable name is treated as the first white space-delimited string in lpCmdLine. If the executable or path name has a space in it, there is a risk that a different executable could be run because of the way the function parses spaces. The following example is dangerous because the function will attempt to run \"Program.exe\", if it exists, instead of \"MyApp.exe\". syntax WinExec(\"C:\\Program Files\\MyApp\", ...) If a malicious user were to create an application called \"Program.exe\" on a system, any program that incorrectly calls WinExec using the Program Files directory will run this application instead of the intended application. To avoid this problem, use CreateProcess rather than WinExec. However, if you must use WinExec for legacy reasons, make sure the application name is enclosed in quotation marks as shown in the example below. syntax WinExec(\"\\\"C:\\Program Files\\MyApp.exe\\\" -L -S\", ...)",
+      "maldev_notes": "Process creation and inspection APIs are ordinary in installers, shells, debuggers, and management software. Analysis usually focuses on the image path, command line, parent process, token, and creation flags rather than on the call itself.",
+      "defensive_notes": "Process-creation and process-query telemetry records the image, command line, parent, user, and access mask. Context and correlation with surrounding behavior matter more than the API name.",
+      "example": {
+        "language": "cpp",
+        "title": "Run a short-lived child process with WinExec",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    UINT result = WinExec(\"cmd.exe /c exit 0\", SW_HIDE);\n    if (result <= 31) {\n        printf(\"WinExec failed: %u\\n\", result);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "WinExec function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-winexec",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "WinExec - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-winexec.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

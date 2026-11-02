@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "name": "NtExplorer bundled catalog",
+  "catalog_version": "0.4.0",
+  "categories": [
+    {
+      "name": "Process Management",
+      "description": "Creating, opening, querying, and terminating processes."
+    },
+    {
+      "name": "Thread Management",
+      "description": "Creating, opening, querying, and synchronizing threads."
+    },
+    {
+      "name": "Memory Management",
+      "description": "Virtual memory allocation, release, protection, and inspection."
+    },
+    {
+      "name": "Remote Process Memory",
+      "description": "APIs that operate on another process's address space, with access checks."
+    },
+    {
+      "name": "DLL and Module Management",
+      "description": "Loading modules and resolving exported functions."
+    },
+    {
+      "name": "File and I/O",
+      "description": "File creation, reading, writing, and metadata."
+    },
+    {
+      "name": "Registry",
+      "description": "Registry key and value operations."
+    },
+    {
+      "name": "Synchronization",
+      "description": "Events, mutexes, semaphores, waits, and related primitives."
+    },
+    {
+      "name": "System Information",
+      "description": "System, processor, version, user, and environment information."
+    },
+    {
+      "name": "Debugging and Diagnostics",
+      "description": "Debugger checks and diagnostic interfaces."
+    },
+    {
+      "name": "Cryptography",
+      "description": "Randomness, hashing, and cryptographic provider interfaces."
+    },
+    {
+      "name": "Networking",
+      "description": "Windows socket and network APIs."
+    },
+    {
+      "name": "Services and Tasks",
+      "description": "Windows service-control and task-related APIs."
+    },
+    {
+      "name": "Windows and UI",
+      "description": "Window creation, messaging, painting, and shell helpers."
+    },
+    {
+      "name": "Clipboard and Input",
+      "description": "Clipboard formats, keyboard state, hot keys, and raw input."
+    },
+    {
+      "name": "Security and Privileges",
+      "description": "Access tokens, privileges, and impersonation."
+    },
+    {
+      "name": "Network Management",
+      "description": "Adapter, share, and network-resource management APIs."
+    },
+    {
+      "name": "Native APIs",
+      "description": "NT-native and kernel routines exported by Ntdll and related modules."
+    }
+  ],
+  "tags": [
+    "process-creation",
+    "process-enumeration",
+    "remote-memory",
+    "memory-protection",
+    "thread-management",
+    "module-loading",
+    "api-resolution",
+    "file-access",
+    "registry-access",
+    "synchronization",
+    "cryptography",
+    "random-number-generation",
+    "debugger-awareness",
+    "environment-discovery",
+    "network-communication",
+    "service-management",
+    "execution-flow",
+    "analysis-relevant",
+    "defensive-telemetry",
+    "memory-management",
+    "maldev-relevant",
+    "account-management",
+    "backup-restore",
+    "clipboard",
+    "clipboard-access",
+    "cryptographic-hashing",
+    "data-protection",
+    "debugging",
+    "device-io",
+    "dns-resolution",
+    "driver-enumeration",
+    "environment",
+    "file-encryption",
+    "file-enumeration",
+    "file-io",
+    "file-mapping",
+    "gdi",
+    "handle-management",
+    "heap-management",
+    "hook-management",
+    "impersonation",
+    "input",
+    "internet-access",
+    "kernel-mode",
+    "keyboard-input",
+    "message-handling",
+    "module-enumeration",
+    "module-management",
+    "named-pipes",
+    "native-api",
+    "network-management",
+    "networking",
+    "privilege-management",
+    "process-management",
+    "random-generation",
+    "raw-input",
+    "registry",
+    "registry-security",
+    "remote-process-memory",
+    "resource-management",
+    "rpc",
+    "security-token",
+    "services",
+    "shell-integration",
+    "socket-communication",
+    "system-information",
+    "thread-enumeration",
+    "time-management",
+    "transacted-registry",
+    "virtual-memory",
+    "window-management",
+    "windows-ui",
+    "wow64"
+  ]
+}

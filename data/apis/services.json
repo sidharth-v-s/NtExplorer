@@ -1,0 +1,528 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.controlservice",
+      "name": "ControlService",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "AdvApi32.dll",
+      "library": "AdvApi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Sends a control code to a service.",
+      "description": "Sends a control code to a service. To specify additional information when stopping a service, use the ControlServiceEx function.",
+      "prototype": "BOOL ControlService(SC_HANDLE hService, DWORD dwControl, LPSERVICE_STATUS lpServiceStatus);",
+      "parameters": [
+        {
+          "name": "hService",
+          "type": "SC_HANDLE",
+          "description": "A handle to the service. This handle is returned by the OpenService or CreateService function. The access rights required for this handle depend on the dwControl code requested."
+        },
+        {
+          "name": "dwControl",
+          "type": "DWORD",
+          "description": "This parameter can be one of the following control codes. Control code Meaning SERVICE_CONTROL_CONTINUE 0x00000003 Notifies a paused service that it should resume. The hService handle must have the SERVICE_PAUSE_CONTINUE access right. SERVICE_CONTROL_INTERROGATE 0x00000004 Notifies a service that it should report its current status information to the service control manager. The hService handle must have the SERVICE_INTERROGATE access right. Note that this control is not generally useful as the SCM is aware of the current state of the service. SERVICE_CONTROL_NETBINDADD 0x00000007 Notifies a network service that there is a new component for binding. The hService handle must have the SERVICE_PAUSE_CONTINUE access right. However, this control code has been deprecated; use Plug and Play functionality instead. SERVICE_CONTROL_NETBINDDISABLE 0x0000000A Notifies a network service that one of i"
+        },
+        {
+          "name": "lpServiceStatus",
+          "type": "LPSERVICE_STATUS",
+          "description": "A pointer to a SERVICE_STATUS structure that receives the latest service status information. The information returned reflects the most recent status that the service reported to the service control manager. The service control manager fills in the structure only when GetLastError returns one of the following error codes: NO_ERROR, ERROR_INVALID_SERVICE_CONTROL, ERROR_SERVICE_CANNOT_ACCEPT_CTRL, or ERROR_SERVICE_NOT_ACTIVE. Otherwise, the structure is not filled in."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The following error codes can be set by the service control manager. Other error codes can be set by the registry functions that are called by the service control manager. Return code Description ERROR_ACCESS_DENIED The handle does not have the required access right. ERROR_DEPENDENT_SERVICES_RUNNING The service cannot be stopped because other running services are dependent on it. ERROR_INVALID_HANDLE The specified handle was not obtained using CreateService or OpenService, or the handle is no longer valid. ERROR_INVALID_PARAMETER The requested control code is undefined. ERROR_INVALID_SERVICE_CONTROL The requested control code is not valid, or it is unacceptable to the service. ERROR_SERVICE_CANNOT_ACCEPT_CTRL The requested control code cannot be sent to the service because the state of the service is SERVICE_STOPPED, SERVICE_START_PE",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "The ControlService function asks the Service Control Manager (SCM) to send the requested control code to the service. The SCM sends the code if the service has specified that it will accept the code, and is in a state in which a control code can be sent to it. The SCM processes service control notifications in a serial fashion—it will wait for one service to complete processing a service control notification before sending the next one. Because of this, a call to ControlService will block for 30 seconds if any service is busy handling a control code. If the busy service still has not returned from its handler function when the timeout expires, ControlService fails with ERROR_SERVICE_REQUEST_TIMEOUT. To stop and start a service requires a security descriptor that allows you to do so. The default security descriptor allows the LocalSystem account, and members of the Administrators and Power Users groups to stop and start services. To change the security descriptor of a service, see Modifying the DACL for a Service. The QueryServiceStatusEx function returns a SERVICE_STATUS_PROCESS structure whose dwCurrentState and dwControlsAccepted members indicate the current state and controls accepted by a running service. All running services accept the SERVICE_CONTROL_INTERROGATE control code by default. Drivers do not accept control codes other than SERVICE_CONTROL_STOP and SERVICE_CONTRO",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Send a status query to the Spooler service",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CONNECT);\n    SC_HANDLE service = OpenServiceA(manager, \"Spooler\",\n        SERVICE_QUERY_STATUS);\n    if (service == nullptr) {\n        CloseServiceHandle(manager);\n        return 1;\n    }\n\n    SERVICE_STATUS status = {};\n    if (ControlService(service, SERVICE_CONTROL_INTERROGATE, &status)) {\n        printf(\"Service state: %lu\\n\", status.dwCurrentState);\n    }\n\n    CloseServiceHandle(service);\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "Only a read-only status query is sent."
+      },
+      "references": [
+        {
+          "title": "ControlService function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-controlservice",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ControlService - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-controlservice.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.controlserviceexa",
+      "name": "ControlServiceExA",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Sends a control code to a service.",
+      "description": "Sends a control code to a service.",
+      "prototype": "BOOL ControlServiceExA(SC_HANDLE hService, DWORD dwControl, DWORD dwInfoLevel, PVOID pControlParams);",
+      "parameters": [
+        {
+          "name": "hService",
+          "type": "SC_HANDLE",
+          "description": "A handle to the service. This handle is returned by the OpenService or CreateService function. The access rights required for this handle depend on the dwControl code requested."
+        },
+        {
+          "name": "dwControl",
+          "type": "DWORD",
+          "description": "This parameter can be one of the following control codes. Control code Meaning SERVICE_CONTROL_CONTINUE 0x00000003 Notifies a paused service that it should resume. The hService handle must have the SERVICE_PAUSE_CONTINUE access right. SERVICE_CONTROL_INTERROGATE 0x00000004 Notifies a service that it should report its current status information to the service control manager. The hService handle must have the SERVICE_INTERROGATE access right. Note that this control is not generally useful as the SCM is aware of the current state of the service. SERVICE_CONTROL_NETBINDADD 0x00000007 Notifies a network service that there is a new component for binding. The hService handle must have the SERVICE_PAUSE_CONTINUE access right. However, this control code has been deprecated; use Plug and Play functionality instead. SERVICE_CONTROL_NETBINDDISABLE 0x0000000A Notifies a network service that one of i"
+        },
+        {
+          "name": "dwInfoLevel",
+          "type": "DWORD",
+          "description": "The information level for the service control parameters. This parameter must be set to SERVICE_CONTROL_STATUS_REASON_INFO (1)."
+        },
+        {
+          "name": "pControlParams",
+          "type": "PVOID",
+          "description": "A pointer to the service control parameters. If dwInfoLevel is SERVICE_CONTROL_STATUS_REASON_INFO, this member is a pointer to a SERVICE_CONTROL_STATUS_REASON_PARAMS structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The following error codes can be set by the service control manager. Other error codes can be set by the registry functions that are called by the service control manager. Return code Description ERROR_ACCESS_DENIED The handle does not have the required access right. ERROR_DEPENDENT_SERVICES_RUNNING The service cannot be stopped because other running services are dependent on it. ERROR_INVALID_HANDLE The specified handle was not obtained using CreateService or OpenService, or the handle is no longer valid. ERROR_INVALID_PARAMETER The requested control code in the dwControl parameter is undefined, or dwControl is SERVICE_CONTROL_STOP but the dwReason or pszComment members of the SERVICE_CONTROL_STATUS_REASON_PARAMS structure are not valid. ERROR_INVALID_SERVICE_CONTROL The requested control code is not valid, or it is unacceptable to",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "The ControlServiceEx function asks the Service Control Manager (SCM) to send the requested control code to the service. The SCM sends the code if the service has specified that it will accept the code, and is in a state in which a control code can be sent to it. The SCM processes service control notifications in a serial fashion — it waits for one service to complete processing a service control notification before sending the next one. Because of this, a call to ControlServiceEx blocks for 30 seconds if any service is busy handling a control code. If the busy service still has not returned from its handler function when the timeout expires, ControlServiceEx fails with ERROR_SERVICE_REQUEST_TIMEOUT. To stop and start a service requires a security descriptor that allows you to do so. The default security descriptor allows the LocalSystem account, and members of the Administrators and Power Users groups to stop and start services. To change the security descriptor of a service, see Modifying the DACL for a Service. The QueryServiceStatusEx function returns a SERVICE_STATUS_PROCESS structure whose dwCurrentState and dwControlsAccepted members indicate the current state and controls accepted by a running service. All running services accept the SERVICE_CONTROL_INTERROGATE control code by default. Drivers do not accept control codes other than SERVICE_CONTROL_STOP and SERVICE_CONTRO",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Send an extended status query to a service",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CONNECT);\n    SC_HANDLE service = OpenServiceA(manager, \"Spooler\",\n        SERVICE_QUERY_STATUS);\n    if (service == nullptr) {\n        CloseServiceHandle(manager);\n        return 1;\n    }\n\n    SERVICE_STATUS status = {};\n    if (ControlServiceExA(service, SERVICE_CONTROL_INTERROGATE,\n            SERVICE_CONTROL_STATUS_REASON_INFO, &status)) {\n        printf(\"Service state: %lu\\n\", status.dwCurrentState);\n    }\n\n    CloseServiceHandle(service);\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "Only a read-only status query is sent."
+      },
+      "references": [
+        {
+          "title": "ControlServiceExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-controlserviceexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ControlServiceExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-controlserviceexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createservicea",
+      "name": "CreateServiceA",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Creates a service object and adds it to the specified service control manager database.",
+      "description": "Creates a service object and adds it to the specified service control manager database.",
+      "prototype": "SC_HANDLE CreateServiceA(SC_HANDLE hSCManager, LPCSTR lpServiceName, LPCSTR lpDisplayName, DWORD dwDesiredAccess, DWORD dwServiceType, DWORD dwStartType, DWORD dwErrorControl, LPCSTR lpBinaryPathName, LPCSTR lpLoadOrderGroup, LPDWORD lpdwTagId, LPCSTR lpDependencies, LPCSTR lpServiceStartName, LPCSTR lpPassword);",
+      "parameters": [
+        {
+          "name": "hSCManager",
+          "type": "SC_HANDLE",
+          "description": "A handle to the service control manager database. This handle is returned by the OpenSCManager function and must have the SC_MANAGER_CREATE_SERVICE access right. For more information, see Service Security and Access Rights."
+        },
+        {
+          "name": "lpServiceName",
+          "type": "LPCSTR",
+          "description": "The name of the service to install. The maximum string length is 256 characters. The service control manager database preserves the case of the characters, but service name comparisons are always case insensitive. Forward-slash (/) and backslash (\\) are not valid service name characters."
+        },
+        {
+          "name": "lpDisplayName",
+          "type": "LPCSTR",
+          "description": "The display name to be used by user interface programs to identify the service. This string has a maximum length of 256 characters. The name is case-preserved in the service control manager. Display name comparisons are always case-insensitive."
+        },
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access to the service. Before granting the requested access, the system checks the access token of the calling process. For a list of values, see Service Security and Access Rights."
+        },
+        {
+          "name": "dwServiceType",
+          "type": "DWORD",
+          "description": "The service type. This parameter can be one of the following values. Value Meaning SERVICE_ADAPTER 0x00000004 Reserved. SERVICE_FILE_SYSTEM_DRIVER 0x00000002 File system driver service. SERVICE_KERNEL_DRIVER 0x00000001 Driver service. SERVICE_RECOGNIZER_DRIVER 0x00000008 Reserved. SERVICE_WIN32_OWN_PROCESS 0x00000010 Service that runs in its own process. SERVICE_WIN32_SHARE_PROCESS 0x00000020 Service that shares a process with one or more other services. For more information, see Service Programs. If you specify either SERVICE_WIN32_OWN_PROCESS or SERVICE_WIN32_SHARE_PROCESS, and the service is running in the context of the LocalSystem account, you can also specify the following value. Value Meaning SERVICE_INTERACTIVE_PROCESS 0x00000100 The service can interact with the desktop. For more information, see Interactive Services."
+        },
+        {
+          "name": "dwStartType",
+          "type": "DWORD",
+          "description": "The service start options. This parameter can be one of the following values. Value Meaning SERVICE_AUTO_START 0x00000002 A service started automatically by the service control manager during system startup. For more information, see Automatically Starting Services. SERVICE_BOOT_START 0x00000000 A device driver started by the system loader. This value is valid only for driver services. SERVICE_DEMAND_START 0x00000003 A service started by the service control manager when a process calls the StartService function. For more information, see Starting Services on Demand. SERVICE_DISABLED 0x00000004 A service that cannot be started. Attempts to start the service result in the error code ERROR_SERVICE_DISABLED. SERVICE_SYSTEM_START 0x00000001 A device driver started by the IoInitSystem function. This value is valid only for driver services."
+        },
+        {
+          "name": "dwErrorControl",
+          "type": "DWORD",
+          "description": "The severity of the error, and action taken, if this service fails to start. This parameter can be one of the following values. Value Meaning SERVICE_ERROR_CRITICAL 0x00000003 The startup program logs the error in the event log, if possible. If the last-known-good configuration is being started, the startup operation fails. Otherwise, the system is restarted with the last-known good configuration. SERVICE_ERROR_IGNORE 0x00000000 The startup program ignores the error and continues the startup operation. SERVICE_ERROR_NORMAL 0x00000001 The startup program logs the error in the event log but continues the startup operation. SERVICE_ERROR_SEVERE 0x00000002 The startup program logs the error in the event log. If the last-known-good configuration is being started, the startup operation continues. Otherwise, the system is restarted with the last-known-good configuration."
+        },
+        {
+          "name": "lpBinaryPathName",
+          "type": "LPCSTR",
+          "description": "The fully qualified path to the service binary file. If the path contains a space, it must be quoted so that it is correctly interpreted. For example, \"d:\\my share\\myservice.exe\" should be specified as \"\\\"d:\\my share\\myservice.exe\\\"\". The path can also include arguments for an auto-start service. For example, \"d:\\myshare\\myservice.exe arg1 arg2\". These arguments are passed to the service entry point (typically the main function). If you specify a path on another computer, the share must be accessible by the computer account of the local computer because this is the security context used in the remote call. However, this requirement allows any potential vulnerabilities in the remote computer to affect the local computer. Therefore, it is best to use a local file."
+        },
+        {
+          "name": "lpLoadOrderGroup",
+          "type": "LPCSTR",
+          "description": "The names of the load ordering group of which this service is a member. Specify NULL or an empty string if the service does not belong to a group. The startup program uses load ordering groups to load groups of services in a specified order with respect to the other groups. The list of load ordering groups is contained in the following registry value: HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\ServiceGroupOrder"
+        },
+        {
+          "name": "lpdwTagId",
+          "type": "LPDWORD",
+          "description": "A pointer to a variable that receives a tag value that is unique in the group specified in the lpLoadOrderGroup parameter. Specify NULL if you are not changing the existing tag. You can use a tag for ordering service startup within a load ordering group by specifying a tag order vector in the following registry value:HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\GroupOrderList Tags are only evaluated for driver services that have SERVICE_BOOT_START or SERVICE_SYSTEM_START start types."
+        },
+        {
+          "name": "lpDependencies",
+          "type": "LPCSTR",
+          "description": "A pointer to a double null-terminated array of null-separated names of services or load ordering groups that the system must start before this service. Specify NULL or an empty string if the service has no dependencies. Dependency on a group means that this service can run if at least one member of the group is running after an attempt to start all members of the group. You must prefix group names with SC_GROUP_IDENTIFIER so that they can be distinguished from a service name, because services and service groups share the same name space."
+        },
+        {
+          "name": "lpServiceStartName",
+          "type": "LPCSTR",
+          "description": "The name of the account under which the service should run. If the service type is SERVICE_WIN32_OWN_PROCESS, use an account name in the form DomainName\\UserName. The service process will be logged on as this user. If the account belongs to the built-in domain, you can specify .\\UserName. If this parameter is NULL, CreateService uses the LocalSystem account. If the service type specifies SERVICE_INTERACTIVE_PROCESS, the service must run in the LocalSystem account. If this parameter is NT AUTHORITY\\LocalService, CreateService uses the LocalService account. If the parameter is NT AUTHORITY\\NetworkService, CreateService uses the NetworkService account. A shared process can run as any user. If the service type is SERVICE_KERNEL_DRIVER or SERVICE_FILE_SYSTEM_DRIVER, the name is the driver object name that the system uses to load the device driver. Specify NULL if the driver is to use a defaul"
+        },
+        {
+          "name": "lpPassword",
+          "type": "LPCSTR",
+          "description": "The password to the account name specified by the lpServiceStartName parameter. Specify an empty string if the account has no password or if the service runs in the LocalService, NetworkService, or LocalSystem account. For more information, see Service Record List. If the account name specified by the lpServiceStartName parameter is the name of a managed service account or virtual account name, the lpPassword parameter must be NULL. Passwords are ignored for driver services."
+        }
+      ],
+      "return": {
+        "type": "SC_HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the service. The following error codes can be set by the service control manager. Other error codes can be set by the registry functions that are called by the service control manager. Return code Description ERROR_ACCESS_DENIED The handle to the SCM database does not have the SC_MANAGER_CREATE_SERVICE access right. ERROR_CIRCULAR_DEPENDENCY A circular service dependency was specified. ERROR_DUPLICATE_SERVICE_NAME The display name already exists in the service control manager database either as a service name or as another display name. ERROR_INVALID_HANDLE The handle to the specified service control manager database is invalid. ERROR_INVALID_NAME The specified service name is invalid. ERROR_INVALID_PARAMETER A parameter that was specified is invalid. ERROR_INVALID_SERVICE_ACCOUNT The user account name specified in the lpServiceSt",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "The CreateService function creates a service object and installs it in the service control manager database by creating a key with the same name as the service under the following registry key:HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Services Information specified by CreateService, ChangeServiceConfig, and ChangeServiceConfig2 is saved as values under this key. The following are examples of values stored for a service. Value Description DependOnGroup Load-ordering groups on which this service depends, as specified by lpDependencies. DependOnService Services on which this service depends, as specified by lpDependencies. Description Description specified by ChangeServiceConfig2. DisplayName Display name specified by lpDisplayName. ErrorControl Error control specified by dwErrorControl. FailureActions Failure actions specified by ChangeServiceConfig2. Group Load ordering group specified by lpLoadOrderGroup. Note that setting this value can override the setting of the DependOnService value. ImagePath Name of binary file, as specified by lpBinaryPathName. ObjectName Account name specified by lpServiceStartName. Start When to start service, as specified by dwStartType. Tag Tag identifier specified by lpdwTagId. Type Service type specified by dwServiceType. Setup programs and the service itself can create additional subkeys for service-specific information. The returned handle is o",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a service definition without changing the system",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
+        "notes": "Service changes are privileged; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "CreateServiceA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-createservicea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateServiceA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-createservicea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.deleteservice",
+      "name": "DeleteService",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Marks the specified service for deletion from the service control manager database.",
+      "description": "Marks the specified service for deletion from the service control manager database.",
+      "prototype": "BOOL DeleteService(SC_HANDLE hService);",
+      "parameters": [
+        {
+          "name": "hService",
+          "type": "SC_HANDLE",
+          "description": "A handle to the service. This handle is returned by the OpenService or CreateService function, and it must have the DELETE access right. For more information, see Service Security and Access Rights."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The following error codes may be set by the service control manager. Others may be set by the registry functions that are called by the service control manager. Return code Description ERROR_ACCESS_DENIED The handle does not have the DELETE access right. ERROR_INVALID_HANDLE The specified handle is invalid. ERROR_SERVICE_MARKED_FOR_DELETE The specified service has already been marked for deletion.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "The DeleteService function marks a service for deletion from the service control manager database. The database entry is not removed until all open handles to the service have been closed by calls to the CloseServiceHandle function, and the service is not running. A running service is stopped by a call to the ControlService function with the SERVICE_CONTROL_STOP control code. If the service cannot be stopped, the database entry is removed when the system is restarted. The service control manager deletes the service by deleting the service key and its subkeys from the registry. #### Examples For an example, see Deleting a Service.",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a service definition without changing the system",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
+        "notes": "Service changes are privileged; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "DeleteService function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-deleteservice",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "DeleteService - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-deleteservice.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.openscmanagera",
+      "name": "OpenSCManagerA",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Establishes a connection to the service control manager on the specified computer and opens the specified service control manager database.",
+      "description": "Establishes a connection to the service control manager on the specified computer and opens the specified service control manager database.",
+      "prototype": "SC_HANDLE OpenSCManagerA(LPCSTR lpMachineName, LPCSTR lpDatabaseName, DWORD dwDesiredAccess);",
+      "parameters": [
+        {
+          "name": "lpMachineName",
+          "type": "LPCSTR",
+          "description": "The name of the target computer. If the pointer is NULL or points to an empty string, the function connects to the service control manager on the local computer."
+        },
+        {
+          "name": "lpDatabaseName",
+          "type": "LPCSTR",
+          "description": "The name of the service control manager database. This parameter should be set to SERVICES_ACTIVE_DATABASE. If it is NULL, the SERVICES_ACTIVE_DATABASE database is opened by default."
+        },
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access to the service control manager. For a list of access rights, see Service Security and Access Rights. Before granting the requested access rights, the system checks the access token of the calling process against the discretionary access-control list of the security descriptor associated with the service control manager. The SC_MANAGER_CONNECT access right is implicitly specified by calling this function."
+        }
+      ],
+      "return": {
+        "type": "SC_HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the specified service control manager database. The following error codes can be set by the SCM. Other error codes can be set by the registry functions that are called by the SCM. Return code Description ERROR_ACCESS_DENIED The requested access was denied. ERROR_DATABASE_DOES_NOT_EXIST The specified database does not exist.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "When a process uses the OpenSCManager function to open a handle to a service control manager database, the system performs a security check before granting the requested access. For more information, see Service Security and Access Rights. If the current user does not have proper access when connecting to a service on another computer, the OpenSCManager function call fails. To connect to a service remotely, call the LogonUser function with LOGON32_LOGON_NEW_CREDENTIALS and then call ImpersonateLoggedOnUser before calling OpenSCManager. For more information about connecting to services remotely, see Services and RPC/TCP. Only processes with Administrator privileges are able to open a database handle that can be used by the CreateService function. The returned handle is only valid for the process that called the OpenSCManager function. It can be closed by calling the CloseServiceHandle function. #### Examples For an example, see Changing a Service's Configuration. > > The winsvc.h header defines OpenSCManager as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Open the local service control manager",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CONNECT);\n    if (manager == nullptr) {\n        printf(\"OpenSCManagerA failed: %lu\\n\", GetLastError());\n        return 1;\n    }\n\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "OpenSCManagerA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-openscmanagera",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "OpenSCManagerA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-openscmanagera.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.openservicea",
+      "name": "OpenServiceA",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Opens an existing service.",
+      "description": "Opens an existing service.",
+      "prototype": "SC_HANDLE OpenServiceA(SC_HANDLE hSCManager, LPCSTR lpServiceName, DWORD dwDesiredAccess);",
+      "parameters": [
+        {
+          "name": "hSCManager",
+          "type": "SC_HANDLE",
+          "description": "A handle to the service control manager database. The OpenSCManager function returns this handle. For more information, see Service Security and Access Rights."
+        },
+        {
+          "name": "lpServiceName",
+          "type": "LPCSTR",
+          "description": "The name of the service to be opened. This is the name specified by the lpServiceName parameter of the CreateService function when the service object was created, not the service display name that is shown by user interface applications to identify the service. The maximum string length is 256 characters. The service control manager database preserves the case of the characters, but service name comparisons are always case insensitive. Forward-slash (/) and backslash (\\) are invalid service name characters."
+        },
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access to the service. For a list of access rights, see Service Security and Access Rights. Before granting the requested access, the system checks the access token of the calling process against the discretionary access-control list of the security descriptor associated with the service object."
+        }
+      ],
+      "return": {
+        "type": "SC_HANDLE",
+        "success": "If the function succeeds, the return value is a handle to the service. The following error codes can be set by the service control manager. Others can be set by the registry functions that are called by the service control manager. Return code Description ERROR_ACCESS_DENIED The handle does not have access to the service. ERROR_INVALID_HANDLE The specified handle is invalid. ERROR_INVALID_NAME The specified service name is invalid. ERROR_SERVICE_DOES_NOT_EXIST The specified service does not exist.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "The returned handle is only valid for the process that called OpenService. It can be closed by calling the CloseServiceHandle function. To use OpenService, no privileges are required aside from SC_MANAGER_CONNECT. #### Examples For an example, see Starting a Service. > > The winsvc.h header defines OpenService as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Open a service for status queries",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CONNECT);\n    if (manager == nullptr) {\n        return 1;\n    }\n\n    SC_HANDLE service = OpenServiceA(manager, \"Spooler\",\n        SERVICE_QUERY_STATUS);\n    if (service != nullptr) {\n        CloseServiceHandle(service);\n    }\n\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "OpenServiceA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-openservicea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "OpenServiceA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-openservicea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.startservicea",
+      "name": "StartServiceA",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Starts a service.",
+      "description": "Starts a service.",
+      "prototype": "BOOL StartServiceA(SC_HANDLE hService, DWORD dwNumServiceArgs, LPCSTR* lpServiceArgVectors);",
+      "parameters": [
+        {
+          "name": "hService",
+          "type": "SC_HANDLE",
+          "description": "A handle to the service. This handle is returned by the OpenService or CreateService function, and it must have the SERVICE_START access right. For more information, see Service Security and Access Rights."
+        },
+        {
+          "name": "dwNumServiceArgs",
+          "type": "DWORD",
+          "description": "The number of strings in the lpServiceArgVectors array. If lpServiceArgVectors is NULL, this parameter can be zero."
+        },
+        {
+          "name": "lpServiceArgVectors",
+          "type": "LPCSTR*",
+          "description": "The null-terminated strings to be passed to the ServiceMain function for the service as arguments. If there are no arguments, this parameter can be NULL. Otherwise, the first argument (lpServiceArgVectors[0]) is the name of the service, followed by any additional arguments (lpServiceArgVectors[1] through lpServiceArgVectors[dwNumServiceArgs-1]). Driver services do not receive these arguments."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The following error codes can be set by the service control manager. Others can be set by the registry functions that are called by the service control manager. Return code Description ERROR_ACCESS_DENIED The handle does not have the SERVICE_START access right. ERROR_INVALID_HANDLE The handle is invalid. ERROR_PATH_NOT_FOUND The service binary file could not be found. ERROR_SERVICE_ALREADY_RUNNING An instance of the service is already running. ERROR_SERVICE_DATABASE_LOCKED The database is locked. ERROR_SERVICE_DEPENDENCY_DELETED The service depends on a service that does not exist or has been marked for deletion. ERROR_SERVICE_DEPENDENCY_FAIL The service depends on another service that has failed to start. ERROR_SERVICE_DISABLED The service has been disabled. ERROR_SERVICE_LOGON_FAILED The service did not start due to a logon failure",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "When a driver service is started, the StartService function does not return until the device driver has finished initializing. When a service is started, the Service Control Manager (SCM) spawns the service process, if necessary. If the specified service shares a process with other services, the required process may already exist. The StartService function does not wait for the first status update from the new service, because it can take a while. Instead, it returns when the SCM receives notification from the service control dispatcher that the ServiceMain thread for this service was created successfully. The SCM sets the following default status values before returning from StartService: Current state of the service is set to SERVICE_START_PENDING. Controls accepted is set to none (zero). The CheckPoint value is set to zero. The WaitHint time is set to 2 seconds. The calling process can determine if the new service has finished its initialization by calling the QueryServiceStatus function periodically to query the service's status. A service cannot call StartService during initialization. The reason is that the SCM locks the service control database during initialization, so a call to StartService will block. After the service reports to the SCM that it has successfully started, it can call StartService. As with ControlService, StartService will block for 30 seconds if any se",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a service definition without changing the system",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
+        "notes": "Service changes are privileged; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "StartServiceA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-startservicea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "StartServiceA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-startservicea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.startservicectrldispatchera",
+      "name": "StartServiceCtrlDispatcherA",
+      "aliases": [],
+      "category": "Services and Tasks",
+      "dll": "Advapi32.dll",
+      "library": "Advapi32.lib",
+      "header": "winsvc.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Connects the main thread of a service process to the service control manager, which causes the thread to be the service control dispatcher thread for the calling process.",
+      "description": "Connects the main thread of a service process to the service control manager, which causes the thread to be the service control dispatcher thread for the calling process.",
+      "prototype": "BOOL StartServiceCtrlDispatcherA(CONST SERVICE_TABLE_ENTRYA* lpServiceStartTable);",
+      "parameters": [
+        {
+          "name": "lpServiceStartTable",
+          "type": "CONST SERVICE_TABLE_ENTRYA*",
+          "description": "A pointer to an array of SERVICE_TABLE_ENTRY structures containing one entry for each service that can execute in the calling process. The members of the last entry in the table must have NULL values to designate the end of the table."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. The following error code can be set by the service control manager. Other error codes can be set by the registry functions that are called by the service control manager. Return code Description ERROR_FAILED_SERVICE_CONTROLLER_CONNECT This error is returned if the program is being run as a console application rather than as a service. If the program will be run as a console application for debugging purposes, structure it such that service-specific code is not called when this error is returned. ERROR_INVALID_DATA The specified dispatch table contains entries that are not in the proper format. ERROR_SERVICE_ALREADY_RUNNING The process has already called StartServiceCtrlDispatcher. Each process can call StartServiceCtrlDispatcher only one time.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "services",
+        "service-management"
+      ],
+      "remarks": "When the service control manager starts a service process, it waits for the process to call the StartServiceCtrlDispatcher function. The main thread of a service process should make this call as soon as possible after it starts up (within 30 seconds). If StartServiceCtrlDispatcher succeeds, it connects the calling thread to the service control manager and does not return until all running services in the process have entered the SERVICE_STOPPED state. The service control manager uses this connection to send control and service start requests to the main thread of the service process. The main thread acts as a dispatcher by invoking the appropriate HandlerEx function to handle control requests, or by creating a new thread to execute the appropriate ServiceMain function when a new service is started. The lpServiceTable parameter contains an entry for each service that can run in the calling process. Each entry specifies the ServiceMain function for that service. For SERVICE_WIN32_SHARE_PROCESS services, each entry must contain the name of a service. This name is the service name that was specified by the CreateService function when the service was installed. For SERVICE_WIN32_OWN_PROCESS services, the service name in the table entry is ignored. If a service runs in its own process, the main thread of the service process should immediately call StartServiceCtrlDispatcher. All init",
+      "maldev_notes": "Service APIs are used by installers, management agents, and privileged software. Analysts note the service name, binary path, account, start type, and who requested the change.",
+      "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a service definition without changing the system",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
+        "notes": "Service changes are privileged; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "StartServiceCtrlDispatcherA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-startservicectrldispatchera",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "StartServiceCtrlDispatcherA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winsvc/nf-winsvc-startservicectrldispatchera.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winsvc.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

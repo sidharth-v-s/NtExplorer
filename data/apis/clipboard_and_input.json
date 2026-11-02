@@ -1,0 +1,741 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.countclipboardformats",
+      "name": "CountClipboardFormats",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves the number of different data formats currently on the clipboard.",
+      "description": "Retrieves the number of different data formats currently on the clipboard.",
+      "prototype": "int CountClipboardFormats(VOID);",
+      "parameters": [],
+      "return": {
+        "type": "int",
+        "success": "If the function succeeds, the return value is the number of different data formats currently on the clipboard.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "clipboard",
+        "clipboard-access",
+        "input"
+      ],
+      "remarks": "",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Count the formats on the clipboard",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    if (!OpenClipboard(nullptr)) {\n        return 1;\n    }\n\n    int formats = CountClipboardFormats();\n    printf(\"Clipboard formats: %d\\n\", formats);\n\n    CloseClipboard();\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CountClipboardFormats function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-countclipboardformats",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CountClipboardFormats - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-countclipboardformats.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getasynckeystate",
+      "name": "GetAsyncKeyState",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Determines whether a key is up or down at the time the function is called, and whether the key was pressed after a previous call to GetAsyncKeyState.",
+      "description": "Determines whether a key is up or down at the time the function is called, and whether the key has been pressed since a previous call to GetAsyncKeyState.",
+      "prototype": "SHORT GetAsyncKeyState(int vKey);",
+      "parameters": [
+        {
+          "name": "vKey",
+          "type": "int",
+          "description": "For more information, see Virtual Key Codes. You can use left- and right-distinguishing constants to specify certain keys. See the Remarks section for further information."
+        }
+      ],
+      "return": {
+        "type": "SHORT",
+        "success": "For backward compatibility, the least significant bit is set if the specified key has been pressed since the most recent previous call in the session to GetAsyncKeyState for that key, but the value is unreliable. (See Remarks.) All other bits of the result are reserved and should be ignored. The return value is zero if the call fails. Reasons for failure include The current desktop is not the active desktop. UI Privilege Isolation (UIPI) prevents the calling thread from accessing the foreground thread. The foreground thread belongs to another process and the calling thread does not have DESKTOP_HOOKCONTROL or DESKTOP_JOURNALRECORD access to its desktop.",
+        "failure": "The most significant bit of the return value is set if the specified key is currently down. Since the most significant bit is the sign bit, a negative value indicates that the key is currently down."
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "The GetAsyncKeyState function works with mouse buttons. However, it checks on the state of the physical mouse buttons, not on the logical mouse buttons that the physical buttons are mapped to. For example, the call GetAsyncKeyState(VK_LBUTTON) always returns the state of the left physical mouse button, regardless of whether it is mapped to the left or right logical mouse button. You can determine the system's current mapping of physical mouse buttons to logical mouse buttons by calling GetSystemMetrics(SM_SWAPBUTTON), which returns TRUE if the mouse buttons have been swapped. Although the least significant bit of the return value indicates whether the key has been pressed since the last query, due to the preemptive multitasking nature of Windows, another application can call GetAsyncKeyState and receive the \"recently pressed\" bit instead of your application. The behavior of the least significant bit of the return value is retained for compatibility with 16-bit Windows applications (which are non-preemptive) and should not be relied upon because it can report false negatives. You can use the virtual-key code constants VK_SHIFT, VK_CONTROL, and VK_MENU as values for the vKey parameter. This gives the state of the SHIFT, CTRL, or ALT keys without distinguishing between left and right. You can use the following virtual-key code constants as values for vKey to distinguish between th",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the state of the Shift key",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SHORT state = GetAsyncKeyState(VK_SHIFT);\n    printf(\"Shift is %s\\n\", (state & 0x8000) ? \"down\" : \"up\");\n    return 0;\n}\n",
+        "notes": "The example reads a single key state once and does not log input."
+      },
+      "references": [
+        {
+          "title": "GetAsyncKeyState function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetAsyncKeyState - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getasynckeystate.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getclipboarddata",
+      "name": "GetClipboardData",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves data from the clipboard in a specified format.",
+      "description": "Retrieves data from the clipboard in a specified format. The clipboard must have been opened previously.",
+      "prototype": "HANDLE GetClipboardData(UINT uFormat);",
+      "parameters": [
+        {
+          "name": "uFormat",
+          "type": "UINT",
+          "description": "For a description of the standard clipboard formats, see Standard Clipboard Formats."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is the handle to a clipboard object in the specified format.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "clipboard",
+        "clipboard-access",
+        "input"
+      ],
+      "remarks": "Caution Clipboard data is not trusted. Parse the data carefully before using it in your application. An application can enumerate the available formats in advance by using the EnumClipboardFormats function. The clipboard controls the handle that the GetClipboardData function returns, not the application. The application should copy the data immediately. The application must not free the handle nor leave it locked. The application must not use the handle after the EmptyClipboard or CloseClipboard function is called, or after the SetClipboardData function is called with the same clipboard format. The system performs implicit data format conversions between certain clipboard formats when an application calls the GetClipboardData function. For example, if the CF_OEMTEXT format is on the clipboard, a window can retrieve data in the CF_TEXT format. The format on the clipboard is converted to the requested format on demand. For more information, see Synthesized Clipboard Formats. #### Examples For an example, see Copying Information to the Clipboard.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the length of clipboard text if present",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    if (!OpenClipboard(nullptr)) {\n        return 1;\n    }\n\n    HANDLE data = GetClipboardData(CF_UNICODETEXT);\n    if (data != nullptr) {\n        auto text = static_cast<const wchar_t*>(GlobalLock(data));\n        if (text != nullptr) {\n            // Report only the length so clipboard contents are not exposed.\n            printf(\"Clipboard text length: %zu characters.\\n\", wcslen(text));\n            GlobalUnlock(data);\n        }\n    }\n\n    CloseClipboard();\n    return 0;\n}\n",
+        "notes": "The example reports only the length of clipboard text so its contents are not displayed."
+      },
+      "references": [
+        {
+          "title": "GetClipboardData function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclipboarddata",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetClipboardData - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getclipboarddata.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getkeyboardstate",
+      "name": "GetKeyboardState",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Copies the status of the 256 virtual keys to the specified buffer.",
+      "description": "Copies the status of the 256 virtual keys to the specified buffer.",
+      "prototype": "BOOL GetKeyboardState(PBYTE lpKeyState);",
+      "parameters": [
+        {
+          "name": "lpKeyState",
+          "type": "PBYTE",
+          "description": "The lpKeyState parameter for GetKeyboardState, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "An application can call this function to retrieve the current status of all the virtual keys. The status changes as a thread removes keyboard messages from its message queue. The status does not change as keyboard messages are posted to the thread's message queue, nor does it change as keyboard messages are posted to or retrieved from message queues of other threads. (Exception: Threads that are connected through AttachThreadInput share the same keyboard state.) When the function returns, each member of the array pointed to by the lpKeyState parameter contains status data for a virtual key. If the high-order bit is 1, the key is down; otherwise, it is up. If the key is a toggle key, for example CAPS LOCK, then the low-order bit is 1 when the key is toggled and is 0 if the key is untoggled. The low-order bit is meaningless for non-toggle keys. A toggle key is said to be toggled when it is turned on. A toggle key's indicator light (if any) on the keyboard will be on when the key is toggled, and off when the key is untoggled. To retrieve status information for an individual key, use the GetKeyState function. To retrieve the current state for an individual key regardless of whether the corresponding keyboard message has been retrieved from the message queue, use the GetAsyncKeyState function. An application can use the virtual-key code constants VK_SHIFT, VK_CONTROL and VK_MENU as ",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the current keyboard state array",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    BYTE state[256] = {};\n    if (GetKeyboardState(state)) {\n        printf(\"Shift state: 0x%02x\\n\", state[VK_SHIFT]);\n    }\n    return 0;\n}\n",
+        "notes": "The example inspects the state array once and does not record keystrokes."
+      },
+      "references": [
+        {
+          "title": "GetKeyboardState function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeyboardstate",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetKeyboardState - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getkeyboardstate.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getkeynametexta",
+      "name": "GetKeynameTextA",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a string that represents the name of a key.",
+      "description": "Retrieves a string that represents the name of a key.",
+      "prototype": "int GetKeyNameTextA(LONG lParam, LPSTR lpString, int cchSize);",
+      "parameters": [
+        {
+          "name": "lParam",
+          "type": "LONG",
+          "description": "The function interprets the following bit positions in the lParam. | Bits | Meaning | |-------|---------| | 16-23 | The scan code. The value depends on the OEM. | | 24 | Indicates whether the key is an extended key, such as the right-hand ALT and CTRL keys that appear on an enhanced 101- or 102-key keyboard. The value is 1 if it is an extended key; otherwise, it is 0. | | 25 | \"Do not care\" bit. The application calling this function sets this bit to indicate that the function should not distinguish between left and right CTRL and SHIFT keys, for example. | For more detail, see Keystroke Message Flags."
+        },
+        {
+          "name": "lpString",
+          "type": "LPSTR",
+          "description": "The lpString parameter for GetKeynameTextA, as documented by the API reference."
+        },
+        {
+          "name": "cchSize",
+          "type": "int",
+          "description": "(This parameter should be equal to the size of the buffer pointed to by the lpString parameter.)"
+        }
+      ],
+      "return": {
+        "type": "int",
+        "success": "If the function succeeds, a null-terminated string is copied into the specified buffer, and the return value is the length of the string, in characters, not counting the terminating null character.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "The format of the key-name string depends on the current keyboard layout. The keyboard layout maintains a list of names in the form of character strings for keys with names longer than a single character. The key name is translated according to the currently active keyboard layout, therefore the function might return different results for different keyboard layouts. The name of a character key is the character itself. The names of dead keys are spelled out in full. Character keys that are mapped to the 'A'..'Z' virtual-key codes are translated to the .. characters regardless of current keyboard layout. In this case, use the ToUnicode or ToUnicodeEx methods to get the character for the corresponding key press. This method might not work properly with some keyboard layouts that produce multiple characters (such as ligatures) or supplementary Unicode characters on a single key press. The winuser.h header defines GetKeyNameText as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve a virtual-key name",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    LONG scan = MapVirtualKeyA(VK_F1, MAPVK_VK_TO_VSC) << 16;\n    char name[64] = {};\n    if (GetKeyNameTextA(scan, name, sizeof(name)) > 0) {\n        printf(\"Key name: %s\\n\", name);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetKeynameTextA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeynametexta",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetKeynameTextA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getkeynametexta.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getkeystate",
+      "name": "GetKeyState",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves the status of the specified virtual key.",
+      "description": "Retrieves the status of the specified virtual key. The status specifies whether the key is up, down, or toggled (on, off—alternating each time the key is pressed).",
+      "prototype": "SHORT GetKeyState(int nVirtKey);",
+      "parameters": [
+        {
+          "name": "nVirtKey",
+          "type": "int",
+          "description": "If the desired virtual key is a letter or digit (A through Z, a through z, or 0 through 9), nVirtKey must be set to the ASCII value of that character. For other keys, it must be a virtual-key code. If a non-English keyboard layout is used, virtual keys with values in the range ASCII A through Z and 0 through 9 are used to specify most of the character keys. For example, for the German keyboard layout, the virtual key of value ASCII O (0x4F) refers to the \"o\" key, whereas VK_OEM_1 refers to the \"o with umlaut\" key."
+        }
+      ],
+      "return": {
+        "type": "SHORT",
+        "success": "If the high-order bit is 1, the key is down; otherwise, it is up. If the low-order bit is 1, the key is toggled. A key, such as the CAPS LOCK key, is toggled if it is turned on. The key is off and untoggled if the low-order bit is 0. A toggle key's indicator light (if any) on the keyboard will be on when the key is toggled, and off when the key is untoggled.",
+        "failure": "The return value specifies the status of the specified virtual key, as follows:"
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "The key status returned from this function changes as a thread reads key messages from its message queue. The status does not reflect the interrupt-level state associated with the hardware. Use the GetAsyncKeyState function to retrieve that information. An application calls GetKeyState in response to a keyboard-input message. This function retrieves the state of the key when the input message was generated. To retrieve state information for all the virtual keys, use the GetKeyboardState function. An application can use the virtual key code constants VK_SHIFT, VK_CONTROL, and VK_MENU as values for the nVirtKey parameter. This gives the status of the SHIFT, CTRL, or ALT keys without distinguishing between left and right. An application can also use the following virtual-key code constants as values for nVirtKey to distinguish between the left and right instances of those keys: VK_LSHIFT VK_RSHIFT VK_LCONTROL VK_RCONTROL VK_LMENU VK_RMENU These left- and right-distinguishing constants are available to an application only through the GetKeyboardState, SetKeyboardState, GetAsyncKeyState, GetKeyState, and MapVirtualKey functions. #### Examples For an example, see Displaying Keyboard Input.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the state of the Caps Lock key",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    SHORT state = GetKeyState(VK_CAPITAL);\n    printf(\"Caps Lock is %s\\n\", (state & 1) ? \"on\" : \"off\");\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetKeyState function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getkeystate",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetKeyState - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getkeystate.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getrawinputdata",
+      "name": "GetRawInputData",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves the raw input from the specified device.",
+      "description": "Retrieves the raw input from the specified device.",
+      "prototype": "UINT GetRawInputData(HRAWINPUT hRawInput, UINT uiCommand, LPVOID pData, PUINT pcbSize, UINT cbSizeHeader);",
+      "parameters": [
+        {
+          "name": "hRawInput",
+          "type": "HRAWINPUT",
+          "description": "This comes from the lParam in WM_INPUT."
+        },
+        {
+          "name": "uiCommand",
+          "type": "UINT",
+          "description": "This parameter can be one of the following values. Value Meaning RID_HEADER 0x10000005 Get the header information from the RAWINPUT structure. RID_INPUT 0x10000003 Get the raw data from the RAWINPUT structure."
+        },
+        {
+          "name": "pData",
+          "type": "LPVOID",
+          "description": "This depends on the value of uiCommand. Pointer should be aligned on a DWORD (32-bit) boundary. If pData is NULL, the required size of the buffer is returned in *pcbSize."
+        },
+        {
+          "name": "pcbSize",
+          "type": "PUINT",
+          "description": "The pcbSize parameter for GetRawInputData, as documented by the API reference."
+        },
+        {
+          "name": "cbSizeHeader",
+          "type": "UINT",
+          "description": "The cbSizeHeader parameter for GetRawInputData, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "UINT",
+        "success": "If there is an error, the return value is (UINT)-1.",
+        "failure": "If pData is NULL and the function is successful, the return value is 0. If pData is not NULL and the function is successful, the return value is the number of bytes copied into pData."
+      },
+      "tags": [
+        "input",
+        "raw-input"
+      ],
+      "remarks": "GetRawInputData gets the raw input one RAWINPUT structure at a time. In contrast, GetRawInputBuffer gets an array of RAWINPUT structures.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a raw-input registration",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Registering for raw input captures device data for a window. The example\n    // fills the structure but does not register, to avoid capturing input.\n    RAWINPUTDEVICE device = {};\n    device.usUsagePage = 0x01;\n    device.usUsage = 0x06; // Keyboard.\n    device.dwFlags = 0;\n    device.hwndTarget = nullptr;\n    printf(\"Raw input usage page: 0x%04x\\n\", device.usUsagePage);\n    return 0;\n}\n",
+        "notes": "Raw-input capture is privacy-sensitive; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "GetRawInputData function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getrawinputdata",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetRawInputData - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getrawinputdata.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.mapvirtualkeya",
+      "name": "MapVirtualKeyA",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Translates (maps) a virtual-key code into a scan code or character value, or translates a scan code into a virtual-key code.",
+      "description": "Translates (maps) a virtual-key code into a scan code or character value, or translates a scan code into a virtual-key code.",
+      "prototype": "UINT MapVirtualKeyA(UINT uCode, UINT uMapType);",
+      "parameters": [
+        {
+          "name": "uCode",
+          "type": "UINT",
+          "description": "How this value is interpreted depends on the value of the *uMapType* parameter."
+        },
+        {
+          "name": "uMapType",
+          "type": "UINT",
+          "description": "The value of this parameter depends on the value of the *uCode* parameter. | Value | Meaning | |-------|---------| | MAPVK_VK_TO_VSC0 | The *uCode* parameter is a virtual-key code and is translated into a scan code. If it is a virtual-key code that does not distinguish between left- and right-hand keys, the left-hand scan code is returned. If there is no translation, the function returns 0. | | MAPVK_VSC_TO_VK1 | The *uCode* parameter is a scan code and is translated into a virtual-key code that does not distinguish between left- and right-hand keys. If there is no translation, the function returns 0.Windows Vista and later: the high byte of the *uCode* value can contain either 0xe0 or 0xe1 to specify the extended scan code. | | MAPVK_VK_TO_CHAR2 | The *uCode* parameter is a virtual-key code and is translated into an unshifted character value in the low order word of the return"
+        }
+      ],
+      "return": {
+        "type": "UINT",
+        "success": "See the reference for the documented success value.",
+        "failure": "The return value is either a scan code, a virtual-key code, or a character value, depending on the value of *uCode* and *uMapType*. If there is no translation, the return value is zero."
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "To specify a handle to the keyboard layout to use for translating the specified code, use the MapVirtualKeyEx function. An application can use MapVirtualKey to translate scan codes to the virtual-key code constants VK_SHIFT, VK_CONTROL, and VK_MENU, and vice versa. These translations do not distinguish between the left and right instances of the SHIFT, CTRL, or ALT keys. An application can get the scan code corresponding to the left or right instance of one of these keys by calling MapVirtualKey with *uCode* set to one of the following virtual-key code constants: - VK_LSHIFT - VK_RSHIFT - VK_LCONTROL - VK_RCONTROL - VK_LMENU - VK_RMENU These left- and right-distinguishing constants are available to an application only through the GetKeyboardState, SetKeyboardState, GetAsyncKeyState, GetKeyState, MapVirtualKey, and MapVirtualKeyEx functions. For list complete table of virtual key codes, see Virtual Key Codes. In MAPVK_VK_TO_CHAR mode virtual-key codes, the 'A'..'Z' keys are translated to upper-case 'A'..'Z' characters regardless of current keyboard layout. If you want to translate a virtual-key code to the corresponding character, use the ToAscii function. > > The winuser.h header defines MapVirtualKey as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neut",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a virtual key to a scan code",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    UINT scan = MapVirtualKeyA(VK_F1, MAPVK_VK_TO_VSC);\n    printf(\"Scan code: %u\\n\", scan);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "MapVirtualKeyA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-mapvirtualkeya",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "MapVirtualKeyA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-mapvirtualkeya.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.mapvirtualkeyexa",
+      "name": "MapVirtualKeyExA",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Translates (maps) a virtual-key code into a scan code or character value, or translates a scan code into a virtual-key code.",
+      "description": "Translates (maps) a virtual-key code into a scan code or character value, or translates a scan code into a virtual-key code. The function translates the codes using the input language and an input locale identifier.",
+      "prototype": "UINT MapVirtualKeyExA(UINT uCode, UINT uMapType, HKL dwhkl);",
+      "parameters": [
+        {
+          "name": "uCode",
+          "type": "UINT",
+          "description": "How this value is interpreted depends on the value of the *uMapType* parameter."
+        },
+        {
+          "name": "uMapType",
+          "type": "UINT",
+          "description": "The value of this parameter depends on the value of the uCode parameter. | Value | Meaning | |-------|---------| | MAPVK_VK_TO_VSC0 | The *uCode* parameter is a virtual-key code and is translated into a scan code. If it is a virtual-key code that does not distinguish between left- and right-hand keys, the left-hand scan code is returned. If there is no translation, the function returns 0. | | MAPVK_VSC_TO_VK1 | The *uCode* parameter is a scan code and is translated into a virtual-key code that does not distinguish between left- and right-hand keys. If there is no translation, the function returns 0.Windows Vista and later: the high byte of the *uCode* value can contain either 0xe0 or 0xe1 to specify the extended scan code. | | MAPVK_VK_TO_CHAR2 | The *uCode* parameter is a virtual-key code and is translated into an unshifted character value in the low order word of the return va"
+        },
+        {
+          "name": "dwhkl",
+          "type": "HKL",
+          "description": "This parameter can be any input locale identifier previously returned by the LoadKeyboardLayout function."
+        }
+      ],
+      "return": {
+        "type": "UINT",
+        "success": "See the reference for the documented success value.",
+        "failure": "The return value is either a scan code, a virtual-key code, or a character value, depending on the value of *uCode* and *uMapType*. If there is no translation, the return value is zero."
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "The input locale identifier is a broader concept than a keyboard layout, since it can also encompass a speech-to-text converter, an Input Method Editor (IME), or any other form of input. An application can use MapVirtualKeyEx to translate scan codes to the virtual-key code constants VK_SHIFT, VK_CONTROL, and VK_MENU, and vice versa. These translations do not distinguish between the left and right instances of the SHIFT, CTRL, or ALT keys. An application can get the scan code corresponding to the left or right instance of one of these keys by calling MapVirtualKeyEx with *uCode* set to one of the following virtual-key code constants: - VK_LSHIFT - VK_RSHIFT - VK_LCONTROL - VK_RCONTROL - VK_LMENU - VK_RMENU These left- and right-distinguishing constants are available to an application only through the GetKeyboardState, SetKeyboardState, GetAsyncKeyState, GetKeyState, MapVirtualKey, and MapVirtualKeyEx functions. For list complete table of virtual key codes, see Virtual Key Codes. In MAPVK_VK_TO_CHAR mode virtual-key codes, the 'A'..'Z' keys are translated to upper-case 'A'..'Z' characters regardless of current keyboard layout. If you want to translate a virtual-key code to the corresponding character, use the ToAscii function. > > The winuser.h header defines MapVirtualKeyEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definitio",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Map a virtual key with an explicit layout",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HKL layout = GetKeyboardLayout(0);\n    UINT scan = MapVirtualKeyExA(VK_F1, MAPVK_VK_TO_VSC, layout);\n    printf(\"Scan code: %u\\n\", scan);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "MapVirtualKeyExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-mapvirtualkeyexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "MapVirtualKeyExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-mapvirtualkeyexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.openclipboard",
+      "name": "OpenClipboard",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Opens the clipboard for examination and prevents other applications from modifying the clipboard content.",
+      "description": "Opens the clipboard for examination and prevents other applications from modifying the clipboard content.",
+      "prototype": "BOOL OpenClipboard(HWND hWndNewOwner);",
+      "parameters": [
+        {
+          "name": "hWndNewOwner",
+          "type": "HWND",
+          "description": "If this parameter is NULL, the open clipboard is associated with the current task."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "clipboard",
+        "clipboard-access",
+        "input"
+      ],
+      "remarks": "OpenClipboard fails if another window has the clipboard open. An application should call the CloseClipboard function after every successful call to OpenClipboard. The window identified by the hWndNewOwner parameter does not become the clipboard owner unless the EmptyClipboard function is called. If an application calls OpenClipboard with hwnd set to NULL, EmptyClipboard sets the clipboard owner to NULL; this causes SetClipboardData to fail. #### Examples For an example, see Copying Information to the Clipboard.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Open and close the clipboard",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    if (!OpenClipboard(nullptr)) {\n        printf(\"OpenClipboard failed: %lu\\n\", GetLastError());\n        return 1;\n    }\n\n    CloseClipboard();\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "OpenClipboard function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-openclipboard",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "OpenClipboard - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-openclipboard.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.registerhotkey",
+      "name": "RegisterHotKey",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Defines a system-wide hot key.",
+      "description": "Defines a system-wide hot key.",
+      "prototype": "BOOL RegisterHotKey(HWND hWnd, int id, UINT fsModifiers, UINT vk);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "If this parameter is NULL, WM_HOTKEY messages are posted to the message queue of the calling thread and must be processed in the message loop."
+        },
+        {
+          "name": "id",
+          "type": "int",
+          "description": "If the *hWnd* parameter is NULL, then the hot key is associated with the current thread rather than with a particular window. If a hot key already exists with the same *hWnd* and *id* parameters, see Remarks for the action taken."
+        },
+        {
+          "name": "fsModifiers",
+          "type": "UINT",
+          "description": "The *fsModifiers* parameter can be a combination of the following values. | Value | Meaning | | --------- | ----------- | | MOD_ALT0x0001 | Either ALT key must be held down. | | MOD_CONTROL0x0002 | Either CTRL key must be held down. | | MOD_NOREPEAT0x4000 | Changes the hotkey behavior so that the keyboard auto-repeat does not yield multiple hotkey notifications.Windows Vista: This flag is not supported. | | MOD_SHIFT0x0004 | Either SHIFT key must be held down. | | MOD_WIN0x0008 | Either WINDOWS key must be held down. These keys are labeled with the Windows logo. Keyboard shortcuts that involve the WINDOWS key are reserved for use by the operating system. |"
+        },
+        {
+          "name": "vk",
+          "type": "UINT",
+          "description": "See Virtual Key Codes."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. This function fails if you try to associate a hot key with a window created by another thread. Typically, RegisterHotKey also fails if the keystrokes specified for the hot key have already been registered for another hot key. However, some pre-existing, default hotkeys registered by the OS (such as PrintScreen, which launches the Snipping tool) may be overridden by another hot key registration when one of the app's windows is in the foreground.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "input",
+        "keyboard-input"
+      ],
+      "remarks": "When a key is pressed, the system looks for a match against all hot keys. Upon finding a match, the system posts the WM_HOTKEY message to the message queue of the window with which the hot key is associated. If the hot key is not associated with a window, then the WM_HOTKEY message is posted to the thread associated with the hot key. If a hot key already exists with the same *hWnd* and *id* parameters, it is maintained along with the new hot key. The application must explicitly call UnregisterHotKey to unregister the old hot key. The F12 key is reserved for use by the debugger at all times, so it should not be registered as a hot key. Even when you are not debugging an application, F12 is reserved in case a kernel-mode debugger or a just-in-time debugger is resident. An application must specify an id value in the range 0x0000 through 0xBFFF. A shared DLL must specify a value in the range 0xC000 through 0xFFFF (the range returned by the GlobalAddAtom function). To avoid conflicts with hot-key identifiers defined by other shared DLLs, a DLL should use the GlobalAddAtom function to obtain the hot-key identifier. Windows Server 2003: If a hot key already exists with the same *hWnd* and *id* parameters, it is replaced by the new hot key. ### Examples The following example shows how to use the RegisterHotKey function with the MOD_NOREPEAT flag. In this example, the hotkey 'ALT+b' is ",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Register and unregister a hotkey",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    if (RegisterHotKey(nullptr, 1, MOD_CONTROL | MOD_ALT, VK_F12)) {\n        printf(\"Hotkey registered.\\n\");\n        UnregisterHotKey(nullptr, 1);\n    }\n    return 0;\n}\n",
+        "notes": "The hotkey is registered for the current thread and removed immediately."
+      },
+      "references": [
+        {
+          "title": "RegisterHotKey function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "RegisterHotKey - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-registerhotkey.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.registerrawinputdevices",
+      "name": "RegisterRawInputDevices",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Registers the devices that supply the raw input data.",
+      "description": "Registers the devices that supply the raw input data.",
+      "prototype": "BOOL RegisterRawInputDevices(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);",
+      "parameters": [
+        {
+          "name": "pRawInputDevices",
+          "type": "PCRAWINPUTDEVICE",
+          "description": "Pointer should be aligned on a DWORD (32-bit) boundary."
+        },
+        {
+          "name": "uiNumDevices",
+          "type": "UINT",
+          "description": "The uiNumDevices parameter for RegisterRawInputDevices, as documented by the API reference."
+        },
+        {
+          "name": "cbSize",
+          "type": "UINT",
+          "description": "The cbSize parameter for RegisterRawInputDevices, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "See the reference for the documented success value.",
+        "failure": "TRUE if the function succeeds; otherwise, FALSE. If the function fails, call GetLastError for more information."
+      },
+      "tags": [
+        "input",
+        "raw-input"
+      ],
+      "remarks": "To receive WM_INPUT messages, an application must first register the raw input devices using RegisterRawInputDevices. By default, an application does not receive raw input. To receive WM_INPUT_DEVICE_CHANGE messages, an application must specify the RIDEV_DEVNOTIFY flag for each device class that is specified by the usUsagePage and usUsage fields of the RAWINPUTDEVICE structure . By default, an application does not receive WM_INPUT_DEVICE_CHANGE notifications for raw input device arrival and removal. If a RAWINPUTDEVICE structure has the RIDEV_REMOVE flag set and the hwndTarget parameter is not set to NULL, then parameter validation will fail. Only one window per raw input device class may be registered to receive raw input within a process (the window passed in the last call to RegisterRawInputDevices). Because of this, RegisterRawInputDevices should not be used from a library, as it may interfere with any raw input processing logic already present in applications that load it.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a raw-input registration",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Registering for raw input captures device data for a window. The example\n    // fills the structure but does not register, to avoid capturing input.\n    RAWINPUTDEVICE device = {};\n    device.usUsagePage = 0x01;\n    device.usUsage = 0x06; // Keyboard.\n    device.dwFlags = 0;\n    device.hwndTarget = nullptr;\n    printf(\"Raw input usage page: 0x%04x\\n\", device.usUsagePage);\n    return 0;\n}\n",
+        "notes": "Raw-input capture is privacy-sensitive; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "RegisterRawInputDevices function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerrawinputdevices",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "RegisterRawInputDevices - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-registerrawinputdevices.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setclipboarddata",
+      "name": "SetClipboardData",
+      "aliases": [],
+      "category": "Clipboard and Input",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Places data on the clipboard in a specified clipboard format.",
+      "description": "Places data on the clipboard in a specified clipboard format. The window must be the current clipboard owner, and the application must have called the OpenClipboard function. (When responding to the WM_RENDERFORMAT message, the clipboard owner must not call OpenClipboard before calling SetClipboardData.)",
+      "prototype": "HANDLE SetClipboardData(UINT uFormat, HANDLE hMem);",
+      "parameters": [
+        {
+          "name": "uFormat",
+          "type": "UINT",
+          "description": "This parameter can be a registered format or any of the standard clipboard formats. For more information, see Standard Clipboard Formats and Registered Clipboard Formats."
+        },
+        {
+          "name": "hMem",
+          "type": "HANDLE",
+          "description": "This parameter can be NULL, indicating that the window provides data in the specified clipboard format (renders the format) upon request; this is known as delayed rendering. If a window delays rendering, it must process the WM_RENDERFORMAT and WM_RENDERALLFORMATS messages. If SetClipboardData succeeds, the system owns the object identified by the hMem parameter. The application may not write to or free the data once ownership has been transferred to the system, but it can lock and read from the data until the CloseClipboard function is called. (The memory must be unlocked before the Clipboard is closed.) If the hMem parameter identifies a memory object, the object must have been allocated using the function with the GMEM_MOVEABLE flag."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "If the function succeeds, the return value is the handle to the data.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "clipboard",
+        "clipboard-access",
+        "input"
+      ],
+      "remarks": "Windows 8: Bitmaps to be shared with Windows Store app apps must be in the CF_BITMAP format (device-dependent bitmap). If an application calls SetClipboardData in response to WM_RENDERFORMAT or WM_RENDERALLFORMATS, the application should not use the handle after SetClipboardData has been called. If an application calls OpenClipboard with hwnd set to NULL, EmptyClipboard sets the clipboard owner to NULL; this causes SetClipboardData to fail. The system performs implicit data format conversions between certain clipboard formats when an application calls the GetClipboardData function. For example, if the CF_OEMTEXT format is on the clipboard, a window can retrieve data in the CF_TEXT format. The format on the clipboard is converted to the requested format on demand. For more information, see Synthesized Clipboard Formats. #### Examples For an example, see Copying Information to the Clipboard.",
+      "maldev_notes": "Clipboard and input APIs are used by editors, accessibility tools, automation, and games. Analysts consider user consent, focus, and whether collection is limited to the application’s own UI.",
+      "defensive_notes": "Clipboard and input telemetry can be sensitive. Analysts review whether access is scoped to the foreground application and consistent with user-facing functionality.",
+      "example": {
+        "language": "cpp",
+        "title": "Set clipboard text and restore the previous text",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    if (!OpenClipboard(nullptr)) {\n        return 1;\n    }\n\n    // Save the existing text so the example can restore it.\n    HANDLE previous = GetClipboardData(CF_UNICODETEXT);\n    HGLOBAL saved = nullptr;\n    if (previous != nullptr) {\n        auto text = static_cast<const wchar_t*>(GlobalLock(previous));\n        if (text != nullptr) {\n            SIZE_T bytes = (wcslen(text) + 1) * sizeof(wchar_t);\n            saved = GlobalAlloc(GMEM_MOVEABLE, bytes);\n            if (saved != nullptr) {\n                memcpy(GlobalLock(saved), text, bytes);\n                GlobalUnlock(saved);\n            }\n            GlobalUnlock(previous);\n        }\n    }\n\n    const wchar_t example[] = L\"NtExplorer example\";\n    HGLOBAL data = GlobalAlloc(GMEM_MOVEABLE, sizeof(example));\n    if (data != nullptr) {\n        memcpy(GlobalLock(data), example, sizeof(example));\n        GlobalUnlock(data);\n        SetClipboardData(CF_UNICODETEXT, data);\n    }\n\n    if (saved != nullptr) {\n        // Restoring after SetClipboardData keeps the user's text intact.\n        EmptyClipboard();\n        SetClipboardData(CF_UNICODETEXT, saved);\n    }\n\n    CloseClipboard();\n    return 0;\n}\n",
+        "notes": "The example saves and restores the previous clipboard text."
+      },
+      "references": [
+        {
+          "title": "SetClipboardData function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setclipboarddata",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetClipboardData - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setclipboarddata.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

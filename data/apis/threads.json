@@ -1,0 +1,1029 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.createthread",
+      "name": "CreateThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Creates a thread that begins execution in the calling process.",
+      "description": "CreateThread creates a new thread in the calling process and starts it at an application-defined start routine, unless CREATE_SUSPENDED is specified. The new thread shares the process address space, handles, and other resources with the existing threads. The caller receives a handle to the thread and, optionally, the system-wide thread identifier. The thread runs until its start routine returns, it calls ExitThread, or the process terminates.",
+      "prototype": "HANDLE CreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);",
+      "parameters": [
+        {
+          "name": "lpThreadAttributes",
+          "type": "LPSECURITY_ATTRIBUTES",
+          "description": "Optional SECURITY_ATTRIBUTES for the new thread object. NULL gives the thread a default security descriptor and a non-inheritable handle."
+        },
+        {
+          "name": "dwStackSize",
+          "type": "SIZE_T",
+          "description": "The initial stack size, in bytes. The system rounds the value to the nearest page. Zero selects the default size for the executable. Unless STACK_SIZE_PARAM_IS_A_RESERVATION is set in dwCreationFlags, the value is treated as the initial committed stack size."
+        },
+        {
+          "name": "lpStartAddress",
+          "type": "LPTHREAD_START_ROUTINE",
+          "description": "A pointer to the application-defined function that the thread executes. The function receives lpParameter and returns a DWORD exit code."
+        },
+        {
+          "name": "lpParameter",
+          "type": "LPVOID",
+          "description": "A single pointer-sized value passed to the thread function. It may be NULL. The value and any memory it points to must remain valid for as long as the thread uses them."
+        },
+        {
+          "name": "dwCreationFlags",
+          "type": "DWORD",
+          "description": "Flags that control thread creation. Zero starts the thread immediately; CREATE_SUSPENDED creates the thread suspended until ResumeThread is called. STACK_SIZE_PARAM_IS_A_RESERVATION changes how dwStackSize is interpreted.",
+          "constants": [
+            "CREATE_SUSPENDED"
+          ]
+        },
+        {
+          "name": "lpThreadId",
+          "type": "LPDWORD",
+          "description": "Optional pointer that receives the new thread's identifier. It may be NULL when the identifier is not needed. The identifier is valid only while the thread exists."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "A handle to the new thread. Close it with CloseHandle when it is no longer needed.",
+        "failure": "NULL. Call GetLastError for the error code."
+      },
+      "tags": [
+        "thread-management",
+        "execution-flow",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.openthread",
+        "win32.resumethread",
+        "win32.suspendthread",
+        "win32.exitthread"
+      ],
+      "related_structures": [
+        "win32.security_attributes"
+      ],
+      "related_constants": [
+        "win32.create_suspended"
+      ],
+      "remarks": "Code that calls C/C++ runtime library functions from the new thread should normally use _beginthreadex so the runtime can initialize and tear down per-thread state. CreateThread remains appropriate for code that does not depend on that per-thread state. Returning from the thread function and calling ExitThread both end the thread, but returning lets C++ destructors run.",
+      "maldev_notes": "CreateThread is ordinary in multithreaded software and also appears in analysis of code that starts work inside its own process. Analysts often note the start address, whether it lies in a loaded module or in dynamically allocated memory, the creation flags, and what the thread does next. The call alone does not indicate malicious behavior.",
+      "defensive_notes": "Thread-creation telemetry can record the creating process, the start address, and the new thread identifier. Comparing the start address with known module mappings and with expected software behavior is more informative than the presence of the call.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a worker thread and wait for it",
+        "code": "#include <windows.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    // Ordinary background work belongs here.\n    return 0;\n}\n\nint main() {\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr, 0, nullptr);\n    if (thread == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example creates one worker thread in the current process, waits up to five seconds for it to finish, and closes the thread handle. No special privileges are required. It is illustrative and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "CreateThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createthread",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, stack-size interpretation and CRT guidance checked against Microsoft Learn (processthreadsapi.h)."
+    },
+    {
+      "id": "win32.openthread",
+      "name": "OpenThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Opens an existing thread by its identifier and returns a handle with the requested access rights.",
+      "description": "OpenThread obtains a handle to a thread from its system-wide thread identifier. The requested access rights determine which operations the caller can perform, such as querying information, suspending or resuming the thread, or reading and writing its context. The system checks the caller's token against the thread object's security descriptor, so some rights may be denied even when the identifier is valid.",
+      "prototype": "HANDLE OpenThread(DWORD dwDesiredAccess, BOOL bInheritHandle, DWORD dwThreadId);",
+      "parameters": [
+        {
+          "name": "dwDesiredAccess",
+          "type": "DWORD",
+          "description": "The access rights to request. Common values include THREAD_QUERY_LIMITED_INFORMATION, THREAD_QUERY_INFORMATION, THREAD_SUSPEND_RESUME, THREAD_GET_CONTEXT, THREAD_SET_CONTEXT, and THREAD_TERMINATE. Request only the rights the task requires.",
+          "constants": [
+            "THREAD_SUSPEND_RESUME",
+            "THREAD_QUERY_INFORMATION"
+          ]
+        },
+        {
+          "name": "bInheritHandle",
+          "type": "BOOL",
+          "description": "If TRUE, child processes can inherit the returned handle. Inheritance also requires that the handle be marked inheritable."
+        },
+        {
+          "name": "dwThreadId",
+          "type": "DWORD",
+          "description": "The system-wide identifier of the thread to open. Thread identifiers can be reused after a thread terminates, so a stale value may refer to a different thread."
+        }
+      ],
+      "return": {
+        "type": "HANDLE",
+        "success": "A handle to the thread with the granted access rights. Close it with CloseHandle when finished.",
+        "failure": "NULL. Call GetLastError."
+      },
+      "tags": [
+        "thread-management",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.createthread",
+        "win32.getthreadid",
+        "win32.suspendthread",
+        "win32.resumethread",
+        "win32.closehandle"
+      ],
+      "related_constants": [
+        "win32.thread_suspend_resume",
+        "win32.thread_query_information"
+      ],
+      "remarks": "A thread identifier is not a stable identity because it can be reused. When identity matters, verify properties such as the owning process and thread creation time in addition to the identifier. An open handle keeps the thread object alive after the thread itself has exited.",
+      "maldev_notes": "Opening a thread is a prerequisite for operations such as inspecting its context or changing its suspend count. Analysis usually considers the requested access mask, the target process, and whether the caller had a plausible reason to operate on that thread. The open call alone is not a behavioral verdict.",
+      "defensive_notes": "Thread-handle telemetry can expose cross-process access and unusual access masks. Correlating the requesting process, the target process, the granted rights, and subsequent operations is more useful than flagging the open call by itself.",
+      "example": {
+        "language": "cpp",
+        "title": "Open the calling thread for a limited query",
+        "code": "#include <windows.h>\n#include <cstdio>\n\nint main() {\n    DWORD threadId = GetCurrentThreadId();\n    HANDLE thread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE, threadId);\n    if (thread == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    std::printf(\"opened thread %lu\\n\",\n                static_cast<unsigned long>(GetThreadId(thread)));\n\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example opens the calling thread with the least-privilege query right, prints the identifier associated with the handle, and closes it. It is illustrative and is never executed by NtExplorer."
+      },
+      "references": [
+        {
+          "title": "OpenThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openthread",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Access-right handling and identifier semantics checked against Microsoft Learn (processthreadsapi.h)."
+    },
+    {
+      "id": "win32.getcurrentthread",
+      "name": "GetCurrentThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Returns a pseudo-handle that refers to the calling thread.",
+      "description": "GetCurrentThread returns a special constant that always refers to the thread making the call. It is not a real kernel handle and does not need to be closed. Functions that accept thread handles can use the pseudo-handle when they should operate on the caller rather than on another thread.",
+      "prototype": "HANDLE GetCurrentThread(void);",
+      "parameters": [],
+      "return": {
+        "type": "HANDLE",
+        "success": "A pseudo-handle for the current thread, currently the constant (HANDLE)-2.",
+        "failure": "This function cannot fail."
+      },
+      "tags": [
+        "thread-management",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getcurrentthreadid",
+        "win32.getthreadid",
+        "win32.openthread"
+      ],
+      "related_constants": [],
+      "remarks": "Do not pass the pseudo-handle to CloseHandle. The value is meaningful only in the calling process and cannot be inherited. To obtain a real handle that can be used outside the calling thread, duplicate the pseudo-handle with DuplicateHandle.",
+      "maldev_notes": "Code that operates on its own thread often uses this call. It is a convenience for self-reference, not a behavioral signal in itself.",
+      "defensive_notes": "When reviewing thread operations, the current-thread pseudo-handle can help distinguish self-operations from operations on another thread.",
+      "references": [
+        {
+          "title": "GetCurrentThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthread",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Pseudo-handle value and lifetime rules checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Use the pseudo-handle for the current thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE thread = GetCurrentThread();\n    printf(\"Current thread id: %lu\\n\", GetThreadId(thread));\n    // The pseudo-handle does not need to be closed.\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.getcurrentthreadid",
+      "name": "GetCurrentThreadId",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Returns the system-wide identifier of the calling thread.",
+      "description": "GetCurrentThreadId returns the identifier assigned to the calling thread. The identifier is unique across the system while the thread exists, but the system can reuse it after the thread terminates. It is commonly used for logging, naming synchronization objects, and locating the thread with OpenThread.",
+      "prototype": "DWORD GetCurrentThreadId(void);",
+      "parameters": [],
+      "return": {
+        "type": "DWORD",
+        "success": "The thread identifier of the calling thread.",
+        "failure": "This function cannot fail."
+      },
+      "tags": [
+        "thread-management",
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getcurrentthread",
+        "win32.getthreadid",
+        "win32.openthread"
+      ],
+      "related_constants": [],
+      "remarks": "A thread identifier is not a handle and cannot be used for operations that require one. Identifiers are reused after threads exit, so historical records should be correlated with process and timing information.",
+      "maldev_notes": "Thread identifiers are used for logging, object naming, and finding a thread to open. Their presence is ordinary; the relevant question is what the program does with the identifier.",
+      "defensive_notes": "Thread identifiers appear in many event records. Because they are reused, correlate them with the owning process, image path, and start time rather than treating them as globally stable.",
+      "references": [
+        {
+          "title": "GetCurrentThreadId function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getcurrentthreadid",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Return type and identifier-reuse caveat checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the current thread identifier",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    printf(\"TID: %lu\\n\", GetCurrentThreadId());\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.getthreadid",
+      "name": "GetThreadId",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Returns the system-wide identifier associated with a thread handle.",
+      "description": "GetThreadId maps an open thread handle to the identifier assigned by the system. The handle must have THREAD_QUERY_INFORMATION or THREAD_QUERY_LIMITED_INFORMATION access. The identifier remains valid only while the thread exists and can be reused afterwards.",
+      "prototype": "DWORD GetThreadId(HANDLE Thread);",
+      "parameters": [
+        {
+          "name": "Thread",
+          "type": "HANDLE",
+          "description": "A handle to the thread. It must have THREAD_QUERY_INFORMATION or THREAD_QUERY_LIMITED_INFORMATION access."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The thread identifier.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "thread-management",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.openthread",
+        "win32.getcurrentthreadid",
+        "win32.getcurrentthread"
+      ],
+      "related_constants": [
+        "win32.thread_query_information"
+      ],
+      "remarks": "Check the return value against zero rather than assuming every failure is distinguishable from a valid identifier. This function is the thread counterpart of GetProcessId.",
+      "maldev_notes": "Converting a thread handle to an identifier is common when logging relationships between threads. On its own it does not indicate malicious behavior.",
+      "defensive_notes": "Correlating handles and identifiers can clarify which thread an event refers to, especially when handles were duplicated or inherited.",
+      "references": [
+        {
+          "title": "GetThreadId function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadid",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Required access and zero-return convention checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve a thread handle to its identifier",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE thread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE,\n        GetCurrentThreadId());\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    printf(\"TID: %lu\\n\", GetThreadId(thread));\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.suspendthread",
+      "name": "SuspendThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Increments a thread's suspend count, preventing it from being scheduled while the count is nonzero.",
+      "description": "SuspendThread increments the suspend count of the specified thread. A thread whose suspend count is greater than zero is not scheduled to run. The function returns the previous suspend count, which lets the caller detect nested suspensions. Each successful call must eventually be balanced by ResumeThread.",
+      "prototype": "DWORD SuspendThread(HANDLE hThread);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread to suspend. The handle must have THREAD_SUSPEND_RESUME access."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The thread's previous suspend count. A value greater than one means the thread was already suspended.",
+        "failure": "(DWORD)-1. Call GetLastError."
+      },
+      "tags": [
+        "thread-management",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.resumethread",
+        "win32.openthread",
+        "win32.createthread"
+      ],
+      "related_constants": [
+        "win32.thread_suspend_resume"
+      ],
+      "remarks": "SuspendThread is intended primarily for debuggers and is not a synchronization primitive. Suspending a thread that holds a lock or is executing inside a critical section can deadlock the process. A thread suspended at an arbitrary point may hold inconsistent application state until it is resumed.",
+      "maldev_notes": "SuspendThread appears in debuggers, process-control tools, and analysis of code that pauses another thread. Investigators usually examine which thread was suspended, the caller's access, and the surrounding sequence, because the call alone is ambiguous.",
+      "defensive_notes": "Thread-suspension activity can be observed through handle operations and thread state changes. Cross-process suspension of security or monitoring threads deserves context, but suspension also has routine debugging and instrumentation uses.",
+      "references": [
+        {
+          "title": "SuspendThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-suspendthread",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Suspend-count semantics and the debugger-oriented guidance checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Suspend and resume a worker thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic HANDLE g_event = nullptr;\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    WaitForSingleObject(g_event, 5000);\n    return 0;\n}\n\nint main() {\n    g_event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr, 0, nullptr);\n    if (g_event == nullptr || thread == nullptr) {\n        return 1;\n    }\n\n    SuspendThread(thread);\n    ResumeThread(thread);\n    SetEvent(g_event);\n\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    CloseHandle(g_event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.resumethread",
+      "name": "ResumeThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Decrements a thread's suspend count and allows the thread to run when the count reaches zero.",
+      "description": "ResumeThread decrements the suspend count of the specified thread. If the count reaches zero, the thread becomes eligible to be scheduled. The function returns the previous suspend count, so a caller can tell whether the thread was suspended once, several times, or not at all. Resuming a thread that is not suspended has no effect on its execution.",
+      "prototype": "DWORD ResumeThread(HANDLE hThread);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread to resume. The handle must have THREAD_SUSPEND_RESUME access."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The thread's previous suspend count. Zero means the thread was not suspended; one means it was suspended and is now eligible to run; a value greater than one means it remains suspended.",
+        "failure": "(DWORD)-1. Call GetLastError."
+      },
+      "tags": [
+        "thread-management",
+        "analysis-relevant",
+        "defensive-telemetry"
+      ],
+      "related_apis": [
+        "win32.suspendthread",
+        "win32.openthread",
+        "win32.createprocessw"
+      ],
+      "related_constants": [
+        "win32.thread_suspend_resume"
+      ],
+      "remarks": "ResumeThread does not guarantee that the thread runs immediately; it only makes the thread eligible for scheduling. Processes created with CREATE_SUSPENDED have a primary thread that must be resumed with this function before it executes.",
+      "maldev_notes": "ResumeThread is commonly paired with CREATE_SUSPENDED process creation and with debugger or instrumentation workflows. Analysis usually focuses on which thread is resumed and what the thread does immediately afterwards, not on the call in isolation.",
+      "defensive_notes": "Resuming a thread, especially the primary thread of a process created suspended, can be a meaningful point in a behavioral sequence. Correlate it with the process creation flags and subsequent activity.",
+      "references": [
+        {
+          "title": "ResumeThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-resumethread",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Return-value semantics and the CREATE_SUSPENDED relationship checked against Microsoft Learn.",
+      "example": {
+        "language": "cpp",
+        "title": "Suspend and resume a worker thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic HANDLE g_event = nullptr;\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    WaitForSingleObject(g_event, 5000);\n    return 0;\n}\n\nint main() {\n    g_event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr, 0, nullptr);\n    if (g_event == nullptr || thread == nullptr) {\n        return 1;\n    }\n\n    SuspendThread(thread);\n    ResumeThread(thread);\n    SetEvent(g_event);\n\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    CloseHandle(g_event);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.exitthread",
+      "name": "ExitThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "summary": "Ends the calling thread and records its exit code.",
+      "description": "ExitThread terminates the calling thread and records the supplied exit code for the thread object. The function does not return to its caller. Other threads in the process continue to run, and the process ends when its last thread exits. The exit code can be retrieved with GetExitCodeThread while a handle to the thread remains open.",
+      "prototype": "void ExitThread(DWORD dwExitCode);",
+      "parameters": [
+        {
+          "name": "dwExitCode",
+          "type": "DWORD",
+          "description": "The exit code to record for the thread. It can be read later with GetExitCodeThread."
+        }
+      ],
+      "return": {
+        "type": "void",
+        "failure": "This function does not return."
+      },
+      "tags": [
+        "thread-management",
+        "execution-flow",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.exitprocess",
+        "win32.createthread",
+        "win32.openthread"
+      ],
+      "related_constants": [],
+      "remarks": "In C++, prefer returning from the thread function so that destructors and stack unwinding run. ExitThread terminates the thread before C++ destructors associated with the thread can execute, which is why Microsoft does not recommend it in C++ code. The thread object remains valid while handles to it are open.",
+      "maldev_notes": "Explicit thread termination is ordinary behavior. In analysis it matters mainly for understanding control flow and cleanup, not as an indicator by itself.",
+      "defensive_notes": "Thread exit events and exit codes can help correlate thread lifetime with other telemetry, but they rarely establish intent on their own.",
+      "references": [
+        {
+          "title": "ExitThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitthread",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Non-returning behavior and C++ guidance checked against Microsoft Learn (processthreadsapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Exit a worker thread with a status code",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    printf(\"Worker thread is exiting.\\n\");\n    ExitThread(7);\n    return 0;\n}\n\nint main() {\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr, 0, nullptr);\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example exits only a worker thread that it created itself."
+      }
+    },
+    {
+      "id": "win32.attachthreadinput",
+      "name": "AttachThreadInput",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Attaches or detaches the input processing mechanism of one thread to that of another thread.",
+      "description": "Attaches or detaches the input processing mechanism of one thread to that of another thread.",
+      "prototype": "BOOL AttachThreadInput(DWORD idAttach, DWORD idAttachTo, BOOL fAttach);",
+      "parameters": [
+        {
+          "name": "idAttach",
+          "type": "DWORD",
+          "description": "The identifier of the thread to be attached to another thread. The thread to be attached cannot be a system thread."
+        },
+        {
+          "name": "idAttachTo",
+          "type": "DWORD",
+          "description": "The identifier of the thread to which idAttach will be attached. This thread cannot be a system thread. A thread cannot attach to itself. Therefore, idAttachTo cannot equal idAttach."
+        },
+        {
+          "name": "fAttach",
+          "type": "BOOL",
+          "description": "If this parameter is TRUE, the two threads are attached. If the parameter is FALSE, the threads are detached."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. Windows Server 2003 and Windows XP: There is no extended error information; do not call GetLastError. This behavior changed as of Windows Vista.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "thread-management",
+        "windows-ui"
+      ],
+      "remarks": "By using the AttachThreadInput function, a thread can share its input states (such as keyboard states and the current focus window) with another thread. Keyboard and mouse events received by both threads are processed in the order they were received until the threads are detached by calling AttachThreadInput a second time and specifying FALSE for the fAttach parameter. The AttachThreadInput function fails if either of the specified threads does not have a message queue. The system creates a thread's message queue when the thread makes its first call to one of the USER or GDI functions. The AttachThreadInput function also fails if a journal record hook is installed. Journal record hooks attach all input queues together. Note that key state, which can be ascertained by calls to the GetKeyState or GetKeyboardState function, is reset after a call to AttachThreadInput. You cannot attach a thread to a thread in another desktop.",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare an input-queue attachment",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Attaching input queues changes keyboard and mouse routing for both\n    // threads. The example shows the identifiers only and does not attach.\n    printf(\"Current thread: %lu\\n\", GetCurrentThreadId());\n    return 0;\n}\n",
+        "notes": "Input-queue attachment is invasive; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "AttachThreadInput function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-attachthreadinput",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "AttachThreadInput - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-attachthreadinput.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getprocessidofthread",
+      "name": "GetProcessIdOfThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Retrieves the process identifier of the process associated with the specified thread.",
+      "description": "Retrieves the process identifier of the process associated with the specified thread.",
+      "prototype": "DWORD GetProcessIdOfThread(HANDLE Thread);",
+      "parameters": [
+        {
+          "name": "Thread",
+          "type": "HANDLE",
+          "description": "A handle to the thread. The handle must have the THREAD_QUERY_INFORMATION or THREAD_QUERY_LIMITED_INFORMATION access right. For more information, see Thread Security and Access Rights. Windows Server 2003: The handle must have the THREAD_QUERY_INFORMATION access right."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value is the process identifier of the process associated with the specified thread.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "Until a process terminates, its process identifier uniquely identifies it on the system. For more information about access rights, see Thread Security and Access Rights.",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve the process that owns a thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE thread = OpenThread(THREAD_QUERY_LIMITED_INFORMATION, FALSE,\n        GetCurrentThreadId());\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    printf(\"Owning PID: %lu\\n\", GetProcessIdOfThread(thread));\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetProcessIdOfThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocessidofthread",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetProcessIdOfThread - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-getprocessidofthread.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getthreadcontext",
+      "name": "GetThreadContext",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Retrieves the context of the specified thread.",
+      "description": "Retrieves the thread context.",
+      "prototype": "BOOL GetThreadContext(HANDLE hThread, LPCONTEXT lpContext);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread."
+        },
+        {
+          "name": "lpContext",
+          "type": "LPCONTEXT",
+          "description": "The thread context."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns True if the context is retrieved. Otherwise, False.",
+        "failure": ""
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Read and re-apply a suspended thread context",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    return 0;\n}\n\nint main() {\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr,\n        CREATE_SUSPENDED, nullptr);\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    CONTEXT context = {};\n    context.ContextFlags = CONTEXT_CONTROL;\n    if (GetThreadContext(thread, &context)) {\n        // Re-applying the same context is a benign no-op.\n        SetThreadContext(thread, &context);\n    }\n\n    ResumeThread(thread);\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example operates on a thread it created in the suspended state."
+      },
+      "references": [
+        {
+          "title": "GetThreadContext function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getthreadcontext",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetThreadContext - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-getthreadcontext.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getthreadinformation",
+      "name": "GetThreadInformation",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows 8 [desktop apps only]",
+      "summary": "Retrieves information about the specified thread.",
+      "description": "Retrieves information about the specified thread.",
+      "prototype": "BOOL GetThreadInformation(HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass, LPVOID ThreadInformation, DWORD ThreadInformationSize);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread. The handle must have THREAD_QUERY_INFORMATION access rights. For more information, see Thread Security and Access Rights."
+        },
+        {
+          "name": "ThreadInformationClass",
+          "type": "THREAD_INFORMATION_CLASS",
+          "description": "The class of information to retrieve. This value can be ThreadMemoryPriority, ThreadAbsoluteCpuPriority or ThreadDynamicCodePolicy. > > ThreadDynamicCodePolicy is supported in Windows Server 2016 and newer, Windows 10 LTSB 2016 and newer, and Windows 10 version 1607 and newer."
+        },
+        {
+          "name": "ThreadInformation",
+          "type": "LPVOID",
+          "description": "Pointer to a structure to receive the type of information specified by the *ThreadInformationClass* parameter. If the *ThreadInformationClass* parameter is ThreadMemoryPriority, this parameter must point to a MEMORY_PRIORITY_INFORMATION structure. If the *ThreadInformationClass* parameter is ThreadAbsoluteCpuPriority, this parameter must point to a LONG. If the *ThreadInformationClass* parameter is ThreadDynamicCodePolicy, this parameter must point to a DWORD."
+        },
+        {
+          "name": "ThreadInformationSize",
+          "type": "DWORD",
+          "description": "The size in bytes of the structure specified by the *ThreadInformation* parameter. If the *ThreadInformationClass* parameter is ThreadMemoryPriority, this parameter must be sizeof(MEMORY_PRIORITY_INFORMATION). If the *ThreadInformationClass* parameter is ThreadAbsoluteCpuPriority, this parameter must be sizeof(LONG). If the *ThreadInformationClass* parameter is ThreadDynamicCodePolicy, this parameter must be sizeof(DWORD)."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the memory priority of the current thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    MEMORY_PRIORITY_INFORMATION info = {};\n    if (GetThreadInformation(GetCurrentThread(), ThreadMemoryPriority,\n            &info, sizeof(info))) {\n        printf(\"Memory priority: %lu\\n\", info.MemoryPriority);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetThreadInformation function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreadinformation",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetThreadInformation - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-getthreadinformation.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setthreadcontext",
+      "name": "SetThreadContext",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Retrieves the context of the specified thread.",
+      "description": "Sets the thread context.",
+      "prototype": "BOOL SetThreadContext(HANDLE hThread, CONST CONTEXT* lpContext);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread."
+        },
+        {
+          "name": "lpContext",
+          "type": "CONST CONTEXT*",
+          "description": "The thread context."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns True if the context is set. Otherwise, False.",
+        "failure": ""
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Read and re-apply a suspended thread context",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    return 0;\n}\n\nint main() {\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr,\n        CREATE_SUSPENDED, nullptr);\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    CONTEXT context = {};\n    context.ContextFlags = CONTEXT_CONTROL;\n    if (GetThreadContext(thread, &context)) {\n        // Re-applying the same context is a benign no-op.\n        SetThreadContext(thread, &context);\n    }\n\n    ResumeThread(thread);\n    WaitForSingleObject(thread, 5000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example operates on a thread it created in the suspended state."
+      },
+      "references": [
+        {
+          "title": "SetThreadContext function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setthreadcontext",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetThreadContext - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-setthreadcontext.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setthreadpriority",
+      "name": "SetThreadPriority",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll; KernelBase.dll on Windows Phone 8.1",
+      "library": "Kernel32.lib; WindowsPhoneCore.lib on Windows Phone 8.1",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Sets the priority value for the specified thread.",
+      "description": "Sets the priority value for the specified thread. This value, together with the priority class of the thread's process, determines the thread's base priority level.",
+      "prototype": "BOOL SetThreadPriority(HANDLE hThread, int nPriority);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread whose priority value is to be set. The handle must have the THREAD_SET_INFORMATION or THREAD_SET_LIMITED_INFORMATION access right. For more information, see Thread Security and Access Rights.Windows Server 2003: The handle must have the THREAD_SET_INFORMATION access right."
+        },
+        {
+          "name": "nPriority",
+          "type": "int",
+          "description": "The priority value for the thread. This parameter can be one of the following values. Priority Meaning THREAD_MODE_BACKGROUND_BEGIN 0x00010000 Begin background processing mode. The system lowers the resource scheduling priorities of the thread so that it can perform background work without significantly affecting activity in the foreground. This value can be specified only if hThread is a handle to the current thread. The function fails if the thread is already in background processing mode. Windows Server 2003: This value is not supported. THREAD_MODE_BACKGROUND_END 0x00020000 End background processing mode. The system restores the resource scheduling priorities of the thread as they were before the thread entered background processing mode. This value can be specified only if hThread is a handle to the current thread. The function fails if the thread is not in background processing mod"
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. Windows Phone 8.1: Windows Phone Store apps may call this function but it has no effect. The function will return a nonzero value indicating success.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "Every thread has a base priority level determined by the thread's priority value and the priority class of its process. The system uses the base priority level of all executable threads to determine which thread gets the next slice of CPU time. Threads are scheduled in a round-robin fashion at each priority level, and only when there are no executable threads at a higher level does scheduling of threads at a lower level take place. The SetThreadPriority function enables setting the base priority level of a thread relative to the priority class of its process. For example, specifying THREAD_PRIORITY_HIGHEST in a call to SetThreadPriority for a thread of an IDLE_PRIORITY_CLASS process sets the thread's base priority level to 6. For a table that shows the base priority levels for each combination of priority class and thread priority value, see Scheduling Priorities. For IDLE_PRIORITY_CLASS, BELOW_NORMAL_PRIORITY_CLASS, NORMAL_PRIORITY_CLASS, ABOVE_NORMAL_PRIORITY_CLASS, and HIGH_PRIORITY_CLASS processes, the system dynamically boosts a thread's base priority level when events occur that are important to the thread. REALTIME_PRIORITY_CLASS processes do not receive dynamic boosts. All threads initially start at THREAD_PRIORITY_NORMAL. Use the GetPriorityClass and SetPriorityClass functions to get and set the priority class of a process. Use the GetThreadPriority function to get the",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Raise and restore the current thread priority",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE thread = GetCurrentThread();\n    int previous = GetThreadPriority(thread);\n    SetThreadPriority(thread, THREAD_PRIORITY_ABOVE_NORMAL);\n    SetThreadPriority(thread, previous);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetThreadPriority function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetThreadPriority - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-setthreadpriority.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.terminatethread",
+      "name": "TerminateThread",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Terminates a thread.",
+      "description": "Terminates a thread.",
+      "prototype": "BOOL TerminateThread(HANDLE hThread, DWORD dwExitCode);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread to be terminated. The handle must have the THREAD_TERMINATE access right. For more information, see Thread Security and Access Rights."
+        },
+        {
+          "name": "dwExitCode",
+          "type": "DWORD",
+          "description": "The exit code for the thread. Use the GetExitCodeThread function to retrieve a thread's exit value."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "TerminateThread is used to cause a thread to exit. When this occurs, the target thread has no chance to execute any user-mode code. DLLs attached to the thread are not notified that the thread is terminating. The system frees the thread's initial stack. Windows Server 2003 and Windows XP: The target thread's initial stack is not freed, causing a resource leak. TerminateThread is a dangerous function that should only be used in the most extreme cases. You should call TerminateThread only if you know exactly what the target thread is doing, and you control all of the code that the target thread could possibly be running at the time of the termination. For example, TerminateThread can result in the following problems: If the target thread owns a critical section, the critical section will not be released. If the target thread is allocating memory from the heap, the heap lock will not be released. If the target thread is executing certain kernel32 calls when it is terminated, the kernel32 state for the thread's process could be inconsistent. If the target thread is manipulating the global state of a shared DLL, the state of the DLL could be destroyed, affecting other users of the DLL. A thread cannot protect itself against TerminateThread, other than by controlling access to its handles. The thread handle returned by the CreateThread and CreateProcess functions has THREAD_TERMINATE",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare to terminate a worker thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // TerminateThread can leave locks and allocations in an inconsistent\n    // state. The example shows the call form but does not terminate a thread.\n    printf(\"TerminateThread(thread, 0) is intentionally not called.\\n\");\n    return 0;\n}\n",
+        "notes": "Thread termination is unsafe and shown as setup-only."
+      },
+      "references": [
+        {
+          "title": "TerminateThread function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminatethread",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "TerminateThread - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processthreadsapi/nf-processthreadsapi-terminatethread.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.thread32first",
+      "name": "Thread32First",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves information about the first thread of any process encountered in a system snapshot.",
+      "description": "Retrieves information about the first thread of any process encountered in a system snapshot.",
+      "prototype": "BOOL Thread32First(HANDLE hSnapshot, LPTHREADENTRY32 lpte);",
+      "parameters": [
+        {
+          "name": "hSnapshot",
+          "type": "HANDLE",
+          "description": "A handle to the snapshot returned from a previous call to the CreateToolhelp32Snapshot function."
+        },
+        {
+          "name": "lpte",
+          "type": "LPTHREADENTRY32",
+          "description": "A pointer to a THREADENTRY32 structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if the first entry of the thread list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no threads exist or the snapshot does not contain thread information.",
+        "failure": ""
+      },
+      "tags": [
+        "thread-management",
+        "thread-enumeration"
+      ],
+      "remarks": "The calling application must set the dwSize member of THREADENTRY32 to the size, in bytes, of the structure. Thread32First changes dwSize to the number of bytes written to the structure. This will never be greater than the initial value of dwSize, but it may be smaller. If the value is smaller, do not rely on the values of any members whose offsets are greater than this value. To retrieve information about other threads recorded in the same snapshot, use the Thread32Next function. #### Examples For an example, see Traversing the Thread List.",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Walk a few entries in a thread snapshot",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    THREADENTRY32 entry = { sizeof(entry) };\n    if (Thread32First(snapshot, &entry)) {\n        int shown = 0;\n        do {\n            printf(\"Thread: %lu in PID %lu\\n\", entry.th32ThreadID,\n                entry.th32OwnerProcessID);\n        } while (++shown < 3 && Thread32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Thread32First function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-thread32first",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Thread32First - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-thread32first.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.thread32next",
+      "name": "Thread32Next",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves information about the next thread of any process encountered in the system memory snapshot.",
+      "description": "Retrieves information about the next thread of any process encountered in the system memory snapshot.",
+      "prototype": "BOOL Thread32Next(HANDLE hSnapshot, LPTHREADENTRY32 lpte);",
+      "parameters": [
+        {
+          "name": "hSnapshot",
+          "type": "HANDLE",
+          "description": "A handle to the snapshot returned from a previous call to the CreateToolhelp32Snapshot function."
+        },
+        {
+          "name": "lpte",
+          "type": "LPTHREADENTRY32",
+          "description": "A pointer to a THREADENTRY32 structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if the next entry of the thread list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no threads exist or the snapshot does not contain thread information.",
+        "failure": ""
+      },
+      "tags": [
+        "thread-management",
+        "thread-enumeration"
+      ],
+      "remarks": "To retrieve information about the first thread recorded in a snapshot, use the Thread32First function. #### Examples For an example, see Traversing the Thread List.",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Walk a few entries in a thread snapshot",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    THREADENTRY32 entry = { sizeof(entry) };\n    if (Thread32First(snapshot, &entry)) {\n        int shown = 0;\n        do {\n            printf(\"Thread: %lu in PID %lu\\n\", entry.th32ThreadID,\n                entry.th32OwnerProcessID);\n        } while (++shown < 3 && Thread32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Thread32Next function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-thread32next",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Thread32Next - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-thread32next.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.wow64setthreadcontext",
+      "name": "Wow64SetThreadContext",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "wow64apiset.h",
+      "minimum_windows": "Windows 10 version 1903",
+      "summary": "Sets the thread context.",
+      "description": "Sets the context of the specified WOW64 thread.",
+      "prototype": "BOOL Wow64SetThreadContext(HANDLE hThread, CONST WOW64_CONTEXT* lpContext);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread whose context is to be set."
+        },
+        {
+          "name": "lpContext",
+          "type": "CONST WOW64_CONTEXT*",
+          "description": "A WOW64_CONTEXT structure. The caller must initialize the ContextFlags member of this structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "wow64",
+        "thread-management"
+      ],
+      "remarks": "This function allows the selective context to be set based on the value of the ContextFlags member of the context structure. The thread handle identified by the hThread parameter is typically being debugged, but the function can also operate even when it is not being debugged. This function is intended for 64-bit applications. It is not supported on 32-bit Windows; such calls fail and set the last error code to ERROR_INVALID_FUNCTION. A 32-bit application can call this function on a WOW64 thread; the result is the same as calling the SetThreadContext function. Do not try to set the context for a running thread; the results are unpredictable. Use the Wow64SuspendThread function to suspend the thread before calling Wow64SetThreadContext.",
+      "maldev_notes": "Thread APIs are common in runtimes, thread pools, debuggers, and component software. Analysts note the owning process, start address, suspend/resume state, and context changes.",
+      "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a WOW64 context update",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // WOW64 context changes apply only to a suspended 32-bit thread on a\n    // 64-bit system. The example shows the structure only.\n    WOW64_CONTEXT context = {};\n    context.ContextFlags = WOW64_CONTEXT_CONTROL;\n    printf(\"WOW64 context flags: 0x%lx\\n\", context.ContextFlags);\n    return 0;\n}\n",
+        "notes": "A WOW64 context update needs a suspended 32-bit thread; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "Wow64SetThreadContext function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wow64apiset/nf-wow64apiset-wow64setthreadcontext",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Wow64SetThreadContext - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wow64apiset/nf-wow64apiset-wow64setthreadcontext.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wow64apiset.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

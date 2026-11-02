@@ -1,0 +1,1391 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.loadlibraryw",
+      "name": "LoadLibraryW",
+      "aliases": [
+        "LoadLibrary"
+      ],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP",
+      "summary": "Loads a module into the address space of the calling process.",
+      "description": "LoadLibraryW maps a module into the calling process and prepares it for execution, resolving its static imports when the image is loaded as an executable module. If the module is already loaded, the system returns its handle and increments the per-process reference count, so each successful call should be balanced by a call to FreeLibrary. When the name is not a fully qualified path, the loader uses its documented search order, which means the directory a module is loaded from depends on process configuration and loader settings.",
+      "prototype": "HMODULE LoadLibraryW(LPCWSTR lpLibFileName);",
+      "parameters": [
+        {
+          "name": "lpLibFileName",
+          "type": "LPCWSTR",
+          "description": "The file name of the module to load. If the name omits a path, the loader searches the documented DLL search path. If the extension is omitted, .dll is appended unless the name ends with a period. When specifying a path, use backslashes rather than forward slashes."
+        }
+      ],
+      "return": {
+        "type": "HMODULE",
+        "success": "A handle to the loaded module. The handle remains valid until the module is unloaded.",
+        "failure": "NULL. Call GetLastError for the loader error, which may describe a missing module or a failed dependency."
+      },
+      "tags": [
+        "module-loading",
+        "api-resolution",
+        "analysis-relevant",
+        "maldev-relevant"
+      ],
+      "related_apis": [
+        "win32.loadlibraryexw",
+        "win32.getprocaddress",
+        "win32.getmodulehandlew",
+        "win32.freelibrary",
+        "win32.getmodulefilenamew"
+      ],
+      "related_constants": [],
+      "unicode_notes": "LoadLibraryW is the Unicode variant. LoadLibraryA accepts an ANSI file name, and the encoding-neutral LoadLibrary alias resolves to one of them at compile time based on UNICODE.",
+      "remarks": "Each successful call increments the module's per-process reference count; call FreeLibrary once for each successful load. Do not call LoadLibrary from DllMain, because doing so can deadlock on the loader lock. A module loaded with LOAD_LIBRARY_AS_DATAFILE through LoadLibraryExW is not an executable image and is not returned by GetModuleHandleW.",
+      "maldev_notes": "Dynamic module loading is routine in plugin hosts, language runtimes, installers, and software that defers optional functionality until it is needed. Analysts also encounter it in code that resolves functionality at run time. The module path, the search-order context, and any subsequent export lookups are more informative than the call itself.",
+      "defensive_notes": "Module-load telemetry, including image-load events where the platform exposes them, can show which module was mapped, from which path, and by which process. Modules loaded from user-writable directories or lacking a valid signature deserve review, but a load event alone does not establish intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Load a system DLL and resolve one export",
+        "code": "#include <windows.h>\n\nint main() {\n    HMODULE user32 = LoadLibraryW(L\"user32.dll\");\n    if (user32 == nullptr) {\n        return static_cast<int>(GetLastError());\n    }\n\n    using MessageBoxW_t = int (WINAPI*)(HWND, LPCWSTR, LPCWSTR, UINT);\n    auto messageBoxW = reinterpret_cast<MessageBoxW_t>(\n        GetProcAddress(user32, \"MessageBoxW\"));\n    if (messageBoxW != nullptr) {\n        messageBoxW(nullptr, L\"Loaded from user32.dll\", L\"LoadLibraryW\", MB_OK);\n    }\n\n    FreeLibrary(user32);\n    return 0;\n}\n",
+        "notes": "Illustrative only. The example loads a signed system DLL, resolves one documented export, and releases the load with FreeLibrary. It does not handle modules obtained from untrusted paths."
+      },
+      "references": [
+        {
+          "title": "LoadLibraryW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, search-order behavior, and reference-count semantics checked against Microsoft Learn (libloaderapi.h)."
+    },
+    {
+      "id": "win32.loadlibraryexw",
+      "name": "LoadLibraryExW",
+      "aliases": [
+        "LoadLibraryEx"
+      ],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP",
+      "summary": "Loads a module with additional loader options that control initialization and search behavior.",
+      "description": "LoadLibraryExW is a generalized form of LoadLibraryW. The dwFlags value selects behaviors such as mapping a file as data instead of executing it, restricting the directories searched for the module and its dependencies, or requiring a signed target at load time. A dwFlags value of zero reproduces LoadLibraryW behavior. The optional data-file modes are useful for reading resources without running the image's initialization code.",
+      "prototype": "HMODULE LoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "lpLibFileName",
+          "type": "LPCWSTR",
+          "description": "The file name of the module to load. A fully qualified path limits the search to that path. If the name omits a path and the extension, the loader appends .dll unless the name ends with a period."
+        },
+        {
+          "name": "hFile",
+          "type": "HANDLE",
+          "description": "Reserved for future use. It must be NULL."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "Flags that control how the module is loaded and located, such as LOAD_LIBRARY_AS_DATAFILE, LOAD_LIBRARY_AS_IMAGE_RESOURCE, LOAD_LIBRARY_SEARCH_SYSTEM32, or LOAD_LIBRARY_SEARCH_DEFAULT_DIRS. Zero gives the same behavior as LoadLibraryW."
+        }
+      ],
+      "return": {
+        "type": "HMODULE",
+        "success": "A handle to the loaded module. Handles returned by this function can be passed to FreeLibrary.",
+        "failure": "NULL. Call GetLastError for the loader error."
+      },
+      "tags": [
+        "module-loading",
+        "api-resolution",
+        "analysis-relevant",
+        "maldev-relevant"
+      ],
+      "related_apis": [
+        "win32.loadlibraryw",
+        "win32.getprocaddress",
+        "win32.getmodulehandlew",
+        "win32.freelibrary"
+      ],
+      "related_constants": [],
+      "unicode_notes": "LoadLibraryExW is the Unicode variant. LoadLibraryExA accepts an ANSI file name, and the encoding-neutral LoadLibraryEx alias resolves to one of them at compile time.",
+      "remarks": "Modules loaded with LOAD_LIBRARY_AS_DATAFILE or LOAD_LIBRARY_AS_IMAGE_RESOURCE are not visible to GetModuleHandleW and cannot be used with GetProcAddress. FreeLibrary should still be called for handles returned by LoadLibraryExW, whether or not the load incremented the reference count. The LOAD_LIBRARY_SEARCH_* flags require the documented update on Windows 7, Windows Server 2008 R2, Windows Vista, and Windows Server 2008; callers that need them on those versions should verify support at run time.",
+      "maldev_notes": "The data-file and search-path flags matter in analysis because they change whether code runs and where dependencies are resolved. Data-file loading is a normal way to inspect resources without executing an image, while explicit search flags are a documented way to avoid unsafe directories. The flags describe intent only in combination with the path and subsequent behavior.",
+      "defensive_notes": "Loader telemetry may not expose the flags directly; investigators often reconstruct behavior from the module path, whether DllMain ran, and which dependencies were mapped. Signed-target enforcement and system-directory search are relevant when reviewing how a process resists DLL search-order manipulation.",
+      "references": [
+        {
+          "title": "LoadLibraryExW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, flag meanings, and data-file reference-count behavior checked against Microsoft Learn (libloaderapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Load a DLL as a data file with wide strings",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = LoadLibraryExW(L\"kernel32.dll\", nullptr,\n        LOAD_LIBRARY_AS_DATAFILE);\n    if (module == nullptr) {\n        return 1;\n    }\n\n    FreeLibrary(module);\n    return 0;\n}\n",
+        "notes": "LOAD_LIBRARY_AS_DATAFILE maps the image without running its initialization code."
+      }
+    },
+    {
+      "id": "win32.getprocaddress",
+      "name": "GetProcAddress",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP",
+      "summary": "Retrieves the address of an exported function or variable from a loaded module.",
+      "description": "GetProcAddress resolves an export by name or ordinal in a module that is already loaded in the calling process. The returned address is valid only while the module remains loaded. The export name is an ANSI string even in a Unicode build; the function has no W variant. Callers typically cast the returned FARPROC to the function pointer type declared by the export's documentation.",
+      "prototype": "FARPROC GetProcAddress(HMODULE hModule, LPCSTR lpProcName);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "A handle to the loaded module that contains the export. The handle can come from LoadLibraryW, LoadLibraryExW, GetModuleHandleW, or the process image. Modules loaded as data files cannot be used."
+        },
+        {
+          "name": "lpProcName",
+          "type": "LPCSTR",
+          "description": "The exported function or variable name as a narrow, case-sensitive string, or an ordinal placed in the low word of a MAKEINTRESOURCEA value."
+        }
+      ],
+      "return": {
+        "type": "FARPROC",
+        "success": "The address of the exported function or variable.",
+        "failure": "NULL. Call GetLastError; ERROR_PROC_NOT_FOUND indicates that the export was not found."
+      },
+      "tags": [
+        "api-resolution",
+        "module-loading",
+        "analysis-relevant",
+        "maldev-relevant"
+      ],
+      "related_apis": [
+        "win32.getmodulehandlew",
+        "win32.loadlibraryw",
+        "win32.loadlibraryexw",
+        "win32.freelibrary"
+      ],
+      "related_constants": [],
+      "unicode_notes": "GetProcAddress has no Unicode variant and takes an LPCSTR export name. The narrow export name must be used even in a Unicode build; the -W suffix does not apply to this function.",
+      "remarks": "Cast the result to the correct function pointer type before calling it. A signature or calling-convention mismatch is undefined behavior. The address must not be used after the owning module has been unloaded. Ordinal-based lookup is supported but is less portable than lookup by name.",
+      "maldev_notes": "Run-time export resolution appears in plugin systems, delayed-loading implementations, compatibility shims, and software that supports multiple operating-system versions. Analysts often inspect the resolved names because they reveal capability that is absent from the static import table, while the resolution mechanism itself is a general-purpose technique.",
+      "defensive_notes": "Exports resolved at run time do not appear in a module's static import table, so import-table review alone can miss them. String, memory, and API-monitoring telemetry often provide the complementary view. The resolved name and the module it came from are usually more useful than the resolution call.",
+      "references": [
+        {
+          "title": "GetProcAddress function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, ANSI-only export name, and module-lifetime notes checked against Microsoft Learn (libloaderapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Resolve an export and release the module",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = LoadLibraryA(\"kernel32.dll\");\n    if (module == nullptr) {\n        return 1;\n    }\n\n    auto get_current_process_id =\n        reinterpret_cast<DWORD (WINAPI*)()>(\n            GetProcAddress(module, \"GetCurrentProcessId\"));\n    if (get_current_process_id != nullptr) {\n        printf(\"PID: %lu\\n\", get_current_process_id());\n    }\n\n    FreeLibrary(module);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.getmodulehandlew",
+      "name": "GetModuleHandleW",
+      "aliases": [
+        "GetModuleHandle"
+      ],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP",
+      "summary": "Returns a handle to a module already loaded in the calling process.",
+      "description": "GetModuleHandleW looks up a module that is already mapped in the calling process. Passing NULL returns a handle to the executable image of the calling process. The function does not load the module and does not increment its reference count, so the returned handle must not be passed to FreeLibrary. Its result can become stale if another thread unloads the module.",
+      "prototype": "HMODULE GetModuleHandleW(LPCWSTR lpModuleName);",
+      "parameters": [
+        {
+          "name": "lpModuleName",
+          "type": "LPCWSTR",
+          "description": "The name of the loaded module, with or without a path. If the extension is omitted, .dll is appended unless the name ends with a period. NULL requests the handle of the executable file used to create the calling process."
+        }
+      ],
+      "return": {
+        "type": "HMODULE",
+        "success": "A handle to the specified loaded module, or to the calling process's executable when lpModuleName is NULL.",
+        "failure": "NULL. Call GetLastError; the module is not loaded or the name did not resolve."
+      },
+      "tags": [
+        "module-loading",
+        "api-resolution",
+        "environment-discovery",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getmodulefilenamew",
+        "win32.getprocaddress",
+        "win32.loadlibraryw",
+        "win32.loadlibraryexw"
+      ],
+      "related_constants": [],
+      "unicode_notes": "GetModuleHandleW is the Unicode variant. GetModuleHandleA accepts an ANSI module name, and the encoding-neutral GetModuleHandle alias resolves to one of them at compile time.",
+      "remarks": "The returned handle is not global or inheritable and cannot be duplicated into another process. Do not pass it to FreeLibrary: although the lookup did not increment the reference count, FreeLibrary would decrement it and could unmap the module prematurely. GetModuleHandleEx offers flags that keep a module loaded and is safer when the handle must remain valid across threads.",
+      "maldev_notes": "Code frequently calls GetModuleHandleW(NULL) to locate its own image, or checks whether a module is already present before loading it. Both patterns are ordinary, and analysts use them to reconstruct module dependencies and self-referential path logic.",
+      "defensive_notes": "The call is local to the process and does not create a kernel object, so it generates little dedicated telemetry. Interpretation depends on the requested module and on what the program does with the handle.",
+      "references": [
+        {
+          "title": "GetModuleHandleW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlew",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "NULL-handle behavior, data-file limitation, and reference-count caveat checked against Microsoft Learn (libloaderapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Get the handle of a loaded system module",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleW(L\"kernel32.dll\");\n    if (module != nullptr) {\n        printf(\"kernel32 handle: %p\\n\", module);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.freelibrary",
+      "name": "FreeLibrary",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP",
+      "summary": "Decrements a loaded module's reference count and unloads it when the count reaches zero.",
+      "description": "FreeLibrary releases a reference obtained from LoadLibraryW or LoadLibraryExW. When the per-process reference count reaches zero, the system calls the module's DllMain with DLL_PROCESS_DETACH and unmaps the module. A handle returned by GetModuleHandleW does not carry a new reference and must not be passed to FreeLibrary.",
+      "prototype": "BOOL FreeLibrary(HMODULE hLibModule);",
+      "parameters": [
+        {
+          "name": "hLibModule",
+          "type": "HMODULE",
+          "description": "A handle to the loaded module library. It must have been returned by LoadLibraryW or LoadLibraryExW, and each successful load should be released exactly once."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "A nonzero value; the reference count was decremented.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "module-loading",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.loadlibraryw",
+        "win32.loadlibraryexw",
+        "win32.getprocaddress"
+      ],
+      "related_constants": [],
+      "remarks": "Unloading a module invalidates every address previously obtained from GetProcAddress for that module. Loader functions, including FreeLibrary, should not be called from DllMain because of loader-lock deadlock risk. Do not free a handle obtained from GetModuleHandleW.",
+      "maldev_notes": "Explicit unloads appear in plugin hosts and in code that uses a module only temporarily. Module lifetime is more often relevant to reconstructing program flow than to classifying behavior.",
+      "defensive_notes": "Module-unload telemetry can explain gaps in later image-load records and is best correlated with the process's module history. An unload followed by a load from a different path can be worth reviewing.",
+      "references": [
+        {
+          "title": "FreeLibrary function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Reference-count and unload semantics checked against Microsoft Learn (libloaderapi.h).",
+      "example": {
+        "language": "cpp",
+        "title": "Load a system DLL and release it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = LoadLibraryA(\"kernel32.dll\");\n    if (module == nullptr) {\n        return 1;\n    }\n\n    auto get_current_process_id =\n        reinterpret_cast<DWORD (WINAPI*)()>(\n            GetProcAddress(module, \"GetCurrentProcessId\"));\n    if (get_current_process_id != nullptr) {\n        printf(\"PID: %lu\\n\", get_current_process_id());\n    }\n\n    FreeLibrary(module);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      }
+    },
+    {
+      "id": "win32.getmodulefilenamew",
+      "name": "GetModuleFileNameW",
+      "aliases": [
+        "GetModuleFileName"
+      ],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP",
+      "summary": "Retrieves the fully qualified path of the file that contains a loaded module.",
+      "description": "GetModuleFileNameW copies the path of a module loaded in the calling process into a caller-supplied buffer. Passing NULL for hModule requests the path of the executable image. The returned string uses the same form in which the module was loaded, so it can contain a short (8.3) name or a \\\\?\\ prefix.",
+      "prototype": "DWORD GetModuleFileNameW(HMODULE hModule, LPWSTR lpFilename, DWORD nSize);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "A handle to the loaded module whose path is requested. NULL requests the path of the executable file of the calling process. Modules loaded with LOAD_LIBRARY_AS_DATAFILE are not covered."
+        },
+        {
+          "name": "lpFilename",
+          "type": "LPWSTR",
+          "description": "A buffer that receives the path as a null-terminated string when the buffer is large enough."
+        },
+        {
+          "name": "nSize",
+          "type": "DWORD",
+          "description": "The size of the lpFilename buffer, in WCHARs. If the path is too long for the buffer, it is truncated to nSize characters including the terminating null character on Windows Vista and later."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "The number of characters copied to the buffer, not including the terminating null character. A return value equal to nSize indicates that the path may have been truncated.",
+        "failure": "Zero. Call GetLastError."
+      },
+      "tags": [
+        "environment-discovery",
+        "module-loading",
+        "analysis-relevant"
+      ],
+      "related_apis": [
+        "win32.getmodulehandlew",
+        "win32.loadlibraryw"
+      ],
+      "related_constants": [],
+      "unicode_notes": "GetModuleFileNameW is the Unicode variant and reports the buffer size in WCHARs. GetModuleFileNameA accepts a byte buffer, and the encoding-neutral GetModuleFileName alias resolves to one of them at compile time.",
+      "remarks": "Do not assume a path that fills the buffer is complete; allocate a larger buffer and retry when the return value equals nSize. The function reports the path associated with the loaded module, which may differ in case, name form, or prefix from the path on disk.",
+      "maldev_notes": "Programs use their own module path to locate configuration, resources, or sibling files. In analysis the same call can show where an image was executed from, which is useful context but not a behavioral indicator by itself.",
+      "defensive_notes": "Process image-path telemetry already covers the main executable; this API matters mostly for non-main modules and for understanding path-dependent behavior such as loading files relative to the module.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the path of the current executable",
+        "code": "#include <windows.h>\n#include <cwchar>\n\nint main() {\n    wchar_t path[MAX_PATH];\n    DWORD length = GetModuleFileNameW(nullptr, path, MAX_PATH);\n    if (length == 0) {\n        return static_cast<int>(GetLastError());\n    }\n    if (length == MAX_PATH) {\n        // The buffer may have been too small; the path can be truncated.\n        return 1;\n    }\n\n    std::wprintf(L\"%ls\\n\", path);\n    return 0;\n}\n",
+        "notes": "Illustrative only. The example requests the current executable's path and treats a full buffer as a possible truncation rather than using the string unconditionally."
+      },
+      "references": [
+        {
+          "title": "GetModuleFileNameW function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamew",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Prototype, WCHAR buffer sizing, and truncation return-value behavior checked against Microsoft Learn (libloaderapi.h)."
+    },
+    {
+      "id": "win32.enumprocessmodules",
+      "name": "EnumProcessModules",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "library": "Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "header": "psapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves a handle for each module in the specified process.",
+      "description": "Retrieves a handle for each module in the specified process. To control whether a 64-bit application enumerates 32-bit modules, 64-bit modules, or both types of modules, use the EnumProcessModulesEx function.",
+      "prototype": "BOOL EnumProcessModules(HANDLE hProcess, HMODULE* lphModule, DWORD cb, LPDWORD lpcbNeeded);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process."
+        },
+        {
+          "name": "lphModule",
+          "type": "HMODULE*",
+          "description": "An array that receives the list of module handles."
+        },
+        {
+          "name": "cb",
+          "type": "DWORD",
+          "description": "The size of the lphModule array, in bytes."
+        },
+        {
+          "name": "lpcbNeeded",
+          "type": "LPDWORD",
+          "description": "The number of bytes required to store all module handles in the lphModule array."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management",
+        "module-enumeration"
+      ],
+      "remarks": "The EnumProcessModules function is primarily designed for use by debuggers and similar applications that must extract module information from another process. If the module list in the target process is corrupted or not yet initialized, or if the module list changes during the function call as a result of DLLs being loaded or unloaded, EnumProcessModules may fail or return incorrect information. It is a good idea to specify a large array of HMODULE values, because it is hard to predict how many modules there will be in the process at the time you call EnumProcessModules. To determine if the lphModule array is too small to hold all module handles for the process, compare the value returned in lpcbNeeded with the value specified in cb. If lpcbNeeded is greater than cb, increase the size of the array and call EnumProcessModules again. To determine how many modules were enumerated by the call to EnumProcessModules, divide the resulting value in the lpcbNeeded parameter by sizeof(HMODULE). The EnumProcessModules function does not retrieve handles for modules that were loaded with the LOAD_LIBRARY_AS_DATAFILE or similar flags. For more information, see LoadLibraryEx. Do not call CloseHandle on any of the handles returned by this function. The information comes from a snapshot, so there are no resources to be freed. If this function is called from a 32-bit application running on WOW64",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "List modules in the current process",
+        "code": "#include <windows.h>\n#include <psapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"psapi.lib\")\n\nint main() {\n    HMODULE modules[64] = {};\n    DWORD needed = 0;\n    if (EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules),\n            &needed)) {\n        printf(\"Modules: %lu\\n\", needed / sizeof(HMODULE));\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumProcessModules function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocessmodules",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumProcessModules - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/psapi/nf-psapi-enumprocessmodules.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (psapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumprocessmodulesex",
+      "name": "EnumProcessModulesEx",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "library": "Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "header": "psapi.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Retrieves a handle for each module in the specified process that meets the specified filter criteria.",
+      "description": "Retrieves a handle for each module in the specified process that meets the specified filter criteria.",
+      "prototype": "BOOL EnumProcessModulesEx(HANDLE hProcess, HMODULE* lphModule, DWORD cb, LPDWORD lpcbNeeded, DWORD dwFilterFlag);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process."
+        },
+        {
+          "name": "lphModule",
+          "type": "HMODULE*",
+          "description": "An array that receives the list of module handles."
+        },
+        {
+          "name": "cb",
+          "type": "DWORD",
+          "description": "The size of the lphModule array, in bytes."
+        },
+        {
+          "name": "lpcbNeeded",
+          "type": "LPDWORD",
+          "description": "The number of bytes required to store all module handles in the lphModule array."
+        },
+        {
+          "name": "dwFilterFlag",
+          "type": "DWORD",
+          "description": "The filter criteria. This parameter can be one of the following values. Value Meaning LIST_MODULES_32BIT 0x01 List the 32-bit modules. LIST_MODULES_64BIT 0x02 List the 64-bit modules. LIST_MODULES_ALL 0x03 List all modules. LIST_MODULES_DEFAULT 0x0 Use the default behavior."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management",
+        "module-enumeration"
+      ],
+      "remarks": "The EnumProcessModulesEx function is primarily designed for use by debuggers and similar applications that must extract module information from another process. If the module list in the target process is corrupted or not yet initialized, or if the module list changes during the function call as a result of DLLs being loaded or unloaded, EnumProcessModulesEx may fail or return incorrect information. This function is intended primarily for 64-bit applications. If the function is called by a 32-bit application running under WOW64, the dwFilterFlag option is ignored and the function provides the same results as the EnumProcessModules function. It is a good idea to specify a large array of HMODULE values, because it is hard to predict how many modules there will be in the process at the time you call EnumProcessModulesEx. To determine if the lphModule array is too small to hold all module handles for the process, compare the value returned in lpcbNeeded with the value specified in cb. If lpcbNeeded is greater than cb, increase the size of the array and call EnumProcessModulesEx again. To determine how many modules were enumerated by the call to EnumProcessModulesEx, divide the resulting value in the lpcbNeeded parameter by sizeof(HMODULE). The EnumProcessModulesEx function does not retrieve handles for modules that were loaded with the LOAD_LIBRARY_AS_DATAFILE flag. For more inform",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "List modules including 32-bit modules",
+        "code": "#include <windows.h>\n#include <psapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"psapi.lib\")\n\nint main() {\n    HMODULE modules[64] = {};\n    DWORD needed = 0;\n    if (EnumProcessModulesEx(GetCurrentProcess(), modules, sizeof(modules),\n            &needed, LIST_MODULES_ALL)) {\n        printf(\"Modules: %lu\\n\", needed / sizeof(HMODULE));\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumProcessModulesEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocessmodulesex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumProcessModulesEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/psapi/nf-psapi-enumprocessmodulesex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (psapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumresourcetypesa",
+      "name": "EnumResourceTypesA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Enumerates resource types within a binary module.",
+      "description": "Enumerates resource types within a binary module. Starting with Windows Vista, this is typically a language-neutral Portable Executable (LN file), and the enumeration also includes resources from one of the corresponding language-specific resource files (.mui files)—if one exists—that contain localizable language resources. It is also possible to use hModule to specify a .mui file, in which case only that file is searched for resource types. Alternately, applications can call EnumResourceTypesEx, which provides more precise control over which resource files to enumerate.",
+      "prototype": "BOOL EnumResourceTypesA(HMODULE hModule, ENUMRESTYPEPROCA lpEnumFunc, LONG_PTR lParam);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "This handle must be obtained through LoadLibrary or LoadLibraryEx. See Remarks for more information. If this parameter is NULL, that is equivalent to passing in a handle to the module used to create the current process."
+        },
+        {
+          "name": "lpEnumFunc",
+          "type": "ENUMRESTYPEPROCA",
+          "description": "For more information, see the EnumResTypeProc function."
+        },
+        {
+          "name": "lParam",
+          "type": "LONG_PTR",
+          "description": "The lParam parameter for EnumResourceTypesA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "See the reference for the documented success value.",
+        "failure": "Returns TRUE if successful or FALSE if the function does not find a resource, if the enumeration has been stopped, or if the function fails for another reason. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "For each resource type found, EnumResourceTypes calls an application-defined callback function lpEnumFunc, passing each resource type it finds, as well as the various other parameters that were passed to EnumResourceTypes. EnumResourceTypes continues to enumerate resource types until the callback function returns FALSE or all resource types have been enumerated. Starting with Windows Vista, if hModule specifies an LN file, then the types enumerated correspond to resources that reside in the LN file and in the .mui file associated with it. If no .mui files are found, only types from the LN file are returned. The order in which .mui files are searched is the usual Resource Loader search order; see User Interface Language Management for details. After one appropriate .mui file is found, the search does not continue further to other .mui files associated with the LN file, because all .mui files that correspond to a single LN file have the same set of resource types. The enumeration never includes duplicates: if a given resource type is contained in both the LN file and in an .mui file, the type is enumerated only once. #### Examples For an example, see Creating a Resource List. > > The winbase.h header defines EnumResourceTypes as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usa",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate resource types in the current image",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic BOOL CALLBACK OnType(HMODULE, LPSTR type, LONG_PTR) {\n    printf(\"Resource type: %s\\n\", type != nullptr ? type : \"(numeric)\");\n    return TRUE;\n}\n\nint main() {\n    EnumResourceTypesA(GetModuleHandleA(nullptr), OnType, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumResourceTypesA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-enumresourcetypesa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumResourceTypesA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-enumresourcetypesa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumresourcetypesexa",
+      "name": "EnumResourceTypesExA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows Vista [desktop apps only]",
+      "summary": "Enumerates resource types associated with a specified binary module.",
+      "description": "Enumerates resource types associated with a specified binary module. The search can include both a language-neutral Portable Executable file (LN file) and its associated .mui files. Alternately, it can be limited to a single binary module of any type, or to the .mui files associated with a single LN file. The search can also be limited to a single associated .mui file that contains resources for a specific language. For each resource type found, EnumResourceTypesEx calls an application-defined callback function lpEnumFunc, passing the resource type it finds, as well as the various other parameters that were passed to EnumResourceTypesEx.",
+      "prototype": "BOOL EnumResourceTypesExA(HMODULE hModule, ENUMRESTYPEPROCA lpEnumFunc, LONG_PTR lParam, DWORD dwFlags, LANGID LangId);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "Typically this is an LN file, and if flag RESOURCE_ENUM_MUI is set, then appropriate .mui files can be included in the search. Alternately, this can be a handle to an .mui file or other LN file. If this parameter is NULL, it is equivalent to passing in a handle to the module used to create the current process."
+        },
+        {
+          "name": "lpEnumFunc",
+          "type": "ENUMRESTYPEPROCA",
+          "description": "For more information, see EnumResTypeProc."
+        },
+        {
+          "name": "lParam",
+          "type": "LONG_PTR",
+          "description": "The lParam parameter for EnumResourceTypesExA, as documented by the API reference."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The following values are supported. Note that if dwFlags is zero, then the RESOURCE_ENUM_LN and RESOURCE_ENUM_MUI flags are assumed to be specified. Value Meaning RESOURCE_ENUM_MUI 0x0002 Search for resource types in one of the .mui files associated with the file specified by hModule and with the current language preferences, following the usual Resource Loader strategy (see User Interface Language Management). Alternately, if LangId is nonzero, then only the .mui file of the language as specified by LangId will be searched. Typically this flag should be used only if hModule references an LN file. If hModule references an .mui file, then that file is actually covered by the RESOURCE_ENUM_LN flag, despite the name of the flag. RESOURCE_ENUM_LN 0x0001 Searches only the file specified by hModule, regardless of whether the file is an LN file or an .mui file. RESOURCE_ENUM_VALIDATE 0x0008 Per"
+        },
+        {
+          "name": "LangId",
+          "type": "LANGID",
+          "description": "This parameter is used only when the RESOURCE_ENUM_MUI flag is set in dwFlags. If zero is specified, then all .mui files that match current language preferences are included in the search, following the usual Resource Loader strategy (see User Interface Language Management). If a nonzero LangId is specified, then the only .mui file searched will be the one matching the specified LangId."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "See the reference for the documented success value.",
+        "failure": "Returns TRUE if successful or FALSE if the function does not find a resource, if the enumeration has been stopped, or if the function fails for another reason. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "The EnumResourceTypesEx function continues to enumerate resource types until the callback function returns FALSE or all resource types have been enumerated. If hModule specifies an LN file, and both flags are selected, the types enumerated correspond to resources residing either in the LN file or in the .mui files associated with it. If no .mui files are found, only types from the LN file are returned. Once one appropriate .mui file is found the search will not continue further, because all .mui files corresponding to a single LN file have the same resource types. If dwFlags and LangId are both zero, then the function behaves like EnumResourceTypes. If LangId is nonzero, then only the .mui file corresponding to that language identifier will be searched. Language fallbacks will not be used. If an .mui file for that language does not exist, the enumeration will be empty (unless resources for that language exist in the LN file, and the flag is set to search the LN file as well). The enumeration never includes duplicates: if resources for a particular language are contained in both the LN file and in an .mui file, the type will only be enumerated once. #### Examples For an example, see Creating a Resource List. > > The libloaderapi.h header defines EnumResourceTypesEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the ",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate resource types for one language",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic BOOL CALLBACK OnType(HMODULE, LPSTR type, LONG_PTR) {\n    printf(\"Resource type: %s\\n\", type != nullptr ? type : \"(numeric)\");\n    return TRUE;\n}\n\nint main() {\n    EnumResourceTypesExA(GetModuleHandleA(nullptr), OnType, 0,\n        RESOURCE_ENUM_LN, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL));\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumResourceTypesExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-enumresourcetypesexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumResourceTypesExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-enumresourcetypesexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.findresourcea",
+      "name": "FindResourceA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Determines the location of a resource with the specified type and name in the specified module.",
+      "description": "Determines the location of a resource with the specified type and name in the specified module. To specify a language, use the FindResourceEx function.",
+      "prototype": "HRSRC FindResourceA(HMODULE hModule, LPCSTR lpName, LPCSTR lpType);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "If this parameter is NULL, the function searches the module used to create the current process."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "Alternately, rather than a pointer, this parameter can be MAKEINTRESOURCE(ID), where ID is the integer identifier of the resource. For more information, see the Remarks section below."
+        },
+        {
+          "name": "lpType",
+          "type": "LPCSTR",
+          "description": "Alternately, rather than a pointer, this parameter can be MAKEINTRESOURCE(ID), where ID is the integer identifier of the given resource type. For standard resource types, see Resource Types. For more information, see the Remarks section below."
+        }
+      ],
+      "return": {
+        "type": "HRSRC",
+        "success": "If the function succeeds, the return value is a handle to the specified resource's information block. To obtain a handle to the resource, pass this handle to the LoadResource function.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "If IS_INTRESOURCE is TRUE for x = lpName or lpType, x specifies the integer identifier of the name or type of the given resource. Otherwise, those parameters are long pointers to null-terminated strings. If the first character of the string is a pound sign (#), the remaining characters represent a decimal number that specifies the integer identifier of the resource's name or type. For example, the string \"#258\" represents the integer identifier 258. To reduce the amount of memory required for a resource, an application should refer to it by integer identifier instead of by name. An application can use FindResource to find any type of resource, but this function should be used only if the application must access the binary resource data by making subsequent calls to LoadResource and then to LockResource. To use a resource immediately, an application should use one of the following resource-specific functions to find the resource and convert the data into a more usable form. Function Action FormatMessage Loads and formats a message-table entry. LoadAccelerators Loads an accelerator table. LoadBitmap Loads a bitmap resource. LoadCursor Loads a cursor resource. LoadIcon Loads an icon resource. LoadMenu Loads a menu resource. LoadString Loads a string-table entry. For example, an application can use the LoadIcon function to load an icon for display on the screen. However, the applic",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the version resource from the current executable",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    HRSRC resource = FindResourceA(module, MAKEINTRESOURCEA(1), RT_VERSION);\n    if (resource == nullptr) {\n        printf(\"No version resource in this image.\\n\");\n        return 0;\n    }\n\n    DWORD size = SizeOfResource(module, resource);\n    HGLOBAL loaded = LoadResource(module, resource);\n    if (loaded != nullptr) {\n        const void* data = LockResource(loaded);\n        printf(\"Version resource: %lu bytes at %p\\n\", size, data);\n    }\n    return 0;\n}\n",
+        "notes": "Resources are read-only and do not require explicit cleanup."
+      },
+      "references": [
+        {
+          "title": "FindResourceA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-findresourcea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "FindResourceA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-findresourcea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.findresourceexa",
+      "name": "FindResourceExA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Determines the location of the resource with the specified type, name, and language in the specified module.",
+      "description": "Determines the location of the resource with the specified type, name, and language in the specified module.",
+      "prototype": "HRSRC FindResourceExA(HMODULE hModule, LPCSTR lpType, LPCSTR lpName, WORD wLanguage);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "If this parameter is NULL, the function searches the module used to create the current process."
+        },
+        {
+          "name": "lpType",
+          "type": "LPCSTR",
+          "description": "Alternately, rather than a pointer, this parameter can be MAKEINTRESOURCE(ID), where ID is the integer identifier of the given resource type. For standard resource types, see Resource Types. For more information, see the Remarks section below."
+        },
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "Alternately, rather than a pointer, this parameter can be MAKEINTRESOURCE(ID), where ID is the integer identifier of the resource. For more information, see the Remarks section below."
+        },
+        {
+          "name": "wLanguage",
+          "type": "WORD",
+          "description": "If this parameter is MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), the current language associated with the calling thread is used. To specify a language other than the current language, use the MAKELANGID macro to create this parameter. For more information, see MAKELANGID."
+        }
+      ],
+      "return": {
+        "type": "HRSRC",
+        "success": "If the function succeeds, the return value is a handle to the specified resource's information block. To obtain a handle to the resource, pass this handle to the LoadResource function.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "If IS_INTRESOURCE is TRUE for x = lpType or lpName, x specifies the integer identifier of the type or name of the given resource. Otherwise, those parameters are long pointers to null-terminated strings. If the first character of the string is a pound sign (#), the remaining characters represent a decimal number that specifies the integer identifier of the resource's name or type. For example, the string \"#258\" represents the integer identifier 258. To reduce the amount of memory required for a resource, an application should refer to it by integer identifier instead of by name. An application can use FindResourceEx to find any type of resource, but this function should be used only if the application must access the binary resource data by making subsequent calls to LoadResource and then to LockResource. To use a resource immediately, an application should use one of the following resource-specific functions to find the resource and convert the data into a more usable form. Function Action FormatMessage Loads and formats a message-table entry. LoadAccelerators Loads an accelerator table. LoadBitmap Loads a bitmap resource. LoadCursor Loads a cursor resource. LoadIcon Loads an icon resource. LoadMenu Loads a menu resource. LoadString Loads a string-table entry. For example, an application can use the LoadIcon function to load an icon for display on the screen. However, the appl",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Find a version resource for a specific language",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    HRSRC resource = FindResourceExA(module, RT_VERSION,\n        MAKEINTRESOURCEA(1), MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL));\n    printf(\"Version resource: %p\\n\", resource);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "FindResourceExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-findresourceexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "FindResourceExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-findresourceexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getmodulebasenamea",
+      "name": "GetModuleBaseNameA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "library": "Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "header": "psapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the base name of the specified module.",
+      "description": "Retrieves the base name of the specified module.",
+      "prototype": "DWORD GetModuleBaseNameA(HANDLE hProcess, HMODULE hModule, LPSTR lpBaseName, DWORD nSize);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process that contains the module. The handle must have the PROCESS_QUERY_INFORMATION and PROCESS_VM_READ access rights. For more information, see Process Security and Access Rights."
+        },
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "A handle to the module. If this parameter is NULL, this function returns the name of the file used to create the calling process."
+        },
+        {
+          "name": "lpBaseName",
+          "type": "LPSTR",
+          "description": "A pointer to the buffer that receives the base name of the module. If the base name is longer than maximum number of characters specified by the nSize parameter, the base name is truncated."
+        },
+        {
+          "name": "nSize",
+          "type": "DWORD",
+          "description": "The size of the lpBaseName buffer, in characters."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value specifies the length of the string copied to the buffer, in characters.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management",
+        "module-enumeration"
+      ],
+      "remarks": "The GetModuleBaseName function is primarily designed for use by debuggers and similar applications that must extract module information from another process. If the module list in the target process is corrupted or is not yet initialized, or if the module list changes during the function call as a result of DLLs being loaded or unloaded, GetModuleBaseName may fail or return incorrect information. To retrieve the base name of a module in the current process, use the GetModuleFileName function to retrieve the full module name and then use a function call such as strrchr(szmodulename, '\\') to scan to the beginning of the base name within the module name string. This is more efficient and more reliable than calling GetModuleBaseName with a handle to the current process. To retrieve the base name of the main executable module for a remote process, use the GetProcessImageFileName or QueryFullProcessImageName function to retrieve the module name and then use the strrchr function as described in the previous paragraph. This is more efficient and more reliable than calling GetModuleBaseName with a NULL module handle. The GetModuleBaseName function does not retrieve the base name for modules that were loaded with the LOAD_LIBRARY_AS_DATAFILE flag. For more information, see LoadLibraryEx. Starting with Windows 7 and Windows Server 2008 R2, Psapi.h establishes version numbers for the PSAPI",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the base name of the current module",
+        "code": "#include <windows.h>\n#include <psapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"psapi.lib\")\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    char name[MAX_PATH] = {};\n    if (GetModuleBaseNameA(GetCurrentProcess(), module, name, MAX_PATH) > 0) {\n        printf(\"Base name: %s\\n\", name);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetModuleBaseNameA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmodulebasenamea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetModuleBaseNameA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/psapi/nf-psapi-getmodulebasenamea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (psapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getmodulefilenamea",
+      "name": "GetModuleFileNameA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the fully qualified path for the file that contains the specified module.",
+      "description": "Retrieves the fully qualified path for the file that contains the specified module. The module must have been loaded by the current process. To locate the file for a module that was loaded by another process, use the GetModuleFileNameEx function.",
+      "prototype": "DWORD GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "A handle to the loaded module whose path is being requested. If this parameter is NULL, GetModuleFileName retrieves the path of the executable file of the current process. The GetModuleFileName function does not retrieve the path for modules that were loaded using the LOAD_LIBRARY_AS_DATAFILE flag. For more information, see LoadLibraryEx."
+        },
+        {
+          "name": "lpFilename",
+          "type": "LPSTR",
+          "description": "A pointer to a buffer that receives the fully qualified path of the module. If the length of the path is less than the size that the nSize parameter specifies, the function succeeds and the path is returned as a null-terminated string. If the length of the path equals or exceeds the value specified by nSize, the function succeeds and the string is truncated to nSize characters (including the terminating null character). Windows XP: The string is truncated to nSize characters and is not null-terminated. The string returned will use the same format that was specified when the module was loaded. Therefore, the path can be a long or short file name, and can use the prefix \\?\\. For more information, see Naming a File."
+        },
+        {
+          "name": "nSize",
+          "type": "DWORD",
+          "description": "The size of the lpFilename buffer, in TCHARs."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value is the length of the string that is copied to the buffer, in characters, not including the terminating null character. If the buffer is too small to hold the module name, the string is truncated to nSize characters including the terminating null character, the function returns nSize, and the function sets the last error to ERROR_INSUFFICIENT_BUFFER.",
+        "failure": "Windows XP: If the buffer is too small to hold the module name, the function returns nSize. The last error code remains ERROR_SUCCESS. If nSize is zero, the return value is zero and the last error code is ERROR_SUCCESS. If the function fails, the return value is 0 (zero). To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management"
+      ],
+      "remarks": "If a DLL is loaded in two processes, its file name in one process may differ in case from its file name in the other process. The global variable _pgmptr is automatically initialized to the full path of the executable file, and can be used to retrieve the full path name of an executable file. #### Examples For an example, see Installing a Service. > > The libloaderapi.h header defines GetModuleFileName as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the path of the current executable",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char path[MAX_PATH] = {};\n    DWORD length = GetModuleFileNameA(nullptr, path, MAX_PATH);\n    if (length > 0) {\n        printf(\"Executable: %s\\n\", path);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetModuleFileNameA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulefilenamea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetModuleFileNameA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-getmodulefilenamea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getmodulefilenameexa",
+      "name": "GetModuleFileNameExA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll on Windows 7 and Windows Server 2008 R2; Psapi.dll (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.dll on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "library": "Kernel32.lib on Windows 7 and Windows Server 2008 R2; Psapi.lib (if PSAPI_VERSION=1) on Windows 7 and Windows Server 2008 R2; Psapi.lib on Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP",
+      "header": "psapi.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Retrieves the fully qualified path for the file containing the specified module.",
+      "description": "Retrieves the fully qualified path for the file containing the specified module.",
+      "prototype": "DWORD GetModuleFileNameExA(HANDLE hProcess, HMODULE hModule, LPSTR lpFilename, DWORD nSize);",
+      "parameters": [
+        {
+          "name": "hProcess",
+          "type": "HANDLE",
+          "description": "A handle to the process that contains the module. The handle must have the PROCESS_QUERY_INFORMATION and PROCESS_VM_READ access rights. For more information, see Process Security and Access Rights. Windows 10 and later, Windows Server 2016 and later: If the hModule parameter is NULL, then the handle requires only PROCESS_QUERY_LIMITED_INFORMATION access rights. The GetModuleFileNameEx function does not retrieve the path for modules that were loaded using the LOAD_LIBRARY_AS_DATAFILE flag. For more information, see LoadLibraryEx."
+        },
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "A handle to the module. If this parameter is NULL, GetModuleFileNameEx returns the path of the executable file of the process specified in hProcess."
+        },
+        {
+          "name": "lpFilename",
+          "type": "LPSTR",
+          "description": "A pointer to a buffer that receives the fully qualified path to the module. If the size of the file name is larger than the value of the nSize parameter, the function succeeds but the file name is truncated and null-terminated."
+        },
+        {
+          "name": "nSize",
+          "type": "DWORD",
+          "description": "The size of the lpFilename buffer, in characters."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value specifies the length of the string copied to the buffer.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management",
+        "module-enumeration"
+      ],
+      "remarks": "The GetModuleFileNameEx function is primarily designed for use by debuggers and similar applications that must extract module information from another process. If the module list in the target process is corrupted or is not yet initialized, or if the module list changes during the function call as a result of DLLs being loaded or unloaded, GetModuleFileNameEx may fail or return incorrect information. To retrieve the name of a module in the current process, use the GetModuleFileName function. This is more efficient and more reliable than calling GetModuleFileNameEx with a handle to the current process. To retrieve the name of the main executable module for a remote process, use the GetProcessImageFileName or QueryFullProcessImageName function. This is more efficient and more reliable than calling the GetModuleFileNameEx function with a NULL module handle. Starting with Windows 7 and Windows Server 2008 R2, Psapi.h establishes version numbers for the PSAPI functions. The PSAPI version number affects the name used to call the function and the library that a program must load. If PSAPI_VERSION is 2 or greater, this function is defined as K32GetModuleFileNameEx in Psapi.h and exported in Kernel32.lib and Kernel32.dll. If PSAPI_VERSION is 1, this function is defined as GetModuleFileNameEx in Psapi.h and exported in Psapi.lib and Psapi.dll as a wrapper that calls K32GetModuleFileNameE",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Print the full path of the current module",
+        "code": "#include <windows.h>\n#include <psapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"psapi.lib\")\n\nint main() {\n    char path[MAX_PATH] = {};\n    if (GetModuleFileNameExA(GetCurrentProcess(), nullptr, path, MAX_PATH)\n            > 0) {\n        printf(\"Module path: %s\\n\", path);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetModuleFileNameExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmodulefilenameexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetModuleFileNameExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/psapi/nf-psapi-getmodulefilenameexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (psapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getmodulehandlea",
+      "name": "GetModuleHandleA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Retrieves a module handle for the specified module.",
+      "description": "Retrieves a module handle for the specified module. The module must have been loaded by the calling process. To avoid the race conditions described in the Remarks section, use the GetModuleHandleEx function.",
+      "prototype": "HMODULE GetModuleHandleA(LPCSTR lpModuleName);",
+      "parameters": [
+        {
+          "name": "lpModuleName",
+          "type": "LPCSTR",
+          "description": "The name of the loaded module (either a .dll or .exe file). If the file name extension is omitted, the default library extension .dll is appended. The file name string can include a trailing point character (.) to indicate that the module name has no extension. The string does not have to specify a path. When specifying a path, be sure to use backslashes (\\), not forward slashes (/). The name is compared (case independently) to the names of modules currently mapped into the address space of the calling process. If this parameter is NULL, GetModuleHandle returns a handle to the file used to create the calling process (.exe file). The GetModuleHandle function does not retrieve handles for modules that were loaded using the LOAD_LIBRARY_AS_DATAFILE flag. For more information, see LoadLibraryEx."
+        }
+      ],
+      "return": {
+        "type": "HMODULE",
+        "success": "If the function succeeds, the return value is a handle to the specified module.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management"
+      ],
+      "remarks": "The returned handle is not global or inheritable. It cannot be duplicated or used by another process. If lpModuleName does not include a path and there is more than one loaded module with the same base name and extension, you cannot predict which module handle will be returned. To work around this problem, you could specify a path, use side-by-side assemblies, or use GetModuleHandleEx to specify a memory location rather than a DLL name. The GetModuleHandle function returns a handle to a mapped module without incrementing its reference count. However, if this handle is passed to the FreeLibrary function, the reference count of the mapped module will be decremented. Therefore, do not pass a handle returned by GetModuleHandle to the FreeLibrary function. Doing so can cause a DLL module to be unmapped prematurely. This function must be used carefully in a multithreaded application. There is no guarantee that the module handle remains valid between the time this function returns the handle and the time it is used. For example, suppose that a thread retrieves a module handle, but before it uses the handle, a second thread frees the module. If the system loads another module, it could reuse the module handle that was recently freed. Therefore, the first thread would have a handle to a different module than the one intended. #### Examples For an example, see Using Brushes. > > The libl",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Get the handle of the current module",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    if (module != nullptr) {\n        printf(\"Module handle: %p\\n\", module);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetModuleHandleA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandlea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetModuleHandleA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-getmodulehandlea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.loadlibrarya",
+      "name": "LoadLibraryA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Loads the specified module into the address space of the calling process.",
+      "description": "Loads the specified module into the address space of the calling process. The specified module may cause other modules to be loaded. For additional load options, use the LoadLibraryEx function.",
+      "prototype": "HMODULE LoadLibraryA(LPCSTR lpLibFileName);",
+      "parameters": [
+        {
+          "name": "lpLibFileName",
+          "type": "LPCSTR",
+          "description": "The name of the module. This can be either a library module (a .dll file) or an executable module (an .exe file). If the specified module is an executable module, static imports are not loaded; instead, the module is loaded as if by LoadLibraryEx with the DONT_RESOLVE_DLL_REFERENCES flag. The name specified is the file name of the module and is not related to the name stored in the library module itself, as specified by the LIBRARY keyword in the module-definition (.def) file. If the string specifies a full path, the function searches only that path for the module. If the string specifies a relative path or a module name without a path, the function uses a standard search strategy to find the module; for more information, see the Remarks. If the function cannot find the module, the function fails. When specifying a path, be sure to use backslashes (\\), not forward slashes (/). For more"
+        }
+      ],
+      "return": {
+        "type": "HMODULE",
+        "success": "If the function succeeds, the return value is a handle to the module.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management"
+      ],
+      "remarks": "To enable or disable error messages displayed by the loader during DLL loads, use the SetErrorMode function. LoadLibrary can be used to load a library module into the address space of the process and return a handle that can be used in GetProcAddress to get the address of a DLL function. LoadLibrary can also be used to load other executable modules. For example, the function can specify an .exe file to get a handle that can be used in FindResource or LoadResource. However, do not use LoadLibrary to run an .exe file. Instead, use the CreateProcess function. If the specified module is a DLL that is not already loaded for the calling process, the system calls the DLL's DllMain function with the DLL_PROCESS_ATTACH value. If DllMain returns TRUE, LoadLibrary returns a handle to the module. If DllMain returns FALSE, the system unloads the DLL from the process address space and LoadLibrary returns NULL. It is not safe to call LoadLibrary from DllMain. For more information, see the Remarks section in DllMain. Module handles are not global or inheritable. A call to LoadLibrary by one process does not produce a handle that another process can use — for example, in calling GetProcAddress. The other process must make its own call to LoadLibrary for the module before calling GetProcAddress. If lpFileName does not include a path and there is more than one loaded module with the same base nam",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Load a system DLL and release it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = LoadLibraryA(\"kernel32.dll\");\n    if (module == nullptr) {\n        return 1;\n    }\n\n    auto get_current_process_id =\n        reinterpret_cast<DWORD (WINAPI*)()>(\n            GetProcAddress(module, \"GetCurrentProcessId\"));\n    if (get_current_process_id != nullptr) {\n        printf(\"PID: %lu\\n\", get_current_process_id());\n    }\n\n    FreeLibrary(module);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "LoadLibraryA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibrarya",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LoadLibraryA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-loadlibrarya.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.loadlibraryexa",
+      "name": "LoadLibraryExA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "Loads the specified module into the address space of the calling process.",
+      "description": "Loads the specified module into the address space of the calling process. The specified module may cause other modules to be loaded.",
+      "prototype": "HMODULE LoadLibraryExA(LPCSTR lpLibFileName, HANDLE hFile, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "lpLibFileName",
+          "type": "LPCSTR",
+          "description": "A string that specifies the file name of the module to load. This name is not related to the name stored in a library module itself, as specified by the LIBRARY keyword in the module-definition (.def) file. The module can be a library module (a .dll file) or an executable module (an .exe file). If the specified module is an executable module, static imports are not loaded; instead, the module is loaded as if DONT_RESOLVE_DLL_REFERENCES was specified. See the dwFlags parameter for more information. If the string specifies a module name without a path and the file name extension is omitted, the function appends the default library extension \".DLL\" to the module name. To prevent the function from appending \".DLL\" to the module name, include a trailing point character (.) in the module name string. If the string specifies a fully qualified path, the function searches only that path for the m"
+        },
+        {
+          "name": "hFile",
+          "type": "HANDLE",
+          "description": "This parameter is reserved for future use. It must be NULL."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The action to be taken when loading the module. If no flags are specified, the behavior of this function is identical to that of the LoadLibrary function. This parameter can be one of the following values. Value Meaning DONT_RESOLVE_DLL_REFERENCES 0x00000001 If this value is used, and the executable module is a DLL, the system does not call DllMain for process and thread initialization and termination. Also, the system does not load additional executable modules that are referenced by the specified module. Note Do not use this value; it is provided only for backward compatibility. If you are planning to access only data or resources in the DLL, use LOAD_LIBRARY_AS_DATAFILE_EXCLUSIVE or LOAD_LIBRARY_AS_IMAGE_RESOURCE or both. Otherwise, load the library as a DLL or executable module using the LoadLibrary function. LOAD_IGNORE_CODE_AUTHZ_LEVEL 0x00000010 If this value is used, the system d"
+        }
+      ],
+      "return": {
+        "type": "HMODULE",
+        "success": "If the function succeeds, the return value is a handle to the loaded module.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "module-management"
+      ],
+      "remarks": "The LoadLibraryEx function is very similar to the LoadLibrary function. The differences consist of a set of optional behaviors that LoadLibraryEx provides: LoadLibraryEx can load a DLL module without calling the DllMain function of the DLL. LoadLibraryEx can load a module in a way that is optimized for the case where the module will never be executed, loading the module as if it were a data file. LoadLibraryEx can find modules and their associated modules by using either of two search strategies or it can search a process-specific set of directories. You select these optional behaviors by setting the dwFlags parameter; if dwFlags is zero, LoadLibraryEx behaves identically to LoadLibrary. The calling process can use the handle returned by LoadLibraryEx to identify the module in calls to the GetProcAddress, FindResource, and LoadResource functions. To enable or disable error messages displayed by the loader during DLL loads, use the SetErrorMode function. It is not safe to call LoadLibraryEx from DllMain. For more information, see the Remarks section in DllMain. Visual C++: The Visual C++ compiler supports a syntax that enables you to declare thread-local variables: _declspec(thread). If you use this syntax in a DLL, you will not be able to load the DLL explicitly using LoadLibraryEx on versions of Windows prior to Windows Vista. If your DLL will be loaded explicitly, you must us",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Load a DLL as a data file",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = LoadLibraryExA(\"kernel32.dll\", nullptr,\n        LOAD_LIBRARY_AS_DATAFILE);\n    if (module == nullptr) {\n        return 1;\n    }\n\n    FreeLibrary(module);\n    return 0;\n}\n",
+        "notes": "LOAD_LIBRARY_AS_DATAFILE maps the image without running its initialization code."
+      },
+      "references": [
+        {
+          "title": "LoadLibraryExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LoadLibraryExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-loadlibraryexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.loadresource",
+      "name": "LoadResource",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a handle that can be used to obtain a pointer to the first byte of the specified resource in memory.",
+      "description": "Retrieves a handle that can be used to obtain a pointer to the first byte of the specified resource in memory.",
+      "prototype": "HGLOBAL LoadResource(HMODULE hModule, HRSRC hResInfo);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "If *hModule* is NULL, the system loads the resource from the module that was used to create the current process."
+        },
+        {
+          "name": "hResInfo",
+          "type": "HRSRC",
+          "description": "This handle is returned by the FindResource or FindResourceEx function."
+        }
+      ],
+      "return": {
+        "type": "HGLOBAL",
+        "success": "If the function succeeds, the return value is a handle to the data associated with the resource.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "The return type of LoadResource is HGLOBAL for backward compatibility, not because the function returns a handle to a global memory block. Do not pass this handle to the GlobalLock or GlobalFree function. To obtain a pointer to the first byte of the resource data, call the LockResource function; to obtain the size of the resource, call SizeofResource. GlobalSize returns 0 for a resource HGLOBAL. As a result, any APIs that depend on GlobalSize to determine the size of the HGLOBAL will not function correctly. For example, use SHCreateMemStream instead of CreateStreamOnHGlobal. To use a resource immediately, an application should use the following resource-specific functions to find and load the resource in one call. | Function | Action | To remove resource | |-----------------|------------------------------------------|---------------------------| | FormatMessage | Loads and formats a message-table entry | No action needed | | LoadAccelerators | Loads an accelerator table | DestroyAcceleratorTable | | LoadBitmap | Loads a bitmap resource | DeleteObject | | LoadCursor | Loads a cursor resource | DestroyCursor | | LoadIcon | Loads an icon resource | DestroyIcon | | LoadMenu | Loads a menu resource | DestroyMenu | | LoadString | Loads a string resource | No action needed | For example, an application can use the LoadIcon function to load an icon for display on the screen, followed b",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the version resource from the current executable",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    HRSRC resource = FindResourceA(module, MAKEINTRESOURCEA(1), RT_VERSION);\n    if (resource == nullptr) {\n        printf(\"No version resource in this image.\\n\");\n        return 0;\n    }\n\n    DWORD size = SizeOfResource(module, resource);\n    HGLOBAL loaded = LoadResource(module, resource);\n    if (loaded != nullptr) {\n        const void* data = LockResource(loaded);\n        printf(\"Version resource: %lu bytes at %p\\n\", size, data);\n    }\n    return 0;\n}\n",
+        "notes": "Resources are read-only and do not require explicit cleanup."
+      },
+      "references": [
+        {
+          "title": "LoadResource function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadresource",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LoadResource - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-loadresource.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.lockresource",
+      "name": "LockResource",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a pointer to the specified resource in memory.",
+      "description": "Retrieves a pointer to the specified resource in memory.",
+      "prototype": "LPVOID LockResource(HGLOBAL hResData);",
+      "parameters": [
+        {
+          "name": "hResData",
+          "type": "HGLOBAL",
+          "description": "The LoadResource function returns this handle. Note that this parameter is listed as an HGLOBAL variable only for backward compatibility. Do not pass any value as a parameter other than a successful return value from the LoadResource function."
+        }
+      ],
+      "return": {
+        "type": "LPVOID",
+        "success": "See the reference for the documented success value.",
+        "failure": "If the loaded resource is available, the return value is a pointer to the first byte of the resource; otherwise, it is NULL."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "The pointer returned by LockResource is valid until the module containing the resource is unloaded. It is not necessary to unlock resources because the system automatically deletes them when the process that created them terminates. Do not try to lock a resource by using the handle returned by the FindResourceA function or FindResourceExA function function. Such a handle points to random data. > [!Note] > LockResource does not actually lock memory; it is just used to obtain a pointer to the memory containing the resource data. The name of the function comes from versions prior to Windows XP, when it was used to lock a global memory block allocated by LoadResource. #### Examples For an example, see Updating Resources.",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the version resource from the current executable",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    HRSRC resource = FindResourceA(module, MAKEINTRESOURCEA(1), RT_VERSION);\n    if (resource == nullptr) {\n        printf(\"No version resource in this image.\\n\");\n        return 0;\n    }\n\n    DWORD size = SizeOfResource(module, resource);\n    HGLOBAL loaded = LoadResource(module, resource);\n    if (loaded != nullptr) {\n        const void* data = LockResource(loaded);\n        printf(\"Version resource: %lu bytes at %p\\n\", size, data);\n    }\n    return 0;\n}\n",
+        "notes": "Resources are read-only and do not require explicit cleanup."
+      },
+      "references": [
+        {
+          "title": "LockResource function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-lockresource",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LockResource - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-lockresource.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.module32first",
+      "name": "Module32First",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "The Module32First function (tlhelp32.h) retrieves information about the first module associated with a process.",
+      "description": "Retrieves information about the first module associated with a process.",
+      "prototype": "BOOL Module32First(HANDLE hSnapshot, LPMODULEENTRY32 lpme);",
+      "parameters": [
+        {
+          "name": "hSnapshot",
+          "type": "HANDLE",
+          "description": "A handle to the snapshot returned from a previous call to the CreateToolhelp32Snapshot function."
+        },
+        {
+          "name": "lpme",
+          "type": "LPMODULEENTRY32",
+          "description": "A pointer to a MODULEENTRY32 structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if the first entry of the module list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no modules exist or the snapshot does not contain module information.",
+        "failure": ""
+      },
+      "tags": [
+        "module-management",
+        "module-enumeration"
+      ],
+      "remarks": "The calling application must set the dwSize member of MODULEENTRY32 to the size, in bytes, of the structure. To retrieve information about other modules associated with the specified process, use the Module32Next function. #### Examples For an example, see Traversing the Module List.",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Walk a few modules in a snapshot",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(\n        TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    MODULEENTRY32 entry = { sizeof(entry) };\n    if (Module32First(snapshot, &entry)) {\n        int shown = 0;\n        do {\n            printf(\"Module: %s\\n\", entry.szModule);\n        } while (++shown < 3 && Module32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Module32First function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-module32first",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Module32First - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-module32first.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.module32next",
+      "name": "Module32Next",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "tlhelp32.h",
+      "minimum_windows": "Windows XP [desktop apps only]",
+      "summary": "The Module32Next function (tlhelp32.h) retrieves information about the next module associated with a process or thread.",
+      "description": "Retrieves information about the next module associated with a process or thread.",
+      "prototype": "BOOL Module32Next(HANDLE hSnapshot, LPMODULEENTRY32 lpme);",
+      "parameters": [
+        {
+          "name": "hSnapshot",
+          "type": "HANDLE",
+          "description": "A handle to the snapshot returned from a previous call to the CreateToolhelp32Snapshot function."
+        },
+        {
+          "name": "lpme",
+          "type": "LPMODULEENTRY32",
+          "description": "A pointer to a MODULEENTRY32 structure."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "Returns TRUE if the next entry of the module list has been copied to the buffer or FALSE otherwise. The ERROR_NO_MORE_FILES error value is returned by the GetLastError function if no more modules exist.",
+        "failure": ""
+      },
+      "tags": [
+        "module-management",
+        "module-enumeration"
+      ],
+      "remarks": "To retrieve information about first module associated with a process, use the Module32First function. #### Examples For an example, see Traversing the Module List.",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Walk a few modules in a snapshot",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nint main() {\n    HANDLE snapshot = CreateToolhelp32Snapshot(\n        TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 1;\n    }\n\n    MODULEENTRY32 entry = { sizeof(entry) };\n    if (Module32First(snapshot, &entry)) {\n        int shown = 0;\n        do {\n            printf(\"Module: %s\\n\", entry.szModule);\n        } while (++shown < 3 && Module32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "Module32Next function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-module32next",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Module32Next - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/tlhelp32/nf-tlhelp32-module32next.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (tlhelp32.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sizeofresource",
+      "name": "SizeOfResource",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "libloaderapi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves the size, in bytes, of the specified resource.",
+      "description": "Retrieves the size, in bytes, of the specified resource.",
+      "prototype": "DWORD SizeofResource(HMODULE hModule, HRSRC hResInfo);",
+      "parameters": [
+        {
+          "name": "hModule",
+          "type": "HMODULE",
+          "description": "Default is the module used to create the current process."
+        },
+        {
+          "name": "hResInfo",
+          "type": "HRSRC",
+          "description": "This handle must be created by using the FindResource or FindResourceEx function."
+        }
+      ],
+      "return": {
+        "type": "DWORD",
+        "success": "If the function succeeds, the return value is the number of bytes in the resource.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Module APIs are used by every component loader, plugin system, and resource reader. Analysts note the module path, signing state, load flags, and the calling process.",
+      "defensive_notes": "Image-load telemetry records the path, hash, signature, and loading process. Unsigned or user-writable image paths are reviewed in context.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the version resource from the current executable",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HMODULE module = GetModuleHandleA(nullptr);\n    HRSRC resource = FindResourceA(module, MAKEINTRESOURCEA(1), RT_VERSION);\n    if (resource == nullptr) {\n        printf(\"No version resource in this image.\\n\");\n        return 0;\n    }\n\n    DWORD size = SizeOfResource(module, resource);\n    HGLOBAL loaded = LoadResource(module, resource);\n    if (loaded != nullptr) {\n        const void* data = LockResource(loaded);\n        printf(\"Version resource: %lu bytes at %p\\n\", size, data);\n    }\n    return 0;\n}\n",
+        "notes": "Resources are read-only and do not require explicit cleanup."
+      },
+      "references": [
+        {
+          "title": "SizeOfResource function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-sizeofresource",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SizeOfResource - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/libloaderapi/nf-libloaderapi-sizeofresource.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}

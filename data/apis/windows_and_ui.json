@@ -1,0 +1,2489 @@
+{
+  "schema_version": 1,
+  "apis": [
+    {
+      "id": "win32.bitblt",
+      "name": "BitBlt",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "Gdi32.dll",
+      "library": "Gdi32.lib",
+      "header": "wingdi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The BitBlt function performs a bit-block transfer of the color data corresponding to a rectangle of pixels from the specified source device context into a destination device context.",
+      "description": "The BitBlt function performs a bit-block transfer of the color data corresponding to a rectangle of pixels from the specified source device context into a destination device context.",
+      "prototype": "BOOL BitBlt(HDC hdc, int x, int y, int cx, int cy, HDC hdcSrc, int x1, int y1, DWORD rop);",
+      "parameters": [
+        {
+          "name": "hdc",
+          "type": "HDC",
+          "description": "A handle to the destination device context."
+        },
+        {
+          "name": "x",
+          "type": "int",
+          "description": "The x-coordinate, in logical units, of the upper-left corner of the destination rectangle."
+        },
+        {
+          "name": "y",
+          "type": "int",
+          "description": "The y-coordinate, in logical units, of the upper-left corner of the destination rectangle."
+        },
+        {
+          "name": "cx",
+          "type": "int",
+          "description": "The width, in logical units, of the source and destination rectangles."
+        },
+        {
+          "name": "cy",
+          "type": "int",
+          "description": "The height, in logical units, of the source and the destination rectangles."
+        },
+        {
+          "name": "hdcSrc",
+          "type": "HDC",
+          "description": "A handle to the source device context."
+        },
+        {
+          "name": "x1",
+          "type": "int",
+          "description": "The x-coordinate, in logical units, of the upper-left corner of the source rectangle."
+        },
+        {
+          "name": "y1",
+          "type": "int",
+          "description": "The y-coordinate, in logical units, of the upper-left corner of the source rectangle."
+        },
+        {
+          "name": "rop",
+          "type": "DWORD",
+          "description": "A raster-operation code. These codes define how the color data for the source rectangle is to be combined with the color data for the destination rectangle to achieve the final color. The following list shows some common raster operation codes. Value Meaning BLACKNESS Fills the destination rectangle using the color associated with index 0 in the physical palette. (This color is black for the default physical palette.) CAPTUREBLT Includes any windows that are layered on top of your window in the resulting image. By default, the image only contains your window. Note that this generally cannot be used for printing device contexts. DSTINVERT Inverts the destination rectangle. MERGECOPY Merges the colors of the source rectangle with the brush currently selected in hdcDest, by using the Boolean AND operator. MERGEPAINT Merges the colors of the inverted source rectangle with the colors of the d"
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "gdi",
+        "windows-ui"
+      ],
+      "remarks": "BitBlt only does clipping on the destination DC. If a rotation or shear transformation is in effect in the source device context, BitBlt returns an error. If other transformations exist in the source device context (and a matching transformation is not in effect in the destination device context), the rectangle in the destination device context is stretched, compressed, or rotated, as necessary. If the color formats of the source and destination device contexts do not match, the BitBlt function converts the source color format to match the destination format. When an enhanced metafile is being recorded, an error occurs if the source device context identifies an enhanced-metafile device context. Not all devices support the BitBlt function. For more information, see the RC_BITBLT raster capability entry in the GetDeviceCaps function as well as the following functions: MaskBlt, PlgBlt, and StretchBlt. BitBlt returns an error if the source and destination device contexts represent different devices. To transfer data between DCs for different devices, convert the memory bitmap to a DIB by calling GetDIBits. To display the DIB to the second device, call SetDIBits or StretchDIBits. ICM: No color management is performed when blits occur. #### Examples The following code example demonstrates the use of BitBlt. cpp if (!BitBlt(hdcMemDC, 0, 0, rcClient.right - rcClient.left, rcClient.bott",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Copy a small rectangle between device contexts",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    HDC source = GetDC(window);\n    if (source == nullptr) {\n        return 1;\n    }\n\n    HDC destination = CreateCompatibleDC(source);\n    if (destination == nullptr) {\n        ReleaseDC(window, source);\n        return 1;\n    }\n\n    BitBlt(destination, 0, 0, 32, 32, source, 0, 0, SRCCOPY);\n\n    DeleteDC(destination);\n    ReleaseDC(window, source);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "BitBlt function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-bitblt",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "BitBlt - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wingdi/nf-wingdi-bitblt.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wingdi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.bringwindowtotop",
+      "name": "BringWindowToTop",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Brings the specified window to the top of the Z order.",
+      "description": "Brings the specified window to the top of the Z order. If the window is a top-level window, it is activated. If the window is a child window, the top-level parent window associated with the child window is activated.",
+      "prototype": "BOOL BringWindowToTop(HWND hWnd);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The hWnd parameter for BringWindowToTop, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "Use the BringWindowToTop function to uncover any window that is partially or completely obscured by other windows. Calling this function is similar to calling the SetWindowPos function to change a window's position in the Z order. BringWindowToTop does not make a window a top-level window.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Bring the console window to the top",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        BringWindowToTop(window);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "BringWindowToTop function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-bringwindowtotop",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "BringWindowToTop - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-bringwindowtotop.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.callnexthookex",
+      "name": "CallNextHookEx",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Passes the hook information to the next hook procedure in the current hook chain.",
+      "description": "Passes the hook information to the next hook procedure in the current hook chain. A hook procedure can call this function either before or after processing the hook information.",
+      "prototype": "LRESULT CallNextHookEx(HHOOK hhk, int nCode, WPARAM wParam, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "hhk",
+          "type": "HHOOK",
+          "description": "The hhk parameter for CallNextHookEx, as documented by the API reference."
+        },
+        {
+          "name": "nCode",
+          "type": "int",
+          "description": "The next hook procedure uses this code to determine how to process the hook information."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The meaning of this parameter depends on the type of hook associated with the current hook chain."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The meaning of this parameter depends on the type of hook associated with the current hook chain."
+        }
+      ],
+      "return": {
+        "type": "LRESULT",
+        "success": "See the reference for the documented success value.",
+        "failure": "This value is returned by the next hook procedure in the chain. The current hook procedure must also return this value. The meaning of the return value depends on the hook type. For more information, see the descriptions of the individual hook procedures."
+      },
+      "tags": [
+        "windows-ui",
+        "hook-management"
+      ],
+      "remarks": "Hook procedures are installed in chains for particular hook types. CallNextHookEx calls the next hook in the chain. Calling CallNextHookEx is optional, but it is highly recommended; otherwise, other applications that have installed hooks will not receive hook notifications and may behave incorrectly as a result. You should call CallNextHookEx unless you absolutely need to prevent the notification from being seen by other applications.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Install and remove a thread-scoped window hook",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic HHOOK g_hook = nullptr;\n\nstatic LRESULT CALLBACK OnCallWnd(int code, WPARAM wparam, LPARAM lparam) {\n    return CallNextHookEx(g_hook, code, wparam, lparam);\n}\n\nint main() {\n    g_hook = SetWindowsHookExA(WH_CALLWNDPROC, OnCallWnd, nullptr,\n        GetCurrentThreadId());\n    if (g_hook == nullptr) {\n        return 1;\n    }\n\n    // The hook is limited to the current thread and removed immediately.\n    UnhookWindowsHookEx(g_hook);\n    return 0;\n}\n",
+        "notes": "The hook is installed for the calling thread only and is removed before exit."
+      },
+      "references": [
+        {
+          "title": "CallNextHookEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-callnexthookex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CallNextHookEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-callnexthookex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.callwindowproca",
+      "name": "CallWindowProcA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Passes message information to the specified window procedure.",
+      "description": "Passes message information to the specified window procedure.",
+      "prototype": "LRESULT CallWindowProcA(WNDPROC lpPrevWndFunc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "lpPrevWndFunc",
+          "type": "WNDPROC",
+          "description": "If this value is obtained by calling the GetWindowLong function with the nIndex parameter set to GWL_WNDPROC or DWL_DLGPROC, it is actually either the address of a window or dialog box procedure, or a special internal value meaningful only to CallWindowProc."
+        },
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The hWnd parameter for CallWindowProcA, as documented by the API reference."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "The Msg parameter for CallWindowProcA, as documented by the API reference."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The contents of this parameter depend on the value of the Msg parameter."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The contents of this parameter depend on the value of the Msg parameter."
+        }
+      ],
+      "return": {
+        "type": "LRESULT",
+        "success": "See the reference for the documented success value.",
+        "failure": "The return value specifies the result of the message processing and depends on the message sent."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "Use the CallWindowProc function for window subclassing. Usually, all windows with the same class share one window procedure. A subclass is a window or set of windows with the same class whose messages are intercepted and processed by another window procedure (or procedures) before being passed to the window procedure of the class. The SetWindowLong function creates the subclass by changing the window procedure associated with a particular window, causing the system to call the new window procedure instead of the previous one. An application must pass any messages not processed by the new window procedure to the previous window procedure by calling CallWindowProc. This allows the application to create a chain of window procedures. If STRICT is defined, the lpPrevWndFunc parameter has the data type WNDPROC. The WNDPROC type is declared as follows: syntax LRESULT (CALLBACK* WNDPROC) (HWND, UINT, WPARAM, LPARAM); If STRICT is not defined, the lpPrevWndFunc parameter has the data type FARPROC. The FARPROC type is declared as follows: syntax int (FAR WINAPI * FARPROC) () In C, the FARPROC declaration indicates a callback function that has an unspecified parameter list. In C++, however, the empty parameter list in the declaration indicates that a function has no parameters. This subtle distinction can break careless code. Following is one way to handle this situation: syntax #ifdef ST",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Call the default window procedure directly",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        CallWindowProcA(DefWindowProcA, window, WM_NULL, 0, 0);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CallWindowProcA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-callwindowproca",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CallWindowProcA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-callwindowproca.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.createwindowexa",
+      "name": "CreateWindowExA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Creates an overlapped, pop-up, or child window with an extended window style; otherwise, this function is identical to the CreateWindow function.",
+      "description": "Creates an overlapped, pop-up, or child window with an extended window style; otherwise, this function is identical to the CreateWindow function. For more information about creating a window and for full descriptions of the other parameters of CreateWindowEx, see CreateWindow.",
+      "prototype": "HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);",
+      "parameters": [
+        {
+          "name": "dwExStyle",
+          "type": "DWORD",
+          "description": "For a list of possible values, see Extended Window Styles."
+        },
+        {
+          "name": "lpClassName",
+          "type": "LPCSTR",
+          "description": "If a null-terminated string, it specifies the window class name. The class name can be any name registered with the RegisterClass or RegisterClassEx function, provided that the module that registers the class is also the module that creates the window. The class name can also be any of the predefined system class names. If a class atom created by a previous call to RegisterClass or RegisterClassEx, it must be converted using the macro MAKEINTATOM. (The atom must be in the low-order word of lpClassName; the high-order word must be zero.)"
+        },
+        {
+          "name": "lpWindowName",
+          "type": "LPCSTR",
+          "description": "If the window style specifies a title bar, the window title pointed to by lpWindowName is displayed in the title bar. When using CreateWindow to create controls, such as buttons, check boxes, and static controls, use lpWindowName to specify the text of the control. When creating a static control with the SS_ICON style, use lpWindowName to specify the icon name or identifier. To specify an identifier, use the syntax \"#num\"."
+        },
+        {
+          "name": "dwStyle",
+          "type": "DWORD",
+          "description": "This parameter can be a combination of the window style values, plus the control styles indicated in the Remarks section."
+        },
+        {
+          "name": "X",
+          "type": "int",
+          "description": "For an overlapped or pop-up window, the x parameter is the initial x-coordinate of the window's upper-left corner, in screen coordinates. For a child window, x is the x-coordinate of the upper-left corner of the window relative to the upper-left corner of the parent window's client area. If x is set to CW_USEDEFAULT, the system selects the default position for the window's upper-left corner and ignores the y parameter. CW_USEDEFAULT is valid only for overlapped windows; if it is specified for a pop-up or child window, the x and y parameters are set to zero."
+        },
+        {
+          "name": "Y",
+          "type": "int",
+          "description": "For an overlapped or pop-up window, the y parameter is the initial y-coordinate of the window's upper-left corner, in screen coordinates. For a child window, y is the initial y-coordinate of the upper-left corner of the child window relative to the upper-left corner of the parent window's client area. For a list box y is the initial y-coordinate of the upper-left corner of the list box's client area relative to the upper-left corner of the parent window's client area. If an overlapped window is created with the WS_VISIBLE style bit set and the x parameter is set to CW_USEDEFAULT, then the y parameter determines how the window is shown. If the y parameter is CW_USEDEFAULT, then the window manager calls ShowWindow with the SW_SHOW flag after the window has been created. If the y parameter is some other value, then the window manager calls ShowWindow with that value as the nCmdShow paramete"
+        },
+        {
+          "name": "nWidth",
+          "type": "int",
+          "description": "For overlapped windows, nWidth is the window's width, in screen coordinates, or CW_USEDEFAULT. If nWidth is CW_USEDEFAULT, the system selects a default width and height for the window; the default width extends from the initial x-coordinates to the right edge of the screen; the default height extends from the initial y-coordinate to the top of the icon area. CW_USEDEFAULT is valid only for overlapped windows; if CW_USEDEFAULT is specified for a pop-up or child window, the nWidth and nHeight parameter are set to zero."
+        },
+        {
+          "name": "nHeight",
+          "type": "int",
+          "description": "For overlapped windows, nHeight is the window's height, in screen coordinates. If the nWidth parameter is set to CW_USEDEFAULT, the system ignores nHeight."
+        },
+        {
+          "name": "hWndParent",
+          "type": "HWND",
+          "description": "To create a child window or an owned window, supply a valid window handle. This parameter is optional for pop-up windows. To create a message-only window, supply HWND_MESSAGE or a handle to an existing message-only window."
+        },
+        {
+          "name": "hMenu",
+          "type": "HMENU",
+          "description": "For an overlapped or pop-up window, hMenu identifies the menu to be used with the window; it can be NULL if the class menu is to be used. For a child window, hMenu specifies the child-window identifier, an integer value used by a dialog box control to notify its parent about events. The application determines the child-window identifier; it must be unique for all child windows with the same parent window."
+        },
+        {
+          "name": "hInstance",
+          "type": "HINSTANCE",
+          "description": "The hInstance parameter for CreateWindowExA, as documented by the API reference."
+        },
+        {
+          "name": "lpParam",
+          "type": "LPVOID",
+          "description": "This message is sent to the created window by this function before it returns. If an application calls CreateWindow to create a MDI client window, lpParam should point to a CLIENTCREATESTRUCT structure. If an MDI client window calls CreateWindow to create an MDI child window, lpParam should point to a MDICREATESTRUCT structure. lpParam may be NULL if no additional data is needed."
+        }
+      ],
+      "return": {
+        "type": "HWND",
+        "success": "If the function succeeds, the return value is a handle to the new window. This function typically fails for one of the following reasons: an invalid parameter value the system class was registered by a different module The WH_CBT hook is installed and returns a failure code if one of the controls in the dialog template is not registered, or its window window procedure fails WM_CREATE or WM_NCCREATE",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "The CreateWindowEx function sends WM_NCCREATE, WM_NCCALCSIZE, and WM_CREATE messages to the window being created. If the created window is a child window, its default position is at the bottom of the Z-order. If the created window is a top-level window, its default position is at the top of the Z-order (but beneath all topmost windows unless the created window is itself topmost). For information on controlling whether the Taskbar displays a button for the created window, see Managing Taskbar Buttons. For information on removing a window, see the DestroyWindow function. The following predefined control classes can be specified in the lpClassName parameter. Note the corresponding control styles you can use in the dwStyle parameter. Class Meaning BUTTON Designates a small rectangular child window that represents a button the user can click to turn it on or off. Button controls can be used alone or in groups, and they can either be labeled or appear without text. Button controls typically change appearance when the user clicks them. For more information, see Buttons. For a table of the button styles you can specify in the dwStyle parameter, see Button Styles. COMBOBOX Designates a control consisting of a list box and a selection field similar to an edit control. When using this style, an application should either display the list box at all times or enable a drop-down list box. If ",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Create and destroy a hidden static window",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = CreateWindowExA(0, \"STATIC\", \"NtExplorer example\",\n        WS_OVERLAPPED, 0, 0, 200, 50, nullptr, nullptr, nullptr, nullptr);\n    if (window == nullptr) {\n        return 1;\n    }\n\n    // The window is never shown.\n    DestroyWindow(window);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "CreateWindowExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-createwindowexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "CreateWindowExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-createwindowexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.drawtextexa",
+      "name": "DrawTextExA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The DrawTextEx function draws formatted text in the specified rectangle.",
+      "description": "The DrawTextEx function draws formatted text in the specified rectangle.",
+      "prototype": "int DrawTextExA(HDC hdc, LPSTR lpchText, int cchText, LPRECT lprc, UINT format, LPDRAWTEXTPARAMS lpdtp);",
+      "parameters": [
+        {
+          "name": "hdc",
+          "type": "HDC",
+          "description": "A handle to the device context in which to draw."
+        },
+        {
+          "name": "lpchText",
+          "type": "LPSTR",
+          "description": "A pointer to the string that contains the text to draw. If the cchText parameter is -1, the string must be null-terminated. If dwDTFormat includes DT_MODIFYSTRING, the function could add up to four additional characters to this string. The buffer containing the string should be large enough to accommodate these extra characters."
+        },
+        {
+          "name": "cchText",
+          "type": "int",
+          "description": "The length of the string pointed to by lpchText. If cchText is -1, then the lpchText parameter is assumed to be a pointer to a null-terminated string and DrawTextEx computes the character count automatically."
+        },
+        {
+          "name": "lprc",
+          "type": "LPRECT",
+          "description": "A pointer to a RECT structure that contains the rectangle, in logical coordinates, in which the text is to be formatted."
+        },
+        {
+          "name": "format",
+          "type": "UINT",
+          "description": "The formatting options. This parameter can be one or more of the following values. Value Meaning DT_BOTTOM Justifies the text to the bottom of the rectangle. This value is used only with the DT_SINGLELINE value. DT_CALCRECT Determines the width and height of the rectangle. If there are multiple lines of text, DrawTextEx uses the width of the rectangle pointed to by the lprc parameter and extends the base of the rectangle to bound the last line of text. If there is only one line of text, DrawTextEx modifies the right side of the rectangle so that it bounds the last character in the line. In either case, DrawTextEx returns the height of the formatted text, but does not draw the text. DT_CENTER Centers text horizontally in the rectangle. DT_EDITCONTROL Duplicates the text-displaying characteristics of a multiline edit control. Specifically, the average character width is calculated in the s"
+        },
+        {
+          "name": "lpdtp",
+          "type": "LPDRAWTEXTPARAMS",
+          "description": "A pointer to a DRAWTEXTPARAMS structure that specifies additional formatting options. This parameter can be NULL."
+        }
+      ],
+      "return": {
+        "type": "int",
+        "success": "If the function succeeds, the return value is the text height in logical units. If DT_VCENTER or DT_BOTTOM is specified, the return value is the offset from lprc->top to the bottom of the drawn text",
+        "failure": "If the function fails, the return value is zero."
+      },
+      "tags": [
+        "windows-ui",
+        "gdi"
+      ],
+      "remarks": "The DrawTextEx function supports only fonts whose escapement and orientation are both zero. The text alignment mode for the device context must include the TA_LEFT, TA_TOP, and TA_NOUPDATECP flags. > > The winuser.h header defines DrawTextEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Draw text into a memory device context",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HDC dc = CreateCompatibleDC(nullptr);\n    if (dc == nullptr) {\n        return 1;\n    }\n\n    char text[] = \"NtExplorer example\";\n    RECT rectangle = { 0, 0, 200, 50 };\n    DrawTextExA(dc, text, -1, &rectangle, DT_LEFT | DT_SINGLELINE, nullptr);\n\n    DeleteDC(dc);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "DrawTextExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-drawtextexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "DrawTextExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-drawtextexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumdesktopwindows",
+      "name": "EnumDesktopWindows",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Enumerates all top-level windows associated with the specified desktop.",
+      "description": "Enumerates all top-level windows associated with the specified desktop. It passes the handle to each window, in turn, to an application-defined callback function.",
+      "prototype": "BOOL EnumDesktopWindows(HDESK hDesktop, WNDENUMPROC lpfn, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "hDesktop",
+          "type": "HDESK",
+          "description": "A handle to the desktop whose top-level windows are to be enumerated. This handle is returned by the CreateDesktop, GetThreadDesktop, OpenDesktop, or OpenInputDesktop function, and must have the DESKTOP_READOBJECTS access right. For more information, see Desktop Security and Access Rights. If this parameter is NULL, the current desktop is used."
+        },
+        {
+          "name": "lpfn",
+          "type": "WNDENUMPROC",
+          "description": "A pointer to an application-defined EnumWindowsProc callback function."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "An application-defined value to be passed to the callback function."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "To get extended error information, call GetLastError. You must ensure that the callback function sets SetLastError if it fails. Windows Server 2003 and Windows XP/2000: If there are no windows on the desktop, GetLastError returns ERROR_INVALID_HANDLE.",
+        "failure": "If the function fails or is unable to perform the enumeration, the return value is zero."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "The EnumDesktopWindows function repeatedly invokes the lpfn callback function until the last top-level window is enumerated or the callback function returns FALSE.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate a few windows on the current desktop",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic BOOL CALLBACK OnWindow(HWND window, LPARAM count) {\n    char title[128] = {};\n    GetWindowTextA(window, title, sizeof(title));\n    if (title[0] != 0) {\n        printf(\"Window: %s\\n\", title);\n    }\n    return ++(*reinterpret_cast<int*>(count)) < 5;\n}\n\nint main() {\n    int count = 0;\n    EnumDesktopWindows(nullptr, OnWindow,\n        reinterpret_cast<LPARAM>(&count));\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumDesktopWindows function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumdesktopwindows",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumDesktopWindows - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-enumdesktopwindows.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.enumwindows",
+      "name": "EnumWindows",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Enumerates all top-level windows on the screen by passing the handle to each window, in turn, to an application-defined callback function.",
+      "description": "Enumerates all top-level windows on the screen by passing the handle to each window, in turn, to an application-defined callback function. EnumWindows continues until the last top-level window is enumerated or the callback function returns FALSE.",
+      "prototype": "BOOL EnumWindows(WNDENUMPROC lpEnumFunc, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "lpEnumFunc",
+          "type": "WNDENUMPROC",
+          "description": "For more information, see EnumWindowsProc."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for EnumWindows, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError. If EnumWindowsProc returns zero, the return value is also zero. In this case, the callback function should call SetLastError to obtain a meaningful error code to be returned to the caller of EnumWindows."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "The EnumWindows function does not enumerate child windows, with the exception of a few top-level windows owned by the system that have the WS_CHILD style. This function is more reliable than calling the GetWindow function in a loop. An application that calls GetWindow to perform this task risks being caught in an infinite loop or referencing a handle to a window that has been destroyed. Note For Windows 8 and later, EnumWindows enumerates only top-level windows of desktop apps.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Enumerate a few top-level windows",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic BOOL CALLBACK OnWindow(HWND window, LPARAM count) {\n    char title[128] = {};\n    GetWindowTextA(window, title, sizeof(title));\n    if (title[0] != 0) {\n        printf(\"Window: %s\\n\", title);\n    }\n    return ++(*reinterpret_cast<int*>(count)) < 5;\n}\n\nint main() {\n    int count = 0;\n    EnumWindows(OnWindow, reinterpret_cast<LPARAM>(&count));\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "EnumWindows function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-enumwindows",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "EnumWindows - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-enumwindows.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.exitwindowsex",
+      "name": "ExitWindowsEx",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Logs off the interactive user, shuts down the system, or shuts down and restarts the system.",
+      "description": "Logs off the interactive user, shuts down the system, or shuts down and restarts the system. It sends the WM_QUERYENDSESSION message to all applications to determine if they can be terminated.",
+      "prototype": "BOOL ExitWindowsEx(UINT uFlags, DWORD dwReason);",
+      "parameters": [
+        {
+          "name": "uFlags",
+          "type": "UINT",
+          "description": "The shutdown type. This parameter must include one of the following values. Value Meaning EWX_HYBRID_SHUTDOWN 0x00400000 Beginning with Windows 8: You can prepare the system for a faster startup by combining the EWX_HYBRID_SHUTDOWN flag with the EWX_SHUTDOWN flag. EWX_LOGOFF 0 Shuts down all processes running in the logon session of the process that called the ExitWindowsEx function. Then it logs the user off. This flag can be used only by processes running in an interactive user's logon session. EWX_POWEROFF 0x00000008 Shuts down the system and turns off the power. The system must support the power-off feature. The calling process must have the SE_SHUTDOWN_NAME privilege. For more information, see the following Remarks section. EWX_REBOOT 0x00000002 Shuts down the system and then restarts the system. The calling process must have the SE_SHUTDOWN_NAME privilege. For more information, see"
+        },
+        {
+          "name": "dwReason",
+          "type": "DWORD",
+          "description": "The reason for initiating the shutdown. This parameter must be one of the system shutdown reason codes. If this parameter is zero, the SHTDN_REASON_FLAG_PLANNED reason code will not be set and therefore the default action is an undefined shutdown that is logged as \"No title for this reason could be found\". By default, it is also an unplanned shutdown. Depending on how the system is configured, an unplanned shutdown triggers the creation of a file that contains the system state information, which can delay shutdown. Therefore, do not use zero for this parameter."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero. Because the function executes asynchronously, a nonzero return value indicates that the shutdown has been initiated. It does not indicate whether the shutdown will succeed. It is possible that the system, the user, or another application will abort the shutdown.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui"
+      ],
+      "remarks": "The ExitWindowsEx function returns as soon as it has initiated the shutdown process. The shutdown or logoff then proceeds asynchronously. The function is designed to stop all processes in the caller's logon session. Therefore, if you are not the interactive user, the function can succeed without actually shutting down the computer. If you are not the interactive user, use the InitiateSystemShutdown or InitiateSystemShutdownEx function. A non-zero return value does not mean the logoff was or will be successful. The shutdown is an asynchronous process, and it can occur long after the API call has returned, or not at all. Even if the timeout value is zero, the shutdown can still be aborted by applications, services, or even the system. The non-zero return value indicates that the validation of the rights and parameters was successful and that the system accepted the shutdown request. When this function is called, the caller must specify whether or not applications with unsaved changes should be forcibly closed. If the caller chooses not to force these applications to close and an application with unsaved changes is running on the console session, the shutdown will remain in progress until the user logged into the console session aborts the shutdown, saves changes, closes the application, or forces the application to close. During this period, the shutdown may not be aborted except",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Prepare a logoff or shutdown request",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // ExitWindowsEx logs off or restarts the machine. The example only prints\n    // the flags that would be used and does not perform the operation.\n    printf(\"Would request logoff with EWX_LOGOFF (0x%lx).\\n\", EWX_LOGOFF);\n    return 0;\n}\n",
+        "notes": "System shutdown and logoff are destructive; the snippet is setup-only."
+      },
+      "references": [
+        {
+          "title": "ExitWindowsEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-exitwindowsex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ExitWindowsEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-exitwindowsex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.findwindowa",
+      "name": "FindWindowA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a handle to the top-level window whose class name and window name match the specified strings.",
+      "description": "Retrieves a handle to the top-level window whose class name and window name match the specified strings. This function does not search child windows. This function does not perform a case-sensitive search. To search child windows, beginning with a specified child window, use the FindWindowEx function.",
+      "prototype": "HWND FindWindowA(LPCSTR lpClassName, LPCSTR lpWindowName);",
+      "parameters": [
+        {
+          "name": "lpClassName",
+          "type": "LPCSTR",
+          "description": "The atom must be in the low-order word of lpClassName; the high-order word must be zero. If lpClassName points to a string, it specifies the window class name. The class name can be any name registered with RegisterClass or RegisterClassEx, or any of the predefined control-class names. If lpClassName is NULL, it finds any window whose title matches the lpWindowName parameter."
+        },
+        {
+          "name": "lpWindowName",
+          "type": "LPCSTR",
+          "description": "If this parameter is NULL, all window names match."
+        }
+      ],
+      "return": {
+        "type": "HWND",
+        "success": "If the function succeeds, the return value is a handle to the window that has the specified class name and window name.",
+        "failure": "If the function fails, the return value is NULL. This function does not modify the last error value."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "If the lpWindowName parameter is not NULL, FindWindow calls the GetWindowText function to retrieve the window name for comparison. For a description of a potential problem that can arise, see the Remarks for GetWindowText. #### Examples For an example, see Retrieving the Number of Mouse Wheel Scroll Lines. > > The winuser.h header defines FindWindow as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Find a top-level window by class",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = FindWindowA(\"ConsoleWindowClass\", nullptr);\n    printf(\"Console window: %p\\n\", window);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "FindWindowA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindowa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "FindWindowA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-findwindowa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.findwindowexa",
+      "name": "FindWindowExA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a handle to a window whose class name and window name match the specified strings.",
+      "description": "Retrieves a handle to a window whose class name and window name match the specified strings. The function searches child windows, beginning with the one following the specified child window. This function does not perform a case-sensitive search.",
+      "prototype": "HWND FindWindowExA(HWND hWndParent, HWND hWndChildAfter, LPCSTR lpszClass, LPCSTR lpszWindow);",
+      "parameters": [
+        {
+          "name": "hWndParent",
+          "type": "HWND",
+          "description": "If hwndParent is NULL, the function uses the desktop window as the parent window. The function searches among windows that are child windows of the desktop. If hwndParent is HWND_MESSAGE, the function searches all message-only windows."
+        },
+        {
+          "name": "hWndChildAfter",
+          "type": "HWND",
+          "description": "The search begins with the next child window in the Z order. The child window must be a direct child window of hwndParent, not just a descendant window. If hwndChildAfter is NULL, the search begins with the first child window of hwndParent. Note that if both hwndParent and hwndChildAfter are NULL, the function searches all top-level and message-only windows."
+        },
+        {
+          "name": "lpszClass",
+          "type": "LPCSTR",
+          "description": "The atom must be placed in the low-order word of lpszClass; the high-order word must be zero. If lpszClass is a string, it specifies the window class name. The class name can be any name registered with RegisterClass or RegisterClassEx, or any of the predefined control-class names, or it can be MAKEINTATOM(0x8000). In this latter case, 0x8000 is the atom for a menu class. For more information, see the Remarks section of this topic."
+        },
+        {
+          "name": "lpszWindow",
+          "type": "LPCSTR",
+          "description": "If this parameter is NULL, all window names match."
+        }
+      ],
+      "return": {
+        "type": "HWND",
+        "success": "If the function succeeds, the return value is a handle to the window that has the specified class and window names.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "The FindWindowEx function searches only direct child windows. It does not search other descendants. If the lpszWindow parameter is not NULL, FindWindowEx calls the GetWindowText function to retrieve the window name for comparison. For a description of a potential problem that can arise, see the Remarks section of GetWindowText. An application can call this function in the following way. FindWindowEx( NULL, NULL, MAKEINTATOM(0x8000), NULL ); Note that 0x8000 is the atom for a menu class. When an application calls this function, the function checks whether a context menu is being displayed that the application created. > > The winuser.h header defines FindWindowEx as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Find a child window by class",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = FindWindowExA(nullptr, nullptr, \"Shell_TrayWnd\", nullptr);\n    printf(\"Taskbar window: %p\\n\", window);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "FindWindowExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-findwindowexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "FindWindowExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-findwindowexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getdc",
+      "name": "GetDC",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The GetDC function retrieves a handle to a device context (DC) for the client area of a specified window or for the entire screen.",
+      "description": "The GetDC function retrieves a handle to a device context (DC) for the client area of a specified window or for the entire screen. You can use the returned handle in subsequent GDI functions to draw in the DC. The device context is an opaque data structure, whose values are used internally by GDI. The GetDCEx function is an extension to GetDC, which gives an application more control over how and whether clipping occurs in the client area.",
+      "prototype": "HDC GetDC(HWND hWnd);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "A handle to the window whose DC is to be retrieved. If this value is NULL, GetDC retrieves the DC for the entire screen."
+        }
+      ],
+      "return": {
+        "type": "HDC",
+        "success": "If the function succeeds, the return value is a handle to the DC for the specified window's client area.",
+        "failure": "If the function fails, the return value is NULL."
+      },
+      "tags": [
+        "windows-ui",
+        "gdi"
+      ],
+      "remarks": "The GetDC function retrieves a common, class, or private DC depending on the class style of the specified window. For class and private DCs, GetDC leaves the previously assigned attributes unchanged. However, for common DCs, GetDC assigns default attributes to the DC each time it is retrieved. For example, the default font is System, which is a bitmap font. Because of this, the handle to a common DC returned by GetDC does not tell you what font, color, or brush was used when the window was drawn. To determine the font, call GetTextFace. Note that the handle to the DC can only be used by a single thread at any one time. After painting with a common DC, the ReleaseDC function must be called to release the DC. Class and private DCs do not have to be released. ReleaseDC must be called from the same thread that called GetDC. The number of DCs is limited only by available memory. #### Examples For an example, see Drawing with the Mouse.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Get and release a window device context",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window == nullptr) {\n        return 1;\n    }\n\n    HDC dc = GetDC(window);\n    if (dc != nullptr) {\n        ReleaseDC(window, dc);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetDC function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetDC - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getdc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getdcex",
+      "name": "GetDCEx",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The GetDCEx function retrieves a handle to a device context (DC) for the client area of a specified window or for the entire screen.",
+      "description": "The GetDCEx function retrieves a handle to a device context (DC) for the client area of a specified window or for the entire screen. You can use the returned handle in subsequent GDI functions to draw in the DC. The device context is an opaque data structure, whose values are used internally by GDI. This function is an extension to the GetDC function, which gives an application more control over how and whether clipping occurs in the client area.",
+      "prototype": "HDC GetDCEx(HWND hWnd, HRGN hrgnClip, DWORD flags);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "A handle to the window whose DC is to be retrieved. If this value is NULL, GetDCEx retrieves the DC for the entire screen."
+        },
+        {
+          "name": "hrgnClip",
+          "type": "HRGN",
+          "description": "A clipping region that may be combined with the visible region of the DC. If the value of flags is DCX_INTERSECTRGN or DCX_EXCLUDERGN, then the operating system assumes ownership of the region and will automatically delete it when it is no longer needed. In this case, the application should not use or delete the region after a successful call to GetDCEx."
+        },
+        {
+          "name": "flags",
+          "type": "DWORD",
+          "description": "Specifies how the DC is created. This parameter can be one or more of the following values. Value Meaning DCX_WINDOW Returns a DC that corresponds to the window rectangle rather than the client rectangle. DCX_CACHE Returns a DC from the cache, rather than the OWNDC or CLASSDC window. Essentially overrides CS_OWNDC and CS_CLASSDC. DCX_PARENTCLIP Uses the visible region of the parent window. The parent's WS_CLIPCHILDREN and CS_PARENTDC style bits are ignored. The origin is set to the upper-left corner of the window identified by hWnd. DCX_CLIPSIBLINGS Excludes the visible regions of all sibling windows above the window identified by hWnd. DCX_CLIPCHILDREN Excludes the visible regions of all child windows below the window identified by hWnd. DCX_NORESETATTRS This flag is ignored. DCX_LOCKWINDOWUPDATE Allows drawing even if there is a LockWindowUpdate call in effect that would otherwise excl"
+        }
+      ],
+      "return": {
+        "type": "HDC",
+        "success": "If the function succeeds, the return value is the handle to the DC for the specified window.",
+        "failure": "If the function fails, the return value is NULL. An invalid value for the hWnd parameter will cause the function to fail."
+      },
+      "tags": [
+        "windows-ui",
+        "gdi"
+      ],
+      "remarks": "Unless the display DC belongs to a window class, the ReleaseDC function must be called to release the DC after painting. Also, ReleaseDC must be called from the same thread that called GetDCEx. The number of DCs is limited only by available memory. The function returns a handle to a DC that belongs to the window's class if CS_CLASSDC, CS_OWNDC or CS_PARENTDC was specified as a style in the WNDCLASS structure when the class was registered.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Get and release an extended device context",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window == nullptr) {\n        return 1;\n    }\n\n    HDC dc = GetDCEx(window, nullptr, DCX_CACHE);\n    if (dc != nullptr) {\n        ReleaseDC(window, dc);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetDCEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdcex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetDCEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getdcex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getdesktopwindow",
+      "name": "GetDesktopWindow",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a handle to the desktop window.",
+      "description": "Retrieves a handle to the desktop window. The desktop window covers the entire screen. The desktop window is the area on top of which other windows are painted.",
+      "prototype": "HWND GetDesktopWindow(VOID);",
+      "parameters": [],
+      "return": {
+        "type": "HWND",
+        "success": "See the reference for the documented success value.",
+        "failure": "The return value is a handle to the desktop window."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the desktop window handle",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    printf(\"Desktop window: %p\\n\", GetDesktopWindow());\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetDesktopWindow function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdesktopwindow",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetDesktopWindow - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getdesktopwindow.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getforegroundwindow",
+      "name": "GetForegroundWindow",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a handle to the foreground window (the window with which the user is currently working).",
+      "description": "Retrieves a handle to the foreground window (the window with which the user is currently working). The system assigns a slightly higher priority to the thread that creates the foreground window than it does to other threads.",
+      "prototype": "HWND GetForegroundWindow(VOID);",
+      "parameters": [],
+      "return": {
+        "type": "HWND",
+        "success": "See the reference for the documented success value.",
+        "failure": "The return value is a handle to the foreground window. The foreground window can be NULL in certain circumstances, such as when a window is losing activation."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Read the foreground window handle",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetForegroundWindow();\n    char title[256] = {};\n    GetWindowTextA(window, title, sizeof(title));\n    printf(\"Foreground: %s\\n\", title);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetForegroundWindow function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetForegroundWindow - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getforegroundwindow.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getmessagea",
+      "name": "GetMessageA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Retrieves a message from the calling thread's message queue.",
+      "description": "Retrieves a message from the calling thread's message queue. The function dispatches incoming sent messages until a posted message is available for retrieval. Unlike GetMessage, the PeekMessage function does not wait for a message to be posted before returning.",
+      "prototype": "BOOL GetMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax);",
+      "parameters": [
+        {
+          "name": "lpMsg",
+          "type": "LPMSG",
+          "description": "The lpMsg parameter for GetMessageA, as documented by the API reference."
+        },
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The window must belong to the current thread. If hWnd is NULL, GetMessage retrieves messages for any window that belongs to the current thread, and any messages on the current thread's message queue whose hwnd value is NULL (see the MSG structure). Therefore if hWnd is NULL, both window messages and thread messages are processed. If hWnd is -1, GetMessage retrieves only messages on the current thread's message queue whose hwnd value is NULL, that is, thread messages as posted by PostMessage (when the hWnd parameter is NULL) or PostThreadMessage."
+        },
+        {
+          "name": "wMsgFilterMin",
+          "type": "UINT",
+          "description": "Use WM_KEYFIRST (0x0100) to specify the first keyboard message or WM_MOUSEFIRST (0x0200) to specify the first mouse message. Use WM_INPUT here and in wMsgFilterMax to specify only the WM_INPUT messages. If wMsgFilterMin and wMsgFilterMax are both zero, GetMessage returns all available messages (that is, no range filtering is performed)."
+        },
+        {
+          "name": "wMsgFilterMax",
+          "type": "UINT",
+          "description": "Use WM_KEYLAST to specify the last keyboard message or WM_MOUSELAST to specify the last mouse message. Use WM_INPUT here and in wMsgFilterMin to specify only the WM_INPUT messages. If wMsgFilterMin and wMsgFilterMax are both zero, GetMessage returns all available messages (that is, no range filtering is performed)."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function retrieves the WM_QUIT message, the return value is zero. If there is an error, the return value is -1. For example, the function fails if hWnd is an invalid window handle or lpMsg is an invalid pointer. To get extended error information, call GetLastError. Because the return value can be nonzero, zero, or -1, avoid code like this: while (GetMessage( lpMsg, hWnd, 0, 0)) ... The possibility of a -1 return value in the case that hWnd is an invalid parameter (such as referring to a window that has already been destroyed) means that such code can lead to fatal application errors. Instead, use code like this: BOOL bRet; while( (bRet = GetMessage( &msg, hWnd, 0, 0 )) != 0) { if (bRet == -1) { // handle the error and possibly exit } else { TranslateMessage(&msg); DispatchMessage(&msg); } }",
+        "failure": "If the function retrieves a message other than WM_QUIT, the return value is nonzero."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "An application typically uses the return value to determine whether to end the main message loop and exit the program. The GetMessage function retrieves messages associated with the window identified by the hWnd parameter or any of its children, as specified by the IsChild function, and within the range of message values given by the wMsgFilterMin and wMsgFilterMax parameters. Note that an application can only use the low word in the wMsgFilterMin and wMsgFilterMax parameters; the high word is reserved for the system. Note that GetMessage always retrieves WM_QUIT messages, no matter which values you specify for wMsgFilterMin and wMsgFilterMax. During this call, the system delivers pending, nonqueued messages, that is, messages sent to windows owned by the calling thread using the SendMessage, SendMessageCallback, SendMessageTimeout, or SendNotifyMessage function. Then the first queued message that matches the specified filter is retrieved. The system may also process internal events. If no filter is specified, messages are processed in the following order: Sent messages Posted messages Input (hardware) messages and system internal events Sent messages (again) WM_PAINT messages WM_TIMER messages To retrieve input messages before posted messages, use the wMsgFilterMin and wMsgFilterMax parameters. GetMessage does not remove WM_PAINT messages from the queue. The messages remain in",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Receive a posted quit message",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Create this thread's message queue before posting to it.\n    MSG message = {};\n    PeekMessageA(&message, nullptr, WM_USER, WM_USER, PM_NOREMOVE);\n    PostThreadMessageA(GetCurrentThreadId(), WM_QUIT, 0, 0);\n\n    if (GetMessageA(&message, nullptr, 0, 0) == 0) {\n        printf(\"Received WM_QUIT.\\n\");\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetMessageA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmessagea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetMessageA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getmessagea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.getwindowdc",
+      "name": "GetWindowDC",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The GetWindowDC function retrieves the device context (DC) for the entire window, including title bar, menus, and scroll bars.",
+      "description": "The GetWindowDC function retrieves the device context (DC) for the entire window, including title bar, menus, and scroll bars. A window device context permits painting anywhere in a window, because the origin of the device context is the upper-left corner of the window instead of the client area. GetWindowDC assigns default attributes to the window device context each time it retrieves the device context. Previous attributes are lost.",
+      "prototype": "HDC GetWindowDC(HWND hWnd);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "A handle to the window with a device context that is to be retrieved. If this value is NULL, GetWindowDC retrieves the device context for the entire screen. If this parameter is NULL, GetWindowDC retrieves the device context for the primary display monitor. To get the device context for other display monitors, use the EnumDisplayMonitors and CreateDC functions."
+        }
+      ],
+      "return": {
+        "type": "HDC",
+        "success": "If the function succeeds, the return value is a handle to a device context for the specified window.",
+        "failure": "If the function fails, the return value is NULL, indicating an error or an invalid hWnd parameter."
+      },
+      "tags": [
+        "windows-ui",
+        "gdi"
+      ],
+      "remarks": "GetWindowDC is intended for special painting effects within a window's nonclient area. Painting in nonclient areas of any window is not recommended. The GetSystemMetrics function can be used to retrieve the dimensions of various parts of the nonclient area, such as the title bar, menu, and scroll bars. The GetDC function can be used to retrieve a device context for the entire screen. After painting is complete, the ReleaseDC function must be called to release the device context. Not releasing the window device context has serious effects on painting requested by applications.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Get and release the window device context",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window == nullptr) {\n        return 1;\n    }\n\n    HDC dc = GetWindowDC(window);\n    if (dc != nullptr) {\n        ReleaseDC(window, dc);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "GetWindowDC function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowdc",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetWindowDC - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-getwindowdc.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.lstrcata",
+      "name": "lstrcatA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Appends one string to another.Warning Do not use.",
+      "description": "Appends one string to another. Warning Do not use. Consider using StringCchCat instead. See Security Considerations.",
+      "prototype": "LPSTR lstrcatA(LPSTR lpString1, LPCSTR lpString2);",
+      "parameters": [
+        {
+          "name": "lpString1",
+          "type": "LPSTR",
+          "description": "This buffer must be large enough to contain both strings."
+        },
+        {
+          "name": "lpString2",
+          "type": "LPCSTR",
+          "description": "The lpString2 parameter for lstrcatA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "LPSTR",
+        "success": "If the function succeeds, the return value is a pointer to the buffer.",
+        "failure": "If the function fails, the return value is NULL and lpString1 may not be null-terminated."
+      },
+      "tags": [
+        "windows-ui"
+      ],
+      "remarks": "> The winbase.h header defines lstrcat as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Concatenate two strings safely sized for the result",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    char buffer[64] = \"Nt\";\n    lstrcatA(buffer, \"Explorer\");\n    printf(\"%s\\n\", buffer);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "lstrcatA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-lstrcata",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "lstrcatA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-lstrcata.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.pathfileexistsa",
+      "name": "PathFileExistsA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "Shlwapi.dll (version 4.71 or later)",
+      "library": "Shlwapi.lib",
+      "header": "shlwapi.h",
+      "minimum_windows": "Windows 2000 Professional, Windows XP [desktop apps only]",
+      "summary": "Determines whether a path to a file system object such as a file or folder is valid.",
+      "description": "Determines whether a path to a file system object such as a file or folder is valid.",
+      "prototype": "BOOL PathFileExistsA(LPCSTR pszPath);",
+      "parameters": [
+        {
+          "name": "pszPath",
+          "type": "LPCSTR",
+          "description": "The pszPath parameter for PathFileExistsA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "See the reference for the documented success value.",
+        "failure": "TRUE if the file exists; otherwise, FALSE. Call GetLastError for extended error information."
+      },
+      "tags": [
+        "shell-integration",
+        "windows-ui"
+      ],
+      "remarks": "This function tests the validity of the path. A path specified by Universal Naming Convention (UNC) is limited to a file only; that is, \\server\\share\\file is permitted. A UNC path to a server or server share is not permitted; that is, \\server or \\server\\share. This function returns FALSE if a mounted remote drive is out of service. #### Examples `cpp #include #include #include \"Shlwapi.h\" void main(void) { // Valid file path name (file is there). char buffer_1[ ] = \"C:\\TEST\\file.txt\"; char *lpStr1; lpStr1 = buffer_1; // Invalid file path name (file is not there). char buffer_2[ ] = \"C:\\TEST\\file.doc\"; char *lpStr2; lpStr2 = buffer_2; // Return value from \"PathFileExists\". int retval; // Search for the presence of a file with a true result. retval = PathFileExists(lpStr1); if(retval == 1) { cout > The shlwapi.h header defines PathFileExists as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Check whether a system path exists",
+        "code": "#include <windows.h>\n#include <shlwapi.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"shlwapi.lib\")\n\nint main() {\n    printf(\"C:\\\\Windows exists: %s\\n\",\n        PathFileExistsA(\"C:\\\\Windows\") ? \"yes\" : \"no\");\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "PathFileExistsA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathfileexistsa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "PathFileExistsA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/shlwapi/nf-shlwapi-pathfileexistsa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (shlwapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.peekmessagea",
+      "name": "PeekMessageA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Dispatches incoming nonqueued messages, checks the thread message queue for a posted message, and retrieves the message (if any exist).",
+      "description": "Dispatches incoming nonqueued messages, checks the thread message queue for a posted message, and retrieves the message (if any exist).",
+      "prototype": "BOOL PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);",
+      "parameters": [
+        {
+          "name": "lpMsg",
+          "type": "LPMSG",
+          "description": "The lpMsg parameter for PeekMessageA, as documented by the API reference."
+        },
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The window must belong to the current thread. If hWnd is NULL, PeekMessage retrieves messages for any window that belongs to the current thread, and any messages on the current thread's message queue whose hwnd value is NULL (see the MSG structure). Therefore if hWnd is NULL, both window messages and thread messages are processed. If hWnd is -1, PeekMessage retrieves only messages on the current thread's message queue whose hwnd value is NULL, that is, thread messages as posted by PostMessage (when the hWnd parameter is NULL) or PostThreadMessage."
+        },
+        {
+          "name": "wMsgFilterMin",
+          "type": "UINT",
+          "description": "Use WM_KEYFIRST (0x0100) to specify the first keyboard message or WM_MOUSEFIRST (0x0200) to specify the first mouse message. If wMsgFilterMin and wMsgFilterMax are both zero, PeekMessage returns all available messages (that is, no range filtering is performed)."
+        },
+        {
+          "name": "wMsgFilterMax",
+          "type": "UINT",
+          "description": "Use WM_KEYLAST to specify the last keyboard message or WM_MOUSELAST to specify the last mouse message. If wMsgFilterMin and wMsgFilterMax are both zero, PeekMessage returns all available messages (that is, no range filtering is performed)."
+        },
+        {
+          "name": "wRemoveMsg",
+          "type": "UINT",
+          "description": "This parameter can be one or more of the following values. | Value | Meaning | |-------|---------| | PM_NOREMOVE0x0000 | Messages are not removed from the queue after processing by PeekMessage. | | PM_REMOVE0x0001 | Messages are removed from the queue after processing by PeekMessage. | | PM_NOYIELD0x0002 | Prevents the system from releasing any thread that is waiting for the caller to go idle (see WaitForInputIdle). Combine this value with either PM_NOREMOVE or PM_REMOVE. | By default, all message types are processed. To specify that only certain message should be processed, specify one or more of the following values. | Value | Meaning | |-------|---------| | PM_QS_INPUT(QS_INPUT ((QS_POSTMESSAGE \\| QS_HOTKEY \\| QS_TIMER) (QS_PAINT (QS_SENDMESSAGE << 16) | Process all sent messages. | For more info on listed QS_` flags and types of messages see GetQueueStatus documentation."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If no messages are available, the return value is zero.",
+        "failure": "If a message is available, the return value is nonzero."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "PeekMessage retrieves messages associated with the window identified by the hWnd parameter or any of its children as specified by the IsChild function, and within the range of message values given by the wMsgFilterMin and wMsgFilterMax parameters. Note that an application can only use the low word in the wMsgFilterMin and wMsgFilterMax parameters; the high word is reserved for the system. Note that PeekMessage always retrieves WM_QUIT messages, no matter which values you specify for wMsgFilterMin and wMsgFilterMax. During this call, the system dispatches (DispatchMessage) pending, nonqueued messages, that is, messages sent to windows owned by the calling thread using the SendMessage, SendMessageCallback, SendMessageTimeout, or SendNotifyMessage function. Then the first queued message that matches the specified filter is retrieved. The system may also process internal events. If no filter is specified, messages are processed in the following order: Sent messages Posted messages Input (hardware) messages and system internal events Sent messages (again) WM_PAINT messages WM_TIMER messages To retrieve input messages before posted messages, use the wMsgFilterMin and wMsgFilterMax parameters. The PeekMessage function normally does not remove WM_PAINT messages from the queue. WM_PAINT messages remain in the queue until they are processed. However, if a WM_PAINT message has a NULL upda",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Peek at a posted message without blocking",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Create this thread's message queue before posting to it.\n    MSG message = {};\n    PeekMessageA(&message, nullptr, WM_USER, WM_USER, PM_NOREMOVE);\n    PostThreadMessageA(GetCurrentThreadId(), WM_NULL, 0, 0);\n\n    if (PeekMessageA(&message, nullptr, 0, 0, PM_REMOVE)) {\n        printf(\"Peeked message: 0x%04x\\n\", message.message);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "PeekMessageA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-peekmessagea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "PeekMessageA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-peekmessagea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.postmessagea",
+      "name": "PostMessageA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Places (posts) a message in the message queue associated with the thread that created the specified window and returns without waiting for the thread to process the message.",
+      "description": "Places (posts) a message in the message queue associated with the thread that created the specified window and returns without waiting for the thread to process the message. To post a message in the message queue associated with a thread, use the PostThreadMessage function.",
+      "prototype": "BOOL PostMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The following values have special meanings. Value Meaning HWND_BROADCAST ((HWND)0xffff) The message is posted to all top-level windows in the system, including disabled or invisible unowned windows, overlapped windows, and pop-up windows. The message is not posted to child windows. NULL The function behaves like a call to PostThreadMessage with the dwThreadId parameter set to the identifier of the current thread. Starting with Windows Vista, message posting is subject to UIPI. The thread of a process can post messages only to message queues of threads in processes of lesser or equal integrity level."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "For lists of the system-provided messages, see System-Defined Messages."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The wParam parameter for PostMessageA, as documented by the API reference."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for PostMessageA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "When a message is blocked by UIPI the last error, retrieved with GetLastError, is set to 5 (access denied). Messages in a message queue are retrieved by calls to the GetMessage or PeekMessage function. Applications that need to communicate using HWND_BROADCAST should use the RegisterWindowMessage function to obtain a unique message for inter-application communication. The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling. If you send a message in the range below WM_USER to the asynchronous message functions (PostMessage, SendNotifyMessage, and SendMessageCallback), its message parameters cannot include pointers. Otherwise, the operation will fail. The functions will return before the receiving thread has had a chance to process the message and the sender will free the memory before it is used. Do not post the WM_QUIT message using PostMessage; use the PostQuitMessage function. An accessibility application can use PostMessage to post WM_APPCOMMAND messages to the shell to launch applications. This functionality is not guaranteed to work for other types of applications. A message queue can contain at most 10,000 messages. This limit should be sufficiently large. If your application exceeds the limit, it should be redesigned to avoid consuming so many ",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Post a harmless message to the console window",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        PostMessageA(window, WM_NULL, 0, 0);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "PostMessageA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postmessagea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "PostMessageA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-postmessagea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.postthreadmessagea",
+      "name": "PostThreadMessageA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Posts a message to the message queue of the specified thread.",
+      "description": "Posts a message to the message queue of the specified thread. It returns without waiting for the thread to process the message.",
+      "prototype": "BOOL PostThreadMessageA(DWORD idThread, UINT Msg, WPARAM wParam, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "idThread",
+          "type": "DWORD",
+          "description": "The function fails if the specified thread does not have a message queue. The system creates a thread's message queue when the thread makes its first call to one of the User or GDI functions. For more information, see the Remarks section. Message posting is subject to UIPI. The thread of a process can post messages only to posted-message queues of threads in processes of lesser or equal integrity level. This thread must have the SE_TCB_NAME privilege to post a message to a thread that belongs to a process with the same locally unique identifier (LUID) but is in a different desktop. Otherwise, the function fails and returns ERROR_INVALID_THREAD_ID. This thread must either belong to the same desktop as the calling thread or to a process with the same LUID. Otherwise, the function fails and returns ERROR_INVALID_THREAD_ID."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "The Msg parameter for PostThreadMessageA, as documented by the API reference."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The wParam parameter for PostThreadMessageA, as documented by the API reference."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for PostThreadMessageA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError. GetLastError returns ERROR_INVALID_THREAD_ID if idThread is not a valid thread identifier, or if the thread specified by idThread does not have a message queue. GetLastError returns ERROR_NOT_ENOUGH_QUOTA when the message limit is hit."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "When a message is blocked by UIPI the last error, retrieved with GetLastError, is set to 5 (access denied). The thread to which the message is posted must have created a message queue, or else the call to PostThreadMessage fails. Use the following method to handle this situation. Create an event object, then create the thread. Use the WaitForSingleObject function to wait for the event to be set to the signaled state before calling PostThreadMessage. In the thread to which the message will be posted, call PeekMessage as shown here to force the system to create the message queue. PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE) Set the event, to indicate that the thread is ready to receive posted messages. The thread to which the message is posted retrieves the message by calling the GetMessage or PeekMessage function. The hwnd member of the returned MSG structure is NULL. Messages posted by PostThreadMessage are not associated with a window. As a general rule, messages that are not associated with a window cannot be dispatched by the DispatchMessage function. Therefore, if the recipient thread is in a modal loop (as used by MessageBox or DialogBox), the messages will be lost. To intercept thread messages while in a modal loop, use a thread-specific hook. The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (thos",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Post a harmless message to the current thread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    PostThreadMessageA(GetCurrentThreadId(), WM_NULL, 0, 0);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "PostThreadMessageA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-postthreadmessagea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "PostThreadMessageA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-postthreadmessagea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sendmessagea",
+      "name": "SendMessageA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sends the specified message to a window or windows.",
+      "description": "Sends the specified message to a window or windows. The SendMessage function calls the window procedure for the specified window and does not return until the window procedure has processed the message. To send a message and return immediately, use the SendMessageCallback or SendNotifyMessage function. To post a message to a thread's message queue and return immediately, use the PostMessage or PostThreadMessage function.",
+      "prototype": "LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system, including disabled or invisible unowned windows, overlapped windows, and pop-up windows; but the message is not sent to child windows. Message sending is subject to UIPI. The thread of a process can send messages only to message queues of threads in processes of lesser or equal integrity level."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "For lists of the system-provided messages, see System-Defined Messages."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The wParam parameter for SendMessageA, as documented by the API reference."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for SendMessageA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "LRESULT",
+        "success": "See the reference for the documented success value.",
+        "failure": "The return value specifies the result of the message processing; it depends on the message sent."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "When a message is blocked by UIPI the last error, retrieved with GetLastError, is set to 5 (access denied). Applications that need to communicate using HWND_BROADCAST should use the RegisterWindowMessage function to obtain a unique message for inter-application communication. The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling. If the specified window was created by the calling thread, the window procedure is called immediately as a subroutine. If the specified window was created by a different thread, the system switches to that thread and calls the appropriate window procedure. Messages sent between threads are processed only when the receiving thread executes message retrieval code. The sending thread is blocked until the receiving thread processes the message. However, the sending thread will process incoming nonqueued messages while waiting for its message to be processed. To prevent this, use SendMessageTimeout with SMTO_BLOCK set. For more information on nonqueued messages, see Nonqueued Messages. An accessibility application can use SendMessage to send WM_APPCOMMAND messages to the shell to launch applications. This functionality is not guaranteed to work for other types of applications. #### Examples For an example, see Displaying Keyboar",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Send a harmless message to the console window",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        SendMessageA(window, WM_NULL, 0, 0);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SendMessageA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SendMessageA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-sendmessagea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sendmessagecallbacka",
+      "name": "SendMessageCallbackA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sends the specified message to a window or windows.",
+      "description": "Sends the specified message to a window or windows. It calls the window procedure for the specified window and returns immediately if the window belongs to another thread. After the window procedure processes the message, the system calls the specified callback function, passing the result of the message processing and an application-defined value to the callback function.",
+      "prototype": "BOOL SendMessageCallbackA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam, SENDASYNCPROC lpResultCallBack, ULONG_PTR dwData);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system, including disabled or invisible unowned windows, overlapped windows, and pop-up windows; but the message is not sent to child windows."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "For lists of the system-provided messages, see System-Defined Messages."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The wParam parameter for SendMessageCallbackA, as documented by the API reference."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for SendMessageCallbackA, as documented by the API reference."
+        },
+        {
+          "name": "lpResultCallBack",
+          "type": "SENDASYNCPROC",
+          "description": "For more information, see SendAsyncProc. If hWnd is HWND_BROADCAST ((HWND)0xffff), the system calls the SendAsyncProc callback function once for each top-level window."
+        },
+        {
+          "name": "dwData",
+          "type": "ULONG_PTR",
+          "description": "The dwData parameter for SendMessageCallbackA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "If the target window belongs to the same thread as the caller, then the window procedure is called synchronously, and the callback function is called immediately after the window procedure returns. If the target window belongs to a different thread from the caller, then the callback function is called only when the thread that called SendMessageCallback also calls GetMessage, PeekMessage, or WaitMessage. If you send a message in the range below WM_USER to the asynchronous message functions (PostMessage, SendNotifyMessage, and SendMessageCallback), its message parameters cannot include pointers. Otherwise, the operation will fail. The functions will return before the receiving thread has had a chance to process the message and the sender will free the memory before it is used. Applications that need to communicate using HWND_BROADCAST should use the RegisterWindowMessage function to obtain a unique message for inter-application communication. The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling. > > The winuser.h header defines SendMessageCallback as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that i",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Send a message with an asynchronous result callback",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic void CALLBACK OnResult(HWND, UINT, ULONG_PTR, LRESULT) {\n}\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        SendMessageCallbackA(window, WM_NULL, 0, 0, OnResult, 0);\n        // Allow the callback to be delivered.\n        Sleep(10);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SendMessageCallbackA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagecallbacka",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SendMessageCallbackA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-sendmessagecallbacka.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sendmessagetimeouta",
+      "name": "SendMessageTimeoutA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sends the specified message to one or more windows.",
+      "description": "Sends the specified message to one or more windows.",
+      "prototype": "LRESULT SendMessageTimeoutA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam, UINT fuFlags, UINT uTimeout, PDWORD_PTR lpdwResult);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system, including disabled or invisible unowned windows. The function does not return until each window has timed out. Therefore, the total wait time can be up to the value of uTimeout multiplied by the number of top-level windows."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "For lists of the system-provided messages, see System-Defined Messages."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The wParam parameter for SendMessageTimeoutA, as documented by the API reference."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for SendMessageTimeoutA, as documented by the API reference."
+        },
+        {
+          "name": "fuFlags",
+          "type": "UINT",
+          "description": "This parameter can be one or more of the following values. Value Meaning SMTO_ABORTIFHUNG 0x0002 The function returns without waiting for the time-out period to elapse if the receiving thread appears to not respond or \"hangs.\" SMTO_BLOCK 0x0001 Prevents the calling thread from processing any other requests until the function returns. SMTO_NORMAL 0x0000 The calling thread is not prevented from processing other requests while waiting for the function to return. SMTO_NOTIMEOUTIFNOTHUNG 0x0008 The function does not enforce the time-out period as long as the receiving thread is processing messages. SMTO_ERRORONEXIT 0x0020 The function should return 0 if the receiving window is destroyed or its owning thread dies while the message is being processed."
+        },
+        {
+          "name": "uTimeout",
+          "type": "UINT",
+          "description": "If the message is a broadcast message, each window can use the full time-out period. For example, if you specify a five second time-out period and there are three top-level windows that fail to process the message, you could have up to a 15 second delay."
+        },
+        {
+          "name": "lpdwResult",
+          "type": "PDWORD_PTR",
+          "description": "The value of this parameter depends on the message that is specified."
+        }
+      ],
+      "return": {
+        "type": "LRESULT",
+        "success": "If the function succeeds, the return value is nonzero. SendMessageTimeout does not provide information about individual windows timing out if HWND_BROADCAST is used.",
+        "failure": "If the function fails or times out, the return value is 0. Note that the function does not always call SetLastError on failure. If the reason for failure is important to you, call SetLastError(ERROR_SUCCESS) before calling SendMessageTimeout. If the function returns 0, and GetLastError returns ERROR_SUCCESS, then treat it as a generic failure."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "The function calls the window procedure for the specified window and, if the specified window belongs to a different thread, does not return until the window procedure has processed the message or the specified time-out period has elapsed. If the window receiving the message belongs to the same queue as the current thread, the window procedure is called directly—the time-out value is ignored. This function considers that a thread is not responding if it has not called GetMessage or a similar function within five seconds. The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling. > > The winuser.h header defines SendMessageTimeout as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Send a message with a timeout",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        DWORD_PTR result = 0;\n        SendMessageTimeoutA(window, WM_NULL, 0, 0, SMTO_ABORTIFHUNG, 100,\n            &result);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SendMessageTimeoutA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessagetimeouta",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SendMessageTimeoutA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-sendmessagetimeouta.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.sendnotifymessagea",
+      "name": "SendNotifyMessageA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sends the specified message to a window or windows.",
+      "description": "Sends the specified message to a window or windows. If the window was created by the calling thread, SendNotifyMessage calls the window procedure for the window and does not return until the window procedure has processed the message. If the window was created by a different thread, SendNotifyMessage passes the message to the window procedure and returns immediately; it does not wait for the window procedure to finish processing the message.",
+      "prototype": "BOOL SendNotifyMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "If this parameter is HWND_BROADCAST ((HWND)0xffff), the message is sent to all top-level windows in the system, including disabled or invisible unowned windows, overlapped windows, and pop-up windows; but the message is not sent to child windows."
+        },
+        {
+          "name": "Msg",
+          "type": "UINT",
+          "description": "For lists of the system-provided messages, see System-Defined Messages."
+        },
+        {
+          "name": "wParam",
+          "type": "WPARAM",
+          "description": "The wParam parameter for SendNotifyMessageA, as documented by the API reference."
+        },
+        {
+          "name": "lParam",
+          "type": "LPARAM",
+          "description": "The lParam parameter for SendNotifyMessageA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "If you send a message in the range below WM_USER to the asynchronous message functions (PostMessage, SendNotifyMessage, and SendMessageCallback), its message parameters cannot include pointers. Otherwise, the operation will fail. The functions will return before the receiving thread has had a chance to process the message and the sender will free the memory before it is used. Applications that need to communicate using HWND_BROADCAST should use the RegisterWindowMessage function to obtain a unique message for inter-application communication. The system only does marshalling for system messages (those in the range 0 to (WM_USER-1)). To send other messages (those >= WM_USER) to another process, you must do custom marshalling. > > The winuser.h header defines SendNotifyMessage as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Send a notification message to the console window",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        SendNotifyMessageA(window, WM_NULL, 0, 0);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SendNotifyMessageA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendnotifymessagea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SendNotifyMessageA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-sendnotifymessagea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setenvironmentvariablea",
+      "name": "SetEnvironmentVariableA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "processenv.h",
+      "minimum_windows": "Windows XP [desktop apps \\| UWP apps]",
+      "summary": "Sets the contents of the specified environment variable for the current process.",
+      "description": "Sets the contents of the specified environment variable for the current process.",
+      "prototype": "BOOL SetEnvironmentVariableA(LPCSTR lpName, LPCSTR lpValue);",
+      "parameters": [
+        {
+          "name": "lpName",
+          "type": "LPCSTR",
+          "description": "The name of the environment variable. The operating system creates the environment variable if it does not exist and lpValue is not NULL."
+        },
+        {
+          "name": "lpValue",
+          "type": "LPCSTR",
+          "description": "The contents of the environment variable. The maximum size of a user-defined environment variable is 32,767 characters. For more information, see Environment Variables. Windows Server 2003 and Windows XP: The total size of the environment block for a process may not exceed 32,767 characters. If this parameter is NULL, the variable is deleted from the current process's environment."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "environment",
+        "windows-ui"
+      ],
+      "remarks": "This function has no effect on the system environment variables or the environment variables of other processes. #### Examples For an example, see Changing Environment Variables. > > The processenv.h header defines SetEnvironmentVariable as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Set and remove a temporary environment variable",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    const char name[] = \"NTEXPLORER_EXAMPLE\";\n    SetEnvironmentVariableA(name, \"1\");\n\n    char value[16] = {};\n    GetEnvironmentVariableA(name, value, sizeof(value));\n    printf(\"Value: %s\\n\", value);\n\n    // A NULL value removes the variable.\n    SetEnvironmentVariableA(name, nullptr);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetEnvironmentVariableA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processenv/nf-processenv-setenvironmentvariablea",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetEnvironmentVariableA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/processenv/nf-processenv-setenvironmentvariablea.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processenv.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setfocus",
+      "name": "SetFocus",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sets the keyboard focus to the specified window.",
+      "description": "Sets the keyboard focus to the specified window. The window must be attached to the calling thread's message queue.",
+      "prototype": "HWND SetFocus(HWND hWnd);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "If this parameter is NULL, keystrokes are ignored."
+        }
+      ],
+      "return": {
+        "type": "HWND",
+        "success": "If the function succeeds, the return value is the handle to the window that previously had the keyboard focus. If the *hWnd* parameter is invalid or the window is not attached to the calling thread's message queue, the return value is NULL. To get extended error information, call GetLastError function.",
+        "failure": "Extended error ERROR_INVALID_PARAMETER (0x57) means that window is in disabled state."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "This function sends a WM_KILLFOCUS message to the window that loses the keyboard focus and a WM_SETFOCUS message to the window that receives the keyboard focus. It also activates either the window that receives the focus or the parent of the window that receives the focus. If a window is active but does not have the focus, any key pressed produces the WM_SYSCHAR, WM_SYSKEYDOWN, or WM_SYSKEYUP message. If the VK_MENU key is also pressed, bit 30 of the *lParam* parameter of the message is set. Otherwise, the messages produced do not have this bit set. By using the AttachThreadInput function, a thread can attach its input processing to another thread. This allows a thread to call SetFocus to set the keyboard focus to a window attached to another thread's message queue. ### Examples For an example, see Initializing a Dialog Box.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Set focus to the console window",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        SetFocus(window);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetFocus function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setfocus",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetFocus - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setfocus.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setforegroundwindow",
+      "name": "SetForegroundWindow",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Brings the thread that created the specified window into the foreground and activates the window.",
+      "description": "Brings the thread that created the specified window into the foreground and activates the window. Keyboard input is directed to the window, and various visual cues are changed for the user. The system assigns a slightly higher priority to the thread that created the foreground window than it does to other threads.",
+      "prototype": "BOOL SetForegroundWindow(HWND hWnd);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The hWnd parameter for SetForegroundWindow, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the window was not brought to the foreground, the return value is zero.",
+        "failure": "If the window was brought to the foreground, the return value is nonzero."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "The system restricts which processes can set the foreground window. A process can set the foreground window by calling SetForegroundWindow only if: - All of the following conditions are true: - The calling process belongs to a desktop application, not a UWP app or a Windows Store app designed for Windows 8 or 8.1. - The foreground process has not disabled calls to SetForegroundWindow by a previous call to the LockSetForegroundWindow function. - No menus are active. - Additionally, at least one of the following conditions is true: - The foreground lock time-out has expired (see SPI_GETFOREGROUNDLOCKTIMEOUT in SystemParametersInfo). - The calling process is the foreground process. - The calling process was started by the foreground process. - There is currently no foreground window, and thus no foreground process. - The calling process received the last input event. - Either the foreground process or the calling process is being debugged. It is possible for a process to be denied the right to set the foreground window even if it meets these conditions. An application cannot force a window to the foreground while the user is working with another window. Instead, Windows flashes the taskbar button of the window to notify the user. A process that can set the foreground window can enable another process to set the foreground window by calling the AllowSetForegroundWindow function. Th",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Set the console window as foreground",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        SetForegroundWindow(window);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetForegroundWindow function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setforegroundwindow",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetForegroundWindow - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setforegroundwindow.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setprocessdeppolicy",
+      "name": "SetProcessDEPPolicy",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "Kernel32.dll",
+      "library": "Kernel32.lib",
+      "header": "winbase.h",
+      "minimum_windows": "Windows Vista with SP1, Windows XP with SP3 [desktop apps only]",
+      "summary": "Changes data execution prevention (DEP) and DEP-ATL thunk emulation settings for a 32-bit process.",
+      "description": "Changes data execution prevention (DEP) and DEP-ATL thunk emulation settings for a 32-bit process.",
+      "prototype": "BOOL SetProcessDEPPolicy(DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "A DWORD that can be one or more of the following values. Value Meaning 0 If the DEP system policy is OptIn or OptOut and DEP is enabled for the process, setting dwFlags to 0 disables DEP for the process. PROCESS_DEP_ENABLE 0x00000001 Enables DEP permanently on the current process. After DEP has been enabled for the process by setting PROCESS_DEP_ENABLE, it cannot be disabled for the life of the process. PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION 0x00000002 Disables DEP-ATL thunk emulation for the current process, which prevents the system from intercepting NX faults that originate from the Active Template Library (ATL) thunk layer. For more information, see the Remarks section. This flag can be specified only with PROCESS_DEP_ENABLE."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, it returns TRUE.",
+        "failure": "If the function fails, it returns FALSE. To retrieve error values defined for this function, call GetLastError."
+      },
+      "tags": [
+        "windows-ui"
+      ],
+      "remarks": "The SetProcessDEPPolicy function overrides the system DEP policy for the current process unless its DEP policy was specified at process creation. The system DEP policy setting must be OptIn or OptOut. If the system DEP policy is AlwaysOff or AlwaysOn, SetProcessDEPPolicy returns an error. After DEP is enabled for a process, subsequent calls to SetProcessDEPPolicy are ignored. DEP policy specified at process creation with the PROC_THREAD_ATTRIBUTE_MITIGATION_POLICY attribute cannot be changed for the life of the process. In this case, calls to SetProcessDEPPolicy fail with ERROR_ACCESS_DENIED. SetProcessDEPPolicy is supported for 32-bit processes only. If this function is called on a 64-bit process, it fails with ERROR_NOT_SUPPORTED. Applications written to ATL 7.1 and earlier can attempt to execute code on pages marked as non-executable, which triggers an NX fault and terminates the application. DEP-ATL thunk emulation allows an application that would otherwise trigger an NX fault to run with DEP enabled. For information about ATL versions, see ATL and MFC Version Numbers. If DEP-ATL thunk emulation is enabled, the system intercepts NX faults, emulates the instructions, and handles the exceptions so the application can continue to run. If DEP-ATL thunk emulation is disabled by setting PROCESS_DEP_DISABLE_ATL_THUNK_EMULATION for the process, NX faults are not intercepted, which ",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Enable DEP for the current process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // This is a process-wide mitigation, not a system-wide change.\n    if (!SetProcessDEPPolicy(PROCESS_DEP_ENABLE)) {\n        printf(\"SetProcessDEPPolicy failed: %lu\\n\", GetLastError());\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetProcessDEPPolicy function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-setprocessdeppolicy",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetProcessDEPPolicy - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winbase/nf-winbase-setprocessdeppolicy.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winbase.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setpropa",
+      "name": "SetPropA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Adds a new entry or changes an existing entry in the property list of the specified window.",
+      "description": "Adds a new entry or changes an existing entry in the property list of the specified window. The function adds a new entry to the list if the specified character string does not exist already in the list. The new entry contains the string and the handle. Otherwise, the function replaces the string's current handle with the specified handle.",
+      "prototype": "BOOL SetPropA(HWND hWnd, LPCSTR lpString, HANDLE hData);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The hWnd parameter for SetPropA, as documented by the API reference."
+        },
+        {
+          "name": "lpString",
+          "type": "LPCSTR",
+          "description": "If this parameter is an atom, it must be a global atom created by a previous call to the GlobalAddAtom function. The atom must be placed in the low-order word of lpString; the high-order word must be zero."
+        },
+        {
+          "name": "hData",
+          "type": "HANDLE",
+          "description": "The data handle can identify any value useful to the application."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "See the reference for the documented success value.",
+        "failure": "If the data handle and string are added to the property list, the return value is nonzero. If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "Before a window is destroyed (that is, before it returns from processing the WM_NCDESTROY message), an application must remove all entries it has added to the property list. The application must use the RemoveProp function to remove the entries. SetProp is subject to the restrictions of User Interface Privilege Isolation (UIPI). A process can only call this function on a window belonging to a process of lesser or equal integrity level. When UIPI blocks property changes, GetLastError will return 5. #### Examples For an example, see Adding a Window Property. > > The winuser.h header defines SetProp as an alias that automatically selects the ANSI or Unicode version of this function based on the definition of the UNICODE preprocessor constant. Mixing usage of the encoding-neutral alias with code that is not encoding-neutral can lead to mismatches that result in compilation or runtime errors. For more information, see Conventions for Function Prototypes.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Set and remove a window property",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        SetPropA(window, \"NtExplorerExample\", reinterpret_cast<HANDLE>(1));\n        RemovePropA(window, \"NtExplorerExample\");\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetPropA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setpropa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetPropA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setpropa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.settimer",
+      "name": "SetTimer",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Creates a timer with the specified time-out value.",
+      "description": "Creates a timer with the specified time-out value.",
+      "prototype": "UINT_PTR SetTimer(HWND hWnd, UINT_PTR nIDEvent, UINT uElapse, TIMERPROC lpTimerFunc);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "This window must be owned by the calling thread. If a NULL value for hWnd is passed in along with an nIDEvent of an existing timer, that timer will be replaced in the same way that an existing non-NULL hWnd timer will be."
+        },
+        {
+          "name": "nIDEvent",
+          "type": "UINT_PTR",
+          "description": "If the hWnd parameter is NULL, and the nIDEvent does not match an existing timer then it is ignored and a new timer ID is generated. If the hWnd parameter is not NULL and the window specified by hWnd already has a timer with the value nIDEvent, then the existing timer is replaced by the new timer. When SetTimer replaces a timer, the timer is reset. Therefore, a message will be sent after the current time-out value elapses, but the previously set time-out value is ignored. If the call is not intended to replace an existing timer, nIDEvent should be 0 if the hWnd is NULL."
+        },
+        {
+          "name": "uElapse",
+          "type": "UINT",
+          "description": "If uElapse is less than USER_TIMER_MINIMUM (0x0000000A), the timeout is set to USER_TIMER_MINIMUM. If uElapse is greater than USER_TIMER_MAXIMUM (0x7FFFFFFF), the timeout is set to USER_TIMER_MAXIMUM."
+        },
+        {
+          "name": "lpTimerFunc",
+          "type": "TIMERPROC",
+          "description": "For more information about the function, see TimerProc. If lpTimerFunc is NULL, the system posts a WM_TIMER message to the application queue. The hwnd member of the message's MSG structure contains the value of the hWnd parameter."
+        }
+      ],
+      "return": {
+        "type": "UINT_PTR",
+        "success": "If the function succeeds and the hWnd parameter is NULL, the return value is an integer identifying the new timer. An application can pass this value to the KillTimer function to destroy the timer. If the function succeeds and the hWnd parameter is not NULL, then the return value is a nonzero integer. An application can pass the value of the nIDEvent parameter to the KillTimer function to destroy the timer.",
+        "failure": "If the function fails to create a timer, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "message-handling"
+      ],
+      "remarks": "An application can process WM_TIMER messages by including a WM_TIMER case statement in the window procedure or by specifying a TimerProc callback function when creating the timer. When you specify a TimerProc callback function, the DispatchMessage calls the callback function instead of calling the window procedure when it processes WM_TIMER with a non-NULL lParam. Therefore, you need to dispatch messages in the calling thread, even when you use TimerProc instead of processing WM_TIMER. The wParam parameter of the WM_TIMER message contains the value of the nIDEvent parameter. The timer identifier, nIDEvent, is specific to the associated window. Another window can have its own timer which has the same identifier as a timer owned by another window. The timers are distinct. SetTimer can reuse timer IDs in the case where hWnd is NULL. Before using SetTimer or other timer-related functions, it is recommended to set the UOI_TIMERPROC_EXCEPTION_SUPPRESSION flag to false through the SetUserObjectInformationW function, otherwise the application could behave unpredictably and could be vulnerable to security exploits. For more info, see SetUserObjectInformationW. #### Examples For an example, see Creating a Timer.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Create and cancel a thread timer",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic VOID CALLBACK OnTimer(HWND, UINT, UINT_PTR, DWORD) {\n}\n\nint main() {\n    UINT_PTR timer = SetTimer(nullptr, 0, 100, OnTimer);\n    if (timer != 0) {\n        KillTimer(nullptr, timer);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetTimer function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-settimer",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetTimer - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-settimer.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setwindowlonga",
+      "name": "SetWindowLongA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Changes an attribute of the specified window.",
+      "description": "Changes an attribute of the specified window. The function also sets the 32-bit (long) value at the specified offset into the extra window memory. Note This function has been superseded by the SetWindowLongPtr function. To write code that is compatible with both 32-bit and 64-bit versions of Windows, use the SetWindowLongPtr function.",
+      "prototype": "LONG SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The hWnd parameter for SetWindowLongA, as documented by the API reference."
+        },
+        {
+          "name": "nIndex",
+          "type": "int",
+          "description": "Valid values are in the range zero through the number of bytes of extra window memory, minus the size of an integer. To set any other value, specify one of the following values. Value Meaning GWL_EXSTYLE -20 Sets a new extended window style. GWL_HINSTANCE -6 Sets a new application instance handle. GWL_HWNDPARENT -8 Sets a new owner for a top-level window. GWL_ID -12 Sets a new identifier of the child window. The window cannot be a top-level window. GWL_STYLE -16 Sets a new window style. GWL_USERDATA -21 Sets the user data associated with the window. This data is intended for use by the application that created the window. Its value is initially zero. GWL_WNDPROC -4 Sets a new address for the window procedure. You cannot change this attribute if the window does not belong to the same process as the calling thread. The following values are also available when the hWnd parameter identifies"
+        },
+        {
+          "name": "dwNewLong",
+          "type": "LONG",
+          "description": "The dwNewLong parameter for SetWindowLongA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "LONG",
+        "success": "If the function succeeds, the return value is the previous value of the specified 32-bit integer. If the previous value of the specified 32-bit integer is zero, and the function succeeds, the return value is zero, but the function does not clear the last error information. This makes it difficult to determine success or failure. To deal with this, you should clear the last error information by calling SetLastError with 0 before calling SetWindowLong. Then, function failure will be indicated by a return value of zero and a GetLastError result that is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "Certain window data is cached, so changes you make using SetWindowLong will not take effect until you call the SetWindowPos function. Specifically, if you change any of the frame styles, you must call SetWindowPos with the SWP_FRAMECHANGED flag for the cache to be updated properly. If you use SetWindowLong with the GWL_WNDPROC index to replace the window procedure, the window procedure must conform to the guidelines specified in the description of the WindowProc callback function. If you use SetWindowLong with the DWL_MSGRESULT index to set the return value for a message processed by a dialog procedure, you should return TRUE directly afterward. Otherwise, if you call any function that results in your dialog procedure receiving a window message, the nested window message could overwrite the return value you set using DWL_MSGRESULT. Calling SetWindowLong with the GWL_WNDPROC index creates a subclass of the window class used to create the window. An application can subclass a system class, but should not subclass a window class created by another process. The SetWindowLong function creates the window subclass by changing the window procedure associated with a particular window class, causing the system to call the new window procedure instead of the previous one. An application must pass any messages not processed by the new window procedure to the previous window procedure by ca",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Read and re-apply a window style",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        LONG style = GetWindowLongA(window, GWL_STYLE);\n        SetWindowLongA(window, GWL_STYLE, style);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetWindowLongA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlonga",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetWindowLongA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setwindowlonga.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setwindowlongptra",
+      "name": "SetWindowLongPtrA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Changes an attribute of the specified window.",
+      "description": "Changes an attribute of the specified window. The function also sets a value at the specified offset in the extra window memory. Note To write code that is compatible with both 32-bit and 64-bit versions of Windows, use SetWindowLongPtr. When compiling for 32-bit Windows, SetWindowLongPtr is defined as a call to the SetWindowLong function.",
+      "prototype": "LONG_PTR SetWindowLongPtrA(HWND hWnd, int nIndex, LONG_PTR dwNewLong);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The SetWindowLongPtr function fails if the process that owns the window specified by the hWnd parameter is at a higher process privilege in the UIPI hierarchy than the process the calling thread resides in. Windows XP/2000: The SetWindowLongPtr function fails if the window specified by the hWnd parameter does not belong to the same process as the calling thread."
+        },
+        {
+          "name": "nIndex",
+          "type": "int",
+          "description": "Valid values are in the range zero through the number of bytes of extra window memory, minus the size of a LONG_PTR. To set any other value, specify one of the following values. Value Meaning GWL_EXSTYLE -20 Sets a new extended window style. GWLP_HINSTANCE -6 Sets a new application instance handle. GWLP_HWNDPARENT -8 Sets a new owner for a top-level window. GWLP_ID -12 Sets a new identifier of the child window. The window cannot be a top-level window. GWL_STYLE -16 Sets a new window style. GWLP_USERDATA -21 Sets the user data associated with the window. This data is intended for use by the application that created the window. Its value is initially zero. GWLP_WNDPROC -4 Sets a new address for the window procedure. The following values are also available when the hWnd parameter identifies a dialog box. Value Meaning DWLP_DLGPROC DWLP_MSGRESULT + sizeof(LRESULT) Sets the new pointer to the"
+        },
+        {
+          "name": "dwNewLong",
+          "type": "LONG_PTR",
+          "description": "The dwNewLong parameter for SetWindowLongPtrA, as documented by the API reference."
+        }
+      ],
+      "return": {
+        "type": "LONG_PTR",
+        "success": "If the function succeeds, the return value is the previous value of the specified offset. If the previous value is zero and the function succeeds, the return value is zero, but the function does not clear the last error information. To determine success or failure, clear the last error information by calling SetLastError with 0, then call SetWindowLongPtr. Function failure will be indicated by a return value of zero and a GetLastError result that is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "Certain window data is cached, so changes you make using SetWindowLongPtr will not take effect until you call the SetWindowPos function. If you use SetWindowLongPtr with the GWLP_WNDPROC index to replace the window procedure, the window procedure must conform to the guidelines specified in the description of the WindowProc callback function. If you use SetWindowLongPtr with the DWLP_MSGRESULT index to set the return value for a message processed by a dialog box procedure, the dialog box procedure should return TRUE directly afterward. Otherwise, if you call any function that results in your dialog box procedure receiving a window message, the nested window message could overwrite the return value you set by using DWLP_MSGRESULT. Calling SetWindowLongPtr with the GWLP_WNDPROC index creates a subclass of the window class used to create the window. An application can subclass a system class, but should not subclass a window class created by another process. The SetWindowLongPtr function creates the window subclass by changing the window procedure associated with a particular window class, causing the system to call the new window procedure instead of the previous one. An application must pass any messages not processed by the new window procedure to the previous window procedure by calling CallWindowProc. This allows the application to create a chain of window procedures. Reserve ",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Read and re-apply a window style",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        LONG_PTR style = GetWindowLongPtrA(window, GWL_STYLE);\n        SetWindowLongPtrA(window, GWL_STYLE, style);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetWindowLongPtrA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptra",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetWindowLongPtrA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setwindowlongptra.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setwindowshookexa",
+      "name": "SetWindowsHookExA",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Installs an application-defined hook procedure into a hook chain.",
+      "description": "Installs an application-defined hook procedure into a hook chain. You would install a hook procedure to monitor the system for certain types of events. These events are associated either with a specific thread or with all threads in the same desktop as the calling thread.",
+      "prototype": "HHOOK SetWindowsHookExA(int idHook, HOOKPROC lpfn, HINSTANCE hmod, DWORD dwThreadId);",
+      "parameters": [
+        {
+          "name": "idHook",
+          "type": "int",
+          "description": "This parameter can be one of the following values. Value Meaning WH_CALLWNDPROC 4 Installs a hook procedure that monitors messages before the system sends them to the destination window procedure. For more information, see the CallWndProc hook procedure. WH_CALLWNDPROCRET 12 Installs a hook procedure that monitors messages after they have been processed by the destination window procedure. For more information, see the HOOKPROC callback function hook procedure. WH_CBT 5 Installs a hook procedure that receives notifications useful to a CBT application. For more information, see the CBTProc hook procedure. WH_DEBUG 9 Installs a hook procedure useful for debugging other hook procedures. For more information, see the *DebugProc* hook procedure. WH_FOREGROUNDIDLE 11 Installs a hook procedure that will be called when the application's foreground thread is about to become idle. This hook is use"
+        },
+        {
+          "name": "lpfn",
+          "type": "HOOKPROC",
+          "description": "If the dwThreadId parameter is zero or specifies the identifier of a thread created by a different process, the lpfn parameter must point to a hook procedure in a DLL. Otherwise, lpfn can point to a hook procedure in the code associated with the current process."
+        },
+        {
+          "name": "hmod",
+          "type": "HINSTANCE",
+          "description": "The hMod parameter must be set to NULL if the dwThreadId parameter specifies a thread created by the current process and if the hook procedure is within the code associated with the current process."
+        },
+        {
+          "name": "dwThreadId",
+          "type": "DWORD",
+          "description": "For desktop apps, if this parameter is zero, the hook procedure is associated with all existing threads running in the same desktop as the calling thread. For Windows Store apps, see the Remarks section."
+        }
+      ],
+      "return": {
+        "type": "HHOOK",
+        "success": "If the function succeeds, the return value is the handle to the hook procedure.",
+        "failure": "If the function fails, the return value is NULL. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "hook-management"
+      ],
+      "remarks": "SetWindowsHookEx can be used to inject a DLL into another process. A 32-bit DLL cannot be injected into a 64-bit process, and a 64-bit DLL cannot be injected into a 32-bit process. If an application requires the use of hooks in other processes, it is required that a 32-bit application call SetWindowsHookEx to inject a 32-bit DLL into 32-bit processes, and a 64-bit application call SetWindowsHookEx to inject a 64-bit DLL into 64-bit processes. The 32-bit and 64-bit DLLs must have different names. Because hooks run in the context of an application, they must match the \"bitness\" of the application. If a 32-bit application installs a global hook on 64-bit Windows, the 32-bit hook is injected into each 32-bit process (the usual security boundaries apply). In a 64-bit process, the threads are still marked as \"hooked.\" However, because a 32-bit application must run the hook code, the system executes the hook in the hooking app's context; specifically, on the thread that called SetWindowsHookEx. This means that the hooking application must continue to pump messages or it might block the normal functioning of the 64-bit processes. If a 64-bit application installs a global hook on 64-bit Windows, the 64-bit hook is injected into each 64-bit process, while all 32-bit processes use a callback to the hooking application. To hook all applications on the desktop of a 64-bit Windows installati",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Install and remove a thread-scoped window hook",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic HHOOK g_hook = nullptr;\n\nstatic LRESULT CALLBACK OnCallWnd(int code, WPARAM wparam, LPARAM lparam) {\n    return CallNextHookEx(g_hook, code, wparam, lparam);\n}\n\nint main() {\n    g_hook = SetWindowsHookExA(WH_CALLWNDPROC, OnCallWnd, nullptr,\n        GetCurrentThreadId());\n    if (g_hook == nullptr) {\n        return 1;\n    }\n\n    // The hook is limited to the current thread and removed immediately.\n    UnhookWindowsHookEx(g_hook);\n    return 0;\n}\n",
+        "notes": "The hook is installed for the calling thread only and is removed before exit."
+      },
+      "references": [
+        {
+          "title": "SetWindowsHookExA function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetWindowsHookExA - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setwindowshookexa.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.setwineventhook",
+      "name": "SetWinEventHook",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sets an event hook function for a range of events.",
+      "description": "Sets an event hook function for a range of events.",
+      "prototype": "HWINEVENTHOOK SetWinEventHook(DWORD eventMin, DWORD eventMax, HMODULE hmodWinEventProc, WINEVENTPROC pfnWinEventProc, DWORD idProcess, DWORD idThread, DWORD dwFlags);",
+      "parameters": [
+        {
+          "name": "eventMin",
+          "type": "DWORD",
+          "description": "This parameter can be set to EVENT_MIN to indicate the lowest possible event value."
+        },
+        {
+          "name": "eventMax",
+          "type": "DWORD",
+          "description": "This parameter can be set to EVENT_MAX to indicate the highest possible event value."
+        },
+        {
+          "name": "hmodWinEventProc",
+          "type": "HMODULE",
+          "description": "If the hook function is not located in a DLL, or if the WINEVENT_OUTOFCONTEXT flag is specified, this parameter is NULL."
+        },
+        {
+          "name": "pfnWinEventProc",
+          "type": "WINEVENTPROC",
+          "description": "For more information about this function, see WinEventProc."
+        },
+        {
+          "name": "idProcess",
+          "type": "DWORD",
+          "description": "Specify zero (0) to receive events from all processes on the current desktop."
+        },
+        {
+          "name": "idThread",
+          "type": "DWORD",
+          "description": "If this parameter is zero, the hook function is associated with all existing threads on the current desktop."
+        },
+        {
+          "name": "dwFlags",
+          "type": "DWORD",
+          "description": "The following flags are valid: Value Meaning WINEVENT_INCONTEXT The DLL that contains the callback function is mapped into the address space of the process that generates the event. With this flag, the system sends event notifications to the callback function as they occur. The hook function must be in a DLL when this flag is specified. This flag has no effect when both the calling process and the generating process are not 32-bit or 64-bit processes, or when the generating process is a console application. For more information, see In-Context Hook Functions. WINEVENT_OUTOFCONTEXT The callback function is not mapped into the address space of the process that generates the event. Because the hook function is called across process boundaries, the system must queue events. Although this method is asynchronous, events are guaranteed to be in sequential order. For more information, see Out-of"
+        }
+      ],
+      "return": {
+        "type": "HWINEVENTHOOK",
+        "success": "If successful, returns an HWINEVENTHOOK value that identifies this event hook instance. Applications save this return value to use it with the UnhookWinEvent function.",
+        "failure": "If unsuccessful, returns zero."
+      },
+      "tags": [
+        "windows-ui",
+        "hook-management"
+      ],
+      "remarks": "This function allows clients to specify which processes and threads they are interested in. If the idProcess parameter is nonzero and idThread is zero, the hook function receives the specified events from all threads in that process. If the idProcess parameter is zero and idThread is nonzero, the hook function receives the specified events only from the thread specified by idThread. If both are zero, the hook function receives the specified events from all threads and processes. Clients can call SetWinEventHook multiple times if they want to register additional hook functions or listen for additional events. The client thread that calls SetWinEventHook must have a message loop in order to receive events. When you use SetWinEventHook to set a callback in managed code, you should use the GCHandle structure to avoid exceptions. This tells the garbage collector not to move the callback. For out-of-context events, the event is delivered on the same thread that called SetWinEventHook. In some situations, even if you request WINEVENT_INCONTEXT events, the events will still be delivered out-of-context. These scenarios include events from console windows and events from processes that have a different bit-depth (64 bit versus 32 bits) than the caller. While a hook function processes an event, additional events may be triggered, which may cause the hook function to reenter before the pro",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Watch foreground-window events for the current process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic void CALLBACK OnEvent(HWINEVENTHOOK, DWORD, HWND, LONG, LONG, DWORD,\n    DWORD) {\n}\n\nint main() {\n    HWINEVENTHOOK hook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND,\n        EVENT_SYSTEM_FOREGROUND, nullptr, OnEvent, GetCurrentProcessId(), 0,\n        WINEVENT_OUTOFCONTEXT);\n    if (hook != nullptr) {\n        UnhookWinEvent(hook);\n    }\n    return 0;\n}\n",
+        "notes": "The hook is scoped to the current process and removed immediately."
+      },
+      "references": [
+        {
+          "title": "SetWinEventHook function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwineventhook",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "SetWinEventHook - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-setwineventhook.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.showwindow",
+      "name": "ShowWindow",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Sets the specified window's show state.",
+      "description": "Sets the specified window's show state.",
+      "prototype": "BOOL ShowWindow(HWND hWnd, int nCmdShow);",
+      "parameters": [
+        {
+          "name": "hWnd",
+          "type": "HWND",
+          "description": "The hWnd parameter for ShowWindow, as documented by the API reference."
+        },
+        {
+          "name": "nCmdShow",
+          "type": "int",
+          "description": "This parameter is ignored the first time an application calls ShowWindow, if the program that launched the application provides a STARTUPINFO structure. Otherwise, the first time ShowWindow is called, the value should be the value obtained by the WinMain function in its nCmdShow parameter. In subsequent calls, this parameter can be one of the following values. | Value | Meaning | |-------|---------| | SW_HIDE0 | Hides the window and activates another window. | | SW_SHOWNORMALSW_NORMAL1 | Activates and displays a window. If the window is minimized, maximized, or arranged, the system restores it to its original size and position. An application should specify this flag when displaying the window for the first time. | | SW_SHOWMINIMIZED2 | Activates the window and displays it as a minimized window. | | SW_SHOWMAXIMIZEDSW_MAXIMIZE3 | Activates the window and displays it as a maximized"
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the window was previously hidden, the return value is zero.",
+        "failure": "If the window was previously visible, the return value is nonzero."
+      },
+      "tags": [
+        "windows-ui",
+        "window-management"
+      ],
+      "remarks": "To perform certain special effects when showing or hiding a window, use AnimateWindow. The first time an application calls ShowWindow, it should use the WinMain function's nCmdShow parameter as its nCmdShow parameter. Subsequent calls to ShowWindow must use one of the values in the given list, instead of the one specified by the WinMain function's nCmdShow parameter. As noted in the discussion of the nCmdShow parameter, the nCmdShow value is ignored in the first call to ShowWindow if the program that launched the application specifies startup information in the structure. In this case, ShowWindow uses the information specified in the STARTUPINFO structure to show the window. On subsequent calls, the application must call ShowWindow with nCmdShow set to SW_SHOWDEFAULT to use the startup information provided by the program that launched the application. This behavior is designed for the following situations: Applications create their main window by calling CreateWindow with the WS_VISIBLE flag set. Applications create their main window by calling CreateWindow with the WS_VISIBLE flag cleared, and later call ShowWindow with the SW_SHOW flag set to make it visible. #### Examples For an example, see Creating a Main Window.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Show the example console window",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    if (window != nullptr) {\n        ShowWindow(window, SW_SHOW);\n    }\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "ShowWindow function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "ShowWindow - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-showwindow.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.stretchblt",
+      "name": "StretchBlt",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "Gdi32.dll",
+      "library": "Gdi32.lib",
+      "header": "wingdi.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "The StretchBlt function copies a bitmap from a source rectangle into a destination rectangle, stretching or compressing the bitmap to fit the dimensions of the destination rectangle, if necessary.",
+      "description": "The StretchBlt function copies a bitmap from a source rectangle into a destination rectangle, stretching or compressing the bitmap to fit the dimensions of the destination rectangle, if necessary. The system stretches or compresses the bitmap according to the stretching mode currently set in the destination device context.",
+      "prototype": "BOOL StretchBlt(HDC hdcDest, int xDest, int yDest, int wDest, int hDest, HDC hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, DWORD rop);",
+      "parameters": [
+        {
+          "name": "hdcDest",
+          "type": "HDC",
+          "description": "A handle to the destination device context."
+        },
+        {
+          "name": "xDest",
+          "type": "int",
+          "description": "The x-coordinate, in logical units, of the upper-left corner of the destination rectangle."
+        },
+        {
+          "name": "yDest",
+          "type": "int",
+          "description": "The y-coordinate, in logical units, of the upper-left corner of the destination rectangle."
+        },
+        {
+          "name": "wDest",
+          "type": "int",
+          "description": "The width, in logical units, of the destination rectangle."
+        },
+        {
+          "name": "hDest",
+          "type": "int",
+          "description": "The height, in logical units, of the destination rectangle."
+        },
+        {
+          "name": "hdcSrc",
+          "type": "HDC",
+          "description": "A handle to the source device context."
+        },
+        {
+          "name": "xSrc",
+          "type": "int",
+          "description": "The x-coordinate, in logical units, of the upper-left corner of the source rectangle."
+        },
+        {
+          "name": "ySrc",
+          "type": "int",
+          "description": "The y-coordinate, in logical units, of the upper-left corner of the source rectangle."
+        },
+        {
+          "name": "wSrc",
+          "type": "int",
+          "description": "The width, in logical units, of the source rectangle."
+        },
+        {
+          "name": "hSrc",
+          "type": "int",
+          "description": "The height, in logical units, of the source rectangle."
+        },
+        {
+          "name": "rop",
+          "type": "DWORD",
+          "description": "The raster operation to be performed. Raster operation codes define how the system combines colors in output operations that involve a brush, a source bitmap, and a destination bitmap. See BitBlt for a list of common raster operation codes (ROPs). Note that the CAPTUREBLT ROP generally cannot be used for printing device contexts."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero."
+      },
+      "tags": [
+        "gdi",
+        "windows-ui"
+      ],
+      "remarks": "StretchBlt stretches or compresses the source bitmap in memory and then copies the result to the destination rectangle. This bitmap can be either a compatible bitmap (DDB) or the output from CreateDIBSection. The color data for pattern or destination pixels is merged after the stretching or compression occurs. When an enhanced metafile is being recorded, an error occurs (and the function returns FALSE) if the source device context identifies an enhanced-metafile device context. If the specified raster operation requires a brush, the system uses the brush currently selected into the destination device context. The destination coordinates are transformed by using the transformation currently specified for the destination device context; the source coordinates are transformed by using the transformation currently specified for the source device context. If the source transformation has a rotation or shear, an error occurs. If destination, source, and pattern bitmaps do not have the same color format, StretchBlt converts the source and pattern bitmaps to match the destination bitmap. If StretchBlt must convert a monochrome bitmap to a color bitmap, it sets white bits (1) to the background color and black bits (0) to the foreground color. To convert a color bitmap to a monochrome bitmap, it sets pixels that match the background color to white (1) and sets all other pixels to black (",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Stretch a small rectangle between device contexts",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    HWND window = GetConsoleWindow();\n    HDC source = GetDC(window);\n    if (source == nullptr) {\n        return 1;\n    }\n\n    HDC destination = CreateCompatibleDC(source);\n    if (destination == nullptr) {\n        ReleaseDC(window, source);\n        return 1;\n    }\n\n    StretchBlt(destination, 0, 0, 64, 64, source, 0, 0, 32, 32, SRCCOPY);\n\n    DeleteDC(destination);\n    ReleaseDC(window, source);\n    return 0;\n}\n",
+        "notes": "NtExplorer only displays this snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "StretchBlt function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-stretchblt",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "StretchBlt - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/wingdi/nf-wingdi-stretchblt.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (wingdi.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    },
+    {
+      "id": "win32.unhookwindowshookex",
+      "name": "UnhookWindowsHookEx",
+      "aliases": [],
+      "category": "Windows and UI",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Removes a hook procedure installed in a hook chain by the SetWindowsHookEx function.",
+      "description": "Removes a hook procedure installed in a hook chain by the SetWindowsHookEx function.",
+      "prototype": "BOOL UnhookWindowsHookEx(HHOOK hhk);",
+      "parameters": [
+        {
+          "name": "hhk",
+          "type": "HHOOK",
+          "description": "This parameter is a hook handle obtained by a previous call to SetWindowsHookEx."
+        }
+      ],
+      "return": {
+        "type": "BOOL",
+        "success": "If the function succeeds, the return value is nonzero.",
+        "failure": "If the function fails, the return value is zero. To get extended error information, call GetLastError."
+      },
+      "tags": [
+        "windows-ui",
+        "hook-management"
+      ],
+      "remarks": "The hook procedure can be in the state of being called by another thread even after UnhookWindowsHookEx returns. If the hook procedure is not being called concurrently, the hook procedure is removed immediately before UnhookWindowsHookEx returns. #### Examples For an example, see Monitoring System Events.",
+      "maldev_notes": "Window, message, and graphics APIs are ordinary in desktop applications and automation tools. Analysts note the window, thread, message, and calling process when reconstructing UI behavior.",
+      "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
+      "example": {
+        "language": "cpp",
+        "title": "Install and remove a thread-scoped window hook",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic HHOOK g_hook = nullptr;\n\nstatic LRESULT CALLBACK OnCallWnd(int code, WPARAM wparam, LPARAM lparam) {\n    return CallNextHookEx(g_hook, code, wparam, lparam);\n}\n\nint main() {\n    g_hook = SetWindowsHookExA(WH_CALLWNDPROC, OnCallWnd, nullptr,\n        GetCurrentThreadId());\n    if (g_hook == nullptr) {\n        return 1;\n    }\n\n    // The hook is limited to the current thread and removed immediately.\n    UnhookWindowsHookEx(g_hook);\n    return 0;\n}\n",
+        "notes": "The hook is installed for the calling thread only and is removed before exit."
+      },
+      "references": [
+        {
+          "title": "UnhookWindowsHookEx function",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-unhookwindowshookex",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "UnhookWindowsHookEx - sdk-api source",
+          "url": "https://github.com/MicrosoftDocs/sdk-api/blob/docs/sdk-api/sdk-api-src/content/winuser/nf-winuser-unhookwindowshookex.md",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (winuser.h); prototype checked against the Windows SDK 10.0.16299 headers."
+    }
+  ]
+}
