@@ -4,26 +4,7 @@ NtExplorer is an offline-first, keyboard-driven terminal reference for Windows A
 
 It ships a bundled, versioned JSON catalog inside a single executable. Browsing and searching work with no network connection and no administrator privileges. NtExplorer **documents** APIs — it never calls catalogued functions, executes examples, or manipulates other processes.
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ NtExplorer                                   Windows API Reference · v0.4.0 │
-├──────────────────┬────────────────────┬────────────────────────────────────┤
-│ CATEGORIES       │ SEARCH RESULTS     │ API DETAILS                        │
-│ ▸All APIs     403│ ▸VirtualAllocEx    │ VirtualAllocEx                     │
-│  Favorites       │  · name            │ Reserves or commits memory in ...  │
-│  Recently Viewed │  VirtualAlloc      │                                    │
-│  Process Manag...│  · name prefix     │ DLL: Kernel32.dll                  │
-│  Thread Managem..│  VirtualProtectEx  │ Header: memoryapi.h                │
-│  Memory Manageme.│  · name prefix     │                                    │
-│  ...             │                    │ DESCRIPTION                        │
-│ LIBRARY          │                    │ ...                                │
-│  MalDev Tags     │                    │ PARAMETERS                         │
-│  Structures    10│                    │ hProcess                           │
-│  Constants     56│                    │ lpAddress                          │
-├──────────────────┴────────────────────┴────────────────────────────────────┤
-│ / Search  Tab Panels  Enter Open  y Copy  g Related  f Favorite ...       │
-└──────────────────────────────────────────────────────────────────────────┘
-```
+![screenshot.png](img/screenshot.png)
 
 ## Features (Release 0.4)
 
@@ -87,26 +68,26 @@ ntexplorer help            Show usage
 
 ## Keyboard reference
 
-| Key | Action |
-|---|---|
-| `↑` / `↓` or `j` / `k` | Move selection / scroll detail |
-| `PgUp` / `PgDn` | Page through a panel |
-| `Home` / `End` | First / last item |
-| `Ctrl+U` / `Ctrl+D` | Half-page detail scroll |
-| `/` | Search |
-| `Esc` | Clear search or go back |
-| `Tab` / `Shift+Tab` | Move between panels |
-| `Enter` | Open selected API/structure/constant or apply tag |
-| `g` | Related APIs, or reverse API links for a structure or constant |
-| `r` | References |
-| `f` | Toggle favorite (API entries) |
-| `e` | Export entry as JSON or Markdown |
-| `y` | Copy the focused panel selection, or choose a detail section |
-| `x` | Show/hide examples |
-| `s` | Open Structures; from an API, its first related structure |
-| `c` | Open Constants; from an API, its first related constant |
-| `?` | Help |
-| `q` | Quit |
+| Key                    | Action                                                         |
+| ---------------------- | -------------------------------------------------------------- |
+| `↑` / `↓` or `j` / `k` | Move selection / scroll detail                                 |
+| `PgUp` / `PgDn`        | Page through a panel                                           |
+| `Home` / `End`         | First / last item                                              |
+| `Ctrl+U` / `Ctrl+D`    | Half-page detail scroll                                        |
+| `/`                    | Search                                                         |
+| `Esc`                  | Clear search or go back                                        |
+| `Tab` / `Shift+Tab`    | Move between panels                                            |
+| `Enter`                | Open selected API/structure/constant or apply tag              |
+| `g`                    | Related APIs, or reverse API links for a structure or constant |
+| `r`                    | References                                                     |
+| `f`                    | Toggle favorite (API entries)                                  |
+| `e`                    | Export entry as JSON or Markdown                               |
+| `y`                    | Copy the focused panel selection, or choose a detail section   |
+| `x`                    | Show/hide examples                                             |
+| `s`                    | Open Structures; from an API, its first related structure      |
+| `c`                    | Open Constants; from an API, its first related constant        |
+| `?`                    | Help                                                           |
+| `q`                    | Quit                                                           |
 
 Bindings are centralized in `internal/tui/keys.go`.
 
