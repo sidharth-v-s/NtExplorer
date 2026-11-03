@@ -224,6 +224,67 @@ func (m Model) renderDetail(api catalog.API) string {
 	return strings.Join(lines, "\n")
 }
 
+// renderStatusDetail builds the scrollable detail document for an NTSTATUS
+// value.
+func (m Model) renderStatusDetail(status catalog.NTStatus) string {
+	width := m.detail.Width
+	if width < 12 {
+		width = 12
+	}
+
+	var lines []string
+	addBlank := func() { lines = append(lines, "") }
+	heading := func(title string) {
+		addBlank()
+		lines = append(lines, m.styles.Section.Render(title))
+	}
+	addField := func(label, value string) {
+		if strings.TrimSpace(value) == "" {
+			return
+		}
+		labelText := label + ": "
+		available := width - runewidth.StringWidth(labelText)
+		if available < 8 {
+			lines = append(lines, m.styles.Label.Render(labelText))
+			lines = append(lines, wrapText(value, width)...)
+			return
+		}
+		wrapped := wrapText(value, available)
+		if len(wrapped) == 0 {
+			return
+		}
+		lines = append(lines, m.styles.Label.Render(labelText)+m.styles.Text.Render(wrapped[0]))
+		padding := strings.Repeat(" ", runewidth.StringWidth(labelText))
+		for _, extra := range wrapped[1:] {
+			lines = append(lines, padding+m.styles.Text.Render(extra))
+		}
+	}
+
+	lines = append(lines, m.styles.Brand.Render(truncatePlain(status.Name, width)))
+	if status.Value != "" {
+		lines = append(lines, "  "+m.styles.Code.Render(truncatePlain(status.Value, width-2)))
+	}
+	if status.Severity != "" {
+		lines = append(lines, m.styles.RowDim.Render(truncatePlain(strings.ToUpper(status.Severity), width)))
+	}
+
+	if status.Description != "" {
+		heading("DESCRIPTION")
+		lines = append(lines, wrapText(status.Description, width)...)
+	}
+
+	if len(status.References) > 0 {
+		heading("REFERENCES")
+		lines = append(lines, m.styles.Text.Render(fmt.Sprintf("%d Microsoft source(s) · press r to inspect", len(status.References))))
+	}
+
+	addBlank()
+	addField("ID", status.ID)
+	lines = append(lines, "")
+	lines = append(lines, m.styles.RowDim.Render("r references · e export · y copy"))
+	return strings.Join(lines, "\n")
+}
+
 // structureName resolves a structure ID for display, falling back to the ID.
 func (m Model) structureName(id string) string {
 	if m.app != nil {

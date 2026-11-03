@@ -27,6 +27,17 @@ func TestEmbeddedCatalogIsValid(t *testing.T) {
 	if len(cat.Constants) < 50 {
 		t.Errorf("embedded catalog has %d constants, release 0.3 requires at least 50", len(cat.Constants))
 	}
+	if len(cat.Statuses) < 100 {
+		t.Errorf("embedded catalog has %d NTSTATUS values, release 0.5 requires at least 100", len(cat.Statuses))
+	}
+	for _, status := range cat.Statuses {
+		if len(status.References) == 0 {
+			t.Errorf("NTSTATUS %s has no references", status.ID)
+		}
+		if status.Value == "" || status.Severity == "" || status.Description == "" {
+			t.Errorf("NTSTATUS %s is missing value, severity, or description", status.ID)
+		}
+	}
 	if len(cat.Categories) == 0 || len(cat.Tags) == 0 {
 		t.Error("catalog metadata is incomplete")
 	}

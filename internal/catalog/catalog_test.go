@@ -166,3 +166,65 @@ func TestValidateAcceptsWellFormedCatalog(t *testing.T) {
 		t.Fatalf("unexpected errors: %s", FormatIssues(issues))
 	}
 }
+
+func TestValidateStatusRecords(t *testing.T) {
+	cat := &Catalog{
+		Meta: Meta{Categories: []Category{{Name: "Memory Management"}}},
+		Statuses: []NTStatus{
+			{
+				ID:          "ntstatus.status_access_denied",
+				Name:        "STATUS_ACCESS_DENIED",
+				Value:       "0xC0000022",
+				Severity:    "error",
+				Description: "Access denied.",
+				References:  []Reference{{Title: "NTSTATUS Values", URL: "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/", SourceType: "official-documentation"}},
+				Source:      "ntstatus/statuses.json",
+			},
+			{
+				ID:       "bad-id",
+				Name:     "",
+				Value:    "C0000022",
+				Severity: "severe",
+				Source:   "ntstatus/statuses.json",
+			},
+			{
+				ID:          "ntstatus.status_pending",
+				Name:        "STATUS_PENDING",
+				Value:       "0xC0000103",
+				Severity:    "success",
+				Description: "Pending.",
+				Source:      "ntstatus/statuses.json",
+			},
+		},
+	}
+	issues := Validate(cat)
+	text := FormatIssues(issues)
+	for _, want := range []string{
+		"value must be a 32-bit hexadecimal constant",
+		"NTSTATUS record has an empty name",
+		"unknown severity",
+		"severity \"success\" does not match",
+		"id does not follow the lowercase dotted convention",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("validation output missing %q:\n%s", want, text)
+		}
+	}
+}
+
+func TestValidateAcceptsWellFormedStatus(t *testing.T) {
+	cat := &Catalog{
+		Meta: Meta{Categories: []Category{{Name: "Memory Management"}}},
+		Statuses: []NTStatus{{
+			ID:          "ntstatus.status_success",
+			Name:        "STATUS_SUCCESS",
+			Value:       "0x00000000",
+			Severity:    "success",
+			Description: "The operation completed successfully.",
+			References:  []Reference{{Title: "NTSTATUS Values", URL: "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/", SourceType: "official-documentation"}},
+		}},
+	}
+	if issues := Validate(cat); HasErrors(issues) {
+		t.Fatalf("unexpected validation errors:\n%s", FormatIssues(issues))
+	}
+}

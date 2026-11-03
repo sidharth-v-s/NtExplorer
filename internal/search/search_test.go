@@ -321,3 +321,90 @@ func TestConstantEmptyQueryReturnsAll(t *testing.T) {
 		t.Fatalf("empty query: got %d results", len(results))
 	}
 }
+
+func statusFixture() []catalog.NTStatus {
+	return []catalog.NTStatus{
+		{
+			ID:          "ntstatus.status_success",
+			Name:        "STATUS_SUCCESS",
+			Value:       "0x00000000",
+			Severity:    "success",
+			Description: "The requested operation completed successfully.",
+		},
+		{
+			ID:          "ntstatus.status_access_denied",
+			Name:        "STATUS_ACCESS_DENIED",
+			Value:       "0xC0000022",
+			Severity:    "error",
+			Description: "The caller does not have the access rights required for the object or operation.",
+		},
+		{
+			ID:          "ntstatus.status_pending",
+			Name:        "STATUS_PENDING",
+			Value:       "0x00000103",
+			Severity:    "success",
+			Description: "The requested operation has started but has not completed yet.",
+		},
+		{
+			ID:          "ntstatus.status_no_more_files",
+			Name:        "STATUS_NO_MORE_FILES",
+			Value:       "0x80000006",
+			Severity:    "warning",
+			Description: "No more files matched the search pattern.",
+		},
+	}
+}
+
+func statusNames(results []StatusResult) []string {
+	out := make([]string, len(results))
+	for i, result := range results {
+		out[i] = result.Status.Name
+	}
+	return out
+}
+
+func TestStatusExactNameRanksFirst(t *testing.T) {
+	results := QueryStatuses(statusFixture(), "STATUS_ACCESS_DENIED", 0)
+	if len(results) == 0 || results[0].Status.Name != "STATUS_ACCESS_DENIED" {
+		t.Fatalf("exact status name should rank first: %v", statusNames(results))
+	}
+	if len(results[0].Reasons) == 0 {
+		t.Fatal("expected a match reason")
+	}
+}
+
+func TestStatusNumericValueForms(t *testing.T) {
+	for _, query := range []string{"0xC0000022", "c0000022", "0xc0000022", "3221225506"} {
+		results := QueryStatuses(statusFixture(), query, 0)
+		if len(results) == 0 || results[0].Status.Name != "STATUS_ACCESS_DENIED" {
+			t.Fatalf("value query %q: %v", query, statusNames(results))
+		}
+	}
+}
+
+func TestStatusSeverityAndDescriptionSearch(t *testing.T) {
+	if got := statusNames(QueryStatuses(statusFixture(), "error", 0)); len(got) != 1 || got[0] != "STATUS_ACCESS_DENIED" {
+		t.Fatalf("severity search: %v", got)
+	}
+	if got := statusNames(QueryStatuses(statusFixture(), "search pattern", 0)); len(got) != 1 || got[0] != "STATUS_NO_MORE_FILES" {
+		t.Fatalf("description search: %v", got)
+	}
+}
+
+func TestStatusMultiTermAndLimit(t *testing.T) {
+	if got := statusNames(QueryStatuses(statusFixture(), "STATUS access", 0)); len(got) != 1 || got[0] != "STATUS_ACCESS_DENIED" {
+		t.Fatalf("multi-term status search: %v", got)
+	}
+	if got := QueryStatuses(statusFixture(), "STATUS", 2); len(got) != 2 {
+		t.Fatalf("status limit ignored: got %d", len(got))
+	}
+	if got := QueryStatuses(statusFixture(), "zzzznotastatus", 0); len(got) != 0 {
+		t.Fatalf("unexpected matches: %v", statusNames(got))
+	}
+}
+
+func TestStatusEmptyQueryReturnsAll(t *testing.T) {
+	if got := QueryStatuses(statusFixture(), "  ", 0); len(got) != 4 {
+		t.Fatalf("empty query: got %d results", len(got))
+	}
+}

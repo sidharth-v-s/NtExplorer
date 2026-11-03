@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -85,10 +86,12 @@ func FormatIssues(issues []Issue) string {
 }
 
 var (
-	apiIDPattern = regexp.MustCompile(`^[a-z0-9]+(\.[a-z0-9_]+)+$`)
-	tagPattern   = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
-	exampleLangs = map[string]bool{"c": true, "cpp": true}
-	allowedURLs  = map[string]bool{"http": true, "https": true}
+	apiIDPattern     = regexp.MustCompile(`^[a-z0-9]+(\.[a-z0-9_]+)+$`)
+	tagPattern       = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	statusValueRegex = regexp.MustCompile(`^0x[0-9A-Fa-f]{8}$`)
+	exampleLangs     = map[string]bool{"c": true, "cpp": true}
+	allowedURLs      = map[string]bool{"http": true, "https": true}
+	statusSeverities = map[string]bool{"success": true, "informational": true, "warning": true, "error": true}
 )
 
 // Validate checks the merged catalog for the rules defined by the project
@@ -203,18 +206,56 @@ func Validate(c *Catalog) []Issue {
 	for _, s := range c.Statuses {
 		if strings.TrimSpace(s.ID) == "" {
 			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, Field: "id", Message: "NTSTATUS record has an empty id"})
+		} else if !apiIDPattern.MatchString(s.ID) {
+			issues = append(issues, Issue{Severity: SeverityWarning, File: s.Source, RecordID: s.ID, Field: "id", Message: "id does not follow the lowercase dotted convention, e.g. ntstatus.status_access_denied"})
 		}
 		if seenStatusIDs[s.ID] {
 			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "id", Message: "duplicate NTSTATUS id"})
 		}
 		seenStatusIDs[s.ID] = true
-		if strings.TrimSpace(s.Name) == "" || strings.TrimSpace(s.Value) == "" {
-			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "name", Message: "NTSTATUS record needs a name and value"})
+		if strings.TrimSpace(s.Name) == "" {
+			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "name", Message: "NTSTATUS record has an empty name"})
+		}
+		if strings.TrimSpace(s.Value) == "" {
+			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "value", Message: "NTSTATUS record has an empty value"})
+		} else if !statusValueRegex.MatchString(strings.TrimSpace(s.Value)) {
+			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "value", Message: "value must be a 32-bit hexadecimal constant such as 0xC0000022"})
+		} else if severity, ok := statusSeverity(s.Value); ok && !strings.EqualFold(s.Severity, severity) {
+			issues = append(issues, Issue{Severity: SeverityWarning, File: s.Source, RecordID: s.ID, Field: "severity", Message: fmt.Sprintf("severity %q does not match the NTSTATUS severity bits (%s)", s.Severity, severity)})
+		}
+		if strings.TrimSpace(s.Severity) == "" {
+			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "severity", Message: "NTSTATUS record has no severity"})
+		} else if !statusSeverities[strings.ToLower(s.Severity)] {
+			issues = append(issues, Issue{Severity: SeverityError, File: s.Source, RecordID: s.ID, Field: "severity", Message: fmt.Sprintf("unknown severity %q; expected success, informational, warning, or error", s.Severity)})
+		}
+		if strings.TrimSpace(s.Description) == "" {
+			issues = append(issues, Issue{Severity: SeverityWarning, File: s.Source, RecordID: s.ID, Field: "description", Message: "NTSTATUS record has no description"})
 		}
 		issues = append(issues, validateReferences(s.Source, s.ID, "statuses", s.References, false)...)
 	}
 
 	return issues
+}
+
+// statusSeverity derives the severity label from bits 30 and 31 of an
+// NTSTATUS value.
+func statusSeverity(value string) (string, bool) {
+	text := strings.TrimSpace(value)
+	text = strings.TrimPrefix(strings.TrimPrefix(text, "0x"), "0X")
+	parsed, err := strconv.ParseUint(text, 16, 32)
+	if err != nil {
+		return "", false
+	}
+	switch (parsed >> 30) & 3 {
+	case 0:
+		return "success", true
+	case 1:
+		return "informational", true
+	case 2:
+		return "warning", true
+	default:
+		return "error", true
+	}
 }
 
 func validateAPI(c *Catalog, api API, seenIDs map[string]bool, seenNames map[string]string, aliasOwner map[string]string) []Issue {

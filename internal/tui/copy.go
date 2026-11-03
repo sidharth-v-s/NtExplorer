@@ -59,8 +59,13 @@ func (m Model) listCopyTargets() []copyTarget {
 		if tag, ok := m.selectedTag(); ok {
 			return []copyTarget{{Label: "Selected tag", Text: tag}}
 		}
-	case listSoon:
-		return nil
+	}
+	if status, ok := m.selectedStatus(); ok {
+		text := status.Name
+		if status.Value != "" {
+			text += "  " + status.Value
+		}
+		return []copyTarget{{Label: "Selected NTSTATUS value", Text: text}}
 	}
 	if structure, ok := m.selectedStructure(); ok {
 		return []copyTarget{{Label: "Selected structure", Text: structure.Name}}
@@ -80,6 +85,8 @@ func (m Model) listCopyTargets() []copyTarget {
 
 func (m Model) detailCopyTargets() []copyTarget {
 	switch {
+	case m.statusActive():
+		return statusCopyTargets(m.currentStatus)
 	case m.constantActive():
 		return constantCopyTargets(m.currentConstant)
 	case m.structureActive():
@@ -251,6 +258,24 @@ func constantCopyTargets(constant catalog.Constant) []copyTarget {
 	add("Value", copySection("VALUE", constant.Value))
 	add("Description", copySection("DESCRIPTION", constant.Description))
 	add("References", referencesCopyText(constant.References))
+	return targets
+}
+
+func statusCopyTargets(status catalog.NTStatus) []copyTarget {
+	targets := []copyTarget{{
+		Label: "Entire entry (Markdown)",
+		Text:  export.StatusMarkdown(status),
+	}}
+	add := func(label, text string) {
+		if strings.TrimSpace(text) != "" {
+			targets = append(targets, copyTarget{Label: label, Text: text})
+		}
+	}
+	add("Name", copySection("NTSTATUS", status.Name))
+	add("Value", copySection("VALUE", status.Value))
+	add("Severity", copySection("SEVERITY", status.Severity))
+	add("Description", copySection("DESCRIPTION", status.Description))
+	add("References", referencesCopyText(status.References))
 	return targets
 }
 

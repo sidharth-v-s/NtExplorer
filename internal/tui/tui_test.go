@@ -832,3 +832,168 @@ func TestConstantLayoutFillsTerminal(t *testing.T) {
 		}
 	}
 }
+
+func selectStatuses(t *testing.T, m Model) Model {
+	t.Helper()
+	for i, item := range m.sidebar {
+		if item.Kind == sideStatuses {
+			m.sidebarIndex = i
+			m.loadSidebarContent()
+			return m
+		}
+	}
+	t.Fatal("NTSTATUS sidebar entry not found")
+	return m
+}
+
+func gotoStatuses(t *testing.T, m Model) Model {
+	t.Helper()
+	for m.sidebarItem().Kind != sideStatuses {
+		before := m.sidebarIndex
+		m = send(m, runes("j"))
+		if m.sidebarIndex == before {
+			t.Fatal("NTSTATUS sidebar entry not found")
+		}
+	}
+	if m.mode != listStatuses {
+		t.Fatalf("expected NTSTATUS list, got %s", m.ModeName())
+	}
+	return m
+}
+
+func TestStatusViewAndSearch(t *testing.T) {
+	m := newTestModel(t)
+	m = gotoStatuses(t, m)
+	if len(m.statuses) < 100 {
+		t.Fatalf("expected the bundled NTSTATUS values, got %d", len(m.statuses))
+	}
+	if len(m.currentStatus.Name) == 0 {
+		t.Fatal("NTSTATUS list should preview the first value")
+	}
+	view := m.View()
+	for _, want := range []string{"NTSTATUS", m.statuses[0].Name, "DESCRIPTION", "REFERENCES"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("NTSTATUS view missing %q:\n%s", want, view)
+		}
+	}
+
+	m = send(m, runes("/"))
+	m = send(m, runes("STATUS_ACCESS_DENIED"))
+	if m.mode != listStatusSearch {
+		t.Fatalf("expected NTSTATUS search mode, got %s", m.ModeName())
+	}
+	if len(m.statusResults) == 0 || m.statusResults[0].Status.Name != "STATUS_ACCESS_DENIED" {
+		t.Fatalf("unexpected NTSTATUS results: %+v", m.statusResults)
+	}
+	if !strings.Contains(m.View(), "NTSTATUS SEARCH") {
+		t.Fatalf("NTSTATUS search heading missing:\n%s", m.View())
+	}
+
+	m = send(m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.hasStatus || m.currentStatus.Name != "STATUS_ACCESS_DENIED" {
+		t.Fatalf("Enter did not open the NTSTATUS value: %+v", m.currentStatus)
+	}
+	if m.hasCurrent || m.hasStructure || m.hasConstant {
+		t.Fatal("NTSTATUS detail state must be exclusive")
+	}
+	detail := m.renderStatusDetail(m.currentStatus)
+	for _, want := range []string{"0xC0000022", "ERROR", "DESCRIPTION", "access rights", "REFERENCES"} {
+		if !strings.Contains(detail, want) {
+			t.Errorf("NTSTATUS detail missing %q:\n%s", want, detail)
+		}
+	}
+}
+
+func TestStatusValueSearch(t *testing.T) {
+	m := newTestModel(t)
+	m = gotoStatuses(t, m)
+	m = send(m, runes("/"))
+	m = send(m, runes("0xC0000022"))
+	if len(m.statusResults) == 0 || m.statusResults[0].Status.Name != "STATUS_ACCESS_DENIED" {
+		t.Fatalf("value search did not match STATUS_ACCESS_DENIED: %+v", m.statusResults)
+	}
+}
+
+func TestStatusSearchNoResults(t *testing.T) {
+	m := newTestModel(t)
+	m = gotoStatuses(t, m)
+	m = send(m, runes("/"))
+	m = send(m, runes("zzzznotastatus"))
+	if len(m.statusResults) != 0 {
+		t.Fatalf("unexpected NTSTATUS results: %d", len(m.statusResults))
+	}
+	if !strings.Contains(m.View(), "No matches") {
+		t.Fatalf("empty NTSTATUS state not rendered:\n%s", m.View())
+	}
+}
+
+func TestStatusFavoriteIsDisabled(t *testing.T) {
+	m := newTestModel(t)
+	m = gotoStatuses(t, m)
+	before := len(m.app.State.Favorites)
+	m = send(m, runes("f"))
+	if got := len(m.app.State.Favorites); got != before {
+		t.Fatalf("favorite count changed from %d to %d", before, got)
+	}
+	if !strings.Contains(m.status, "API entries only") {
+		t.Fatalf("unexpected status: %q", m.status)
+	}
+}
+
+func TestStatusExportWritesFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	m := newTestModel(t)
+	m = gotoStatuses(t, m)
+	m = send(m, runes("/"))
+	m = send(m, runes("STATUS_ACCESS_DENIED"))
+	m = send(m, tea.KeyMsg{Type: tea.KeyEnter})
+
+	m = send(m, runes("e"))
+	if m.overlay != overlayExport {
+		t.Fatalf("expected export overlay, got %v", m.overlay)
+	}
+	if !strings.Contains(m.View(), "NTSTATUS record as JSON") {
+		t.Fatalf("NTSTATUS export menu missing:\n%s", m.View())
+	}
+	m = send(m, tea.KeyMsg{Type: tea.KeyEnter})
+	if m.overlay != overlayNone {
+		t.Fatalf("NTSTATUS export did not complete: %v (%s)", m.overlay, m.status)
+	}
+	path := filepath.Join("exports", "STATUS_ACCESS_DENIED.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("NTSTATUS export file missing: %v", err)
+	}
+	if !strings.Contains(string(data), `"status"`) || !strings.Contains(string(data), `"id": "ntstatus.status_access_denied"`) {
+		t.Fatalf("unexpected NTSTATUS export:\n%s", data)
+	}
+}
+
+func TestStatusCopyTargets(t *testing.T) {
+	m := newTestModel(t)
+	m = selectStatuses(t, m)
+	m.focus = panelDetail
+	m = send(m, runes("y"))
+	labels := make(map[string]bool)
+	for _, target := range m.copyTargets {
+		labels[target.Label] = true
+	}
+	for _, want := range []string{"Entire entry (Markdown)", "Value", "Severity", "Description", "References"} {
+		if !labels[want] {
+			t.Errorf("NTSTATUS copy target %q missing: %+v", want, labels)
+		}
+	}
+}
+
+func TestStatusRelatedIsUnavailable(t *testing.T) {
+	m := newTestModel(t)
+	m = selectStatuses(t, m)
+	m.focus = panelDetail
+	m = send(m, runes("g"))
+	if m.overlay == overlayRelated {
+		t.Fatal("NTSTATUS records should not open a related API overlay")
+	}
+	if !strings.Contains(m.status, "not recorded") {
+		t.Fatalf("unexpected status: %q", m.status)
+	}
+}

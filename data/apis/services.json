@@ -221,9 +221,9 @@
       "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
       "example": {
         "language": "cpp",
-        "title": "Prepare a service definition without changing the system",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
-        "notes": "Service changes are privileged; the snippet is setup-only."
+        "title": "Create and remove a temporary service",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CREATE_SERVICE);\n    if (manager == nullptr) {\n        printf(\"OpenSCManagerA failed: %lu (administrator required)\\n\",\n            GetLastError());\n        return 1;\n    }\n\n    char serviceName[64] = {};\n    sprintf_s(serviceName, \"NtExplorerExample%lu\", GetCurrentProcessId());\n    const char* binaryPath = \"C:\\\\Windows\\\\System32\\\\cmd.exe /c exit 0\";\n\n    SC_HANDLE service = CreateServiceA(manager, serviceName, serviceName,\n        SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,\n        SERVICE_ERROR_IGNORE, binaryPath, nullptr, nullptr, nullptr, nullptr,\n        nullptr);\n    if (service != nullptr) {\n        printf(\"Created service %s\\n\", serviceName);\n        DeleteService(service);\n        CloseServiceHandle(service);\n    } else {\n        printf(\"CreateServiceA failed: %lu\\n\", GetLastError());\n    }\n\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "The example creates a demand-start service that runs a short-lived cmd.exe, then deletes it immediately. Creating a service requires administrative rights. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -272,9 +272,9 @@
       "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
       "example": {
         "language": "cpp",
-        "title": "Prepare a service definition without changing the system",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
-        "notes": "Service changes are privileged; the snippet is setup-only."
+        "title": "Create a temporary service and delete it",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CREATE_SERVICE);\n    if (manager == nullptr) {\n        printf(\"OpenSCManagerA failed: %lu (administrator required)\\n\",\n            GetLastError());\n        return 1;\n    }\n\n    char serviceName[64] = {};\n    sprintf_s(serviceName, \"NtExplorerExample%lu\", GetCurrentProcessId());\n    const char* binaryPath = \"C:\\\\Windows\\\\System32\\\\cmd.exe /c exit 0\";\n\n    SC_HANDLE service = CreateServiceA(manager, serviceName, serviceName,\n        SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,\n        SERVICE_ERROR_IGNORE, binaryPath, nullptr, nullptr, nullptr, nullptr,\n        nullptr);\n    if (service == nullptr) {\n        printf(\"CreateServiceA failed: %lu\\n\", GetLastError());\n        CloseServiceHandle(manager);\n        return 1;\n    }\n\n    BOOL deleted = DeleteService(service);\n    printf(\"DeleteService: %s (%lu)\\n\", deleted ? \"ok\" : \"failed\",\n        GetLastError());\n\n    CloseServiceHandle(service);\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "The example first creates its own temporary service and then removes it with DeleteService, so only a self-created resource is affected. Administrative rights are required. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -455,9 +455,9 @@
       "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
       "example": {
         "language": "cpp",
-        "title": "Prepare a service definition without changing the system",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
-        "notes": "Service changes are privileged; the snippet is setup-only."
+        "title": "Start a temporary service",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nint main() {\n    SC_HANDLE manager = OpenSCManagerA(nullptr, nullptr,\n        SC_MANAGER_CREATE_SERVICE);\n    if (manager == nullptr) {\n        printf(\"OpenSCManagerA failed: %lu (administrator required)\\n\",\n            GetLastError());\n        return 1;\n    }\n\n    char serviceName[64] = {};\n    sprintf_s(serviceName, \"NtExplorerExample%lu\", GetCurrentProcessId());\n    const char* binaryPath = \"C:\\\\Windows\\\\System32\\\\cmd.exe /c exit 0\";\n\n    SC_HANDLE service = CreateServiceA(manager, serviceName, serviceName,\n        SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,\n        SERVICE_ERROR_IGNORE, binaryPath, nullptr, nullptr, nullptr, nullptr,\n        nullptr);\n    if (service != nullptr) {\n        BOOL started = StartServiceA(service, 0, nullptr);\n        printf(\"StartServiceA: %s (%lu)\\n\", started ? \"ok\" : \"failed\",\n            GetLastError());\n\n        DeleteService(service);\n        CloseServiceHandle(service);\n    } else {\n        printf(\"CreateServiceA failed: %lu\\n\", GetLastError());\n    }\n\n    CloseServiceHandle(manager);\n    return 0;\n}\n",
+        "notes": "The example creates a temporary service whose binary exits immediately, starts it with StartServiceA, and deletes the service. Administrative rights are required. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -506,9 +506,9 @@
       "defensive_notes": "Service-control telemetry records the caller, service, binary path, and operation. Creation or modification of services is reviewed with the caller’s authorization and the binary’s signature.",
       "example": {
         "language": "cpp",
-        "title": "Prepare a service definition without changing the system",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Creating, deleting, or starting a service requires administrator\n    // rights and changes machine-wide state. The example documents the\n    // inputs and leaves the service database untouched.\n    const char* name = \"NtExplorerExample\";\n    const char* binary = \"C:\\\\Windows\\\\System32\\\\cmd.exe\";\n    printf(\"Would configure service %s -> %s\\n\", name, binary);\n    return 0;\n}\n",
-        "notes": "Service changes are privileged; the snippet is setup-only."
+        "title": "Connect a service process to the service controller",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"advapi32.lib\")\n\nstatic VOID WINAPI ServiceMain(DWORD argc, LPSTR* argv) {\n    printf(\"ServiceMain entered with %lu argument(s).\\n\", argc);\n    if (argc > 0) {\n        printf(\"Service name: %s\\n\", argv[0]);\n    }\n}\n\nint main() {\n    SERVICE_TABLE_ENTRYA table[] = {\n        { const_cast<LPSTR>(\"NtExplorerExample\"), ServiceMain },\n        { nullptr, nullptr },\n    };\n\n    if (!StartServiceCtrlDispatcherA(table)) {\n        DWORD error = GetLastError();\n        if (error == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT) {\n            printf(\"Run this example as a service: a console process has no \"\n                \"service controller.\\n\");\n        } else {\n            printf(\"StartServiceCtrlDispatcherA failed: %lu\\n\", error);\n        }\n    }\n\n    return 0;\n}\n",
+        "notes": "The example defines a ServiceMain entry point and calls StartServiceCtrlDispatcherA. When run from a console the call fails with ERROR_FAILED_SERVICE_CONTROLLER_CONNECT, which is the documented behavior. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {

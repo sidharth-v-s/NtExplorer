@@ -1,7 +1,7 @@
 .PHONY: run build test validate fmt vet check dist-windows clean
 
 BINARY := ntexplorer
-VERSION := 0.4.0
+VERSION := 0.5.0
 
 run:
 	go run ./cmd/ntexplorer

@@ -252,9 +252,9 @@
       "defensive_notes": "",
       "example": {
         "language": "cpp",
-        "title": "Prepare a share definition without changing the system",
-        "code": "#include <windows.h>\n#include <lm.h>\n#include <stdio.h>\n\nint main() {\n    // Adding or changing a share requires administrator rights and changes\n    // machine-wide state. The example documents the inputs only.\n    SHARE_INFO_1 info = {};\n    info.shi1_netname = const_cast<LMSTR>(L\"NtExplorerExample\");\n    info.shi1_type = STYPE_DISKTREE;\n    info.shi1_remark = const_cast<LMSTR>(L\"example only\");\n    printf(\"Would configure share %ls\\n\", info.shi1_netname);\n    return 0;\n}\n",
-        "notes": "Share creation and modification require administrative rights; the snippet is setup-only."
+        "title": "Create and remove a temporary local share",
+        "code": "#include <windows.h>\n#include <lm.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"netapi32.lib\")\n\nint main() {\n    wchar_t tempPath[MAX_PATH] = {};\n    wchar_t sharePath[MAX_PATH] = {};\n    GetTempPathW(MAX_PATH, tempPath);\n    swprintf_s(sharePath, L\"%sNtExplorerShare\", tempPath);\n    CreateDirectoryW(sharePath, nullptr);\n\n    wchar_t shareName[64] = {};\n    swprintf_s(shareName, L\"NtExplorerShare%lu\", GetCurrentProcessId());\n\n    SHARE_INFO_2 info = {};\n    info.shi2_netname = shareName;\n    info.shi2_type = STYPE_DISKTREE;\n    info.shi2_remark = const_cast<LPWSTR>(L\"NtExplorer example share\");\n    info.shi2_permissions = 0;\n    info.shi2_max_uses = 1;\n    info.shi2_current_uses = 0;\n    info.shi2_path = sharePath;\n    info.shi2_passwd = nullptr;\n\n    DWORD parameterError = 0;\n    NET_API_STATUS status = NetShareAdd(nullptr, 2,\n        reinterpret_cast<LPBYTE>(&info), &parameterError);\n    printf(\"NetShareAdd status: %lu\\n\", status);\n\n    if (status == NERR_Success) {\n        NetShareDel(nullptr, shareName, 0);\n        printf(\"Removed the temporary share.\\n\");\n    }\n\n    RemoveDirectoryW(sharePath);\n    return 0;\n}\n",
+        "notes": "The example creates a temporary directory and shares it with NetShareAdd at level 2, then removes the share and directory. Share creation requires administrative rights. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -531,9 +531,9 @@
       "defensive_notes": "",
       "example": {
         "language": "cpp",
-        "title": "Prepare a share definition without changing the system",
-        "code": "#include <windows.h>\n#include <lm.h>\n#include <stdio.h>\n\nint main() {\n    // Adding or changing a share requires administrator rights and changes\n    // machine-wide state. The example documents the inputs only.\n    SHARE_INFO_1 info = {};\n    info.shi1_netname = const_cast<LMSTR>(L\"NtExplorerExample\");\n    info.shi1_type = STYPE_DISKTREE;\n    info.shi1_remark = const_cast<LMSTR>(L\"example only\");\n    printf(\"Would configure share %ls\\n\", info.shi1_netname);\n    return 0;\n}\n",
-        "notes": "Share creation and modification require administrative rights; the snippet is setup-only."
+        "title": "Update the remark on a temporary local share",
+        "code": "#include <windows.h>\n#include <lm.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"netapi32.lib\")\n\nint main() {\n    wchar_t tempPath[MAX_PATH] = {};\n    wchar_t sharePath[MAX_PATH] = {};\n    GetTempPathW(MAX_PATH, tempPath);\n    swprintf_s(sharePath, L\"%sNtExplorerShare\", tempPath);\n    CreateDirectoryW(sharePath, nullptr);\n\n    wchar_t shareName[64] = {};\n    swprintf_s(shareName, L\"NtExplorerShare%lu\", GetCurrentProcessId());\n\n    SHARE_INFO_2 info = {};\n    info.shi2_netname = shareName;\n    info.shi2_type = STYPE_DISKTREE;\n    info.shi2_remark = const_cast<LPWSTR>(L\"original remark\");\n    info.shi2_permissions = 0;\n    info.shi2_max_uses = 1;\n    info.shi2_path = sharePath;\n\n    DWORD parameterError = 0;\n    NET_API_STATUS status = NetShareAdd(nullptr, 2,\n        reinterpret_cast<LPBYTE>(&info), &parameterError);\n    if (status == NERR_Success) {\n        info.shi2_remark = const_cast<LPWSTR>(L\"updated remark\");\n        status = NetShareSetInfo(nullptr, shareName, 2,\n            reinterpret_cast<LPBYTE>(&info), &parameterError);\n        printf(\"NetShareSetInfo status: %lu\\n\", status);\n\n        NetShareDel(nullptr, shareName, 0);\n    } else {\n        printf(\"NetShareAdd failed: %lu\\n\", status);\n    }\n\n    RemoveDirectoryW(sharePath);\n    return 0;\n}\n",
+        "notes": "The example creates its own share and calls NetShareSetInfo at level 2 to change the remark before deleting the share. Share changes require administrative rights. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -597,9 +597,9 @@
       "defensive_notes": "",
       "example": {
         "language": "cpp",
-        "title": "Prepare a network connection without storing credentials",
-        "code": "#include <windows.h>\n#include <winnetwk.h>\n#include <stdio.h>\n\nint main() {\n    // Network connections depend on a user-supplied server and credentials.\n    // The example shows the structure only and does not connect.\n    NETRESOURCEA resource = {};\n    resource.dwType = RESOURCETYPE_DISK;\n    resource.lpRemoteName = const_cast<LPSTR>(\"\\\\\\\\server\\\\share\");\n    printf(\"Would connect to %s\\n\", resource.lpRemoteName);\n    return 0;\n}\n",
-        "notes": "The snippet is setup-only and contains no credentials."
+        "title": "Connect to a temporary local share",
+        "code": "#include <windows.h>\n#include <lm.h>\n#include <winnetwk.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"mpr.lib\")\n#pragma comment(lib, \"netapi32.lib\")\n\nint main() {\n    wchar_t tempPath[MAX_PATH] = {};\n    wchar_t sharePath[MAX_PATH] = {};\n    GetTempPathW(MAX_PATH, tempPath);\n    swprintf_s(sharePath, L\"%sNtExplorerShare\", tempPath);\n    CreateDirectoryW(sharePath, nullptr);\n\n    wchar_t shareName[64] = {};\n    swprintf_s(shareName, L\"NtExplorerShare%lu\", GetCurrentProcessId());\n\n    SHARE_INFO_2 info = {};\n    info.shi2_netname = shareName;\n    info.shi2_type = STYPE_DISKTREE;\n    info.shi2_path = sharePath;\n    DWORD parameterError = 0;\n    NET_API_STATUS shareStatus = NetShareAdd(nullptr, 2,\n        reinterpret_cast<LPBYTE>(&info), &parameterError);\n\n    char remoteName[MAX_PATH] = {};\n    sprintf_s(remoteName, \"\\\\\\\\localhost\\\\%ls\", shareName);\n\n    NETRESOURCEA resource = {};\n    resource.dwType = RESOURCETYPE_DISK;\n    resource.lpRemoteName = remoteName;\n\n    DWORD result = WNetAddConnection2A(&resource, nullptr, nullptr, 0);\n    printf(\"WNetAddConnection2A: %lu\\n\", result);\n    if (result == NO_ERROR) {\n        WNetCancelConnection2A(remoteName, 0, TRUE);\n    }\n\n    if (shareStatus == NERR_Success) {\n        NetShareDel(nullptr, shareName, 0);\n    }\n    RemoveDirectoryW(sharePath);\n    return 0;\n}\n",
+        "notes": "The example shares its own temporary directory and uses WNetAddConnection2A to connect to it without stored credentials, then cancels the connection and removes the share. Creating the share requires administrative rights. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -658,9 +658,9 @@
       "defensive_notes": "",
       "example": {
         "language": "cpp",
-        "title": "Prepare a network connection without storing credentials",
-        "code": "#include <windows.h>\n#include <winnetwk.h>\n#include <stdio.h>\n\nint main() {\n    // Network connections depend on a user-supplied server and credentials.\n    // The example shows the structure only and does not connect.\n    NETRESOURCEA resource = {};\n    resource.dwType = RESOURCETYPE_DISK;\n    resource.lpRemoteName = const_cast<LPSTR>(\"\\\\\\\\server\\\\share\");\n    printf(\"Would connect to %s\\n\", resource.lpRemoteName);\n    return 0;\n}\n",
-        "notes": "The snippet is setup-only and contains no credentials."
+        "title": "Map a drive to a temporary local share",
+        "code": "#include <windows.h>\n#include <lm.h>\n#include <winnetwk.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"mpr.lib\")\n#pragma comment(lib, \"netapi32.lib\")\n\nint main() {\n    wchar_t tempPath[MAX_PATH] = {};\n    wchar_t sharePath[MAX_PATH] = {};\n    GetTempPathW(MAX_PATH, tempPath);\n    swprintf_s(sharePath, L\"%sNtExplorerShare\", tempPath);\n    CreateDirectoryW(sharePath, nullptr);\n\n    wchar_t shareName[64] = {};\n    swprintf_s(shareName, L\"NtExplorerShare%lu\", GetCurrentProcessId());\n\n    SHARE_INFO_2 info = {};\n    info.shi2_netname = shareName;\n    info.shi2_type = STYPE_DISKTREE;\n    info.shi2_path = sharePath;\n    DWORD parameterError = 0;\n    NET_API_STATUS shareStatus = NetShareAdd(nullptr, 2,\n        reinterpret_cast<LPBYTE>(&info), &parameterError);\n\n    char remoteName[MAX_PATH] = {};\n    sprintf_s(remoteName, \"\\\\\\\\localhost\\\\%ls\", shareName);\n\n    char localName[3] = {};\n    DWORD drives = GetLogicalDrives();\n    for (char letter = 'Z'; letter >= 'E'; --letter) {\n        if ((drives & (1u << (letter - 'A'))) == 0) {\n            localName[0] = letter;\n            localName[1] = ':';\n            break;\n        }\n    }\n\n    DWORD result = WNetAddConnectionA(remoteName, nullptr,\n        localName[0] != 0 ? localName : nullptr);\n    printf(\"WNetAddConnectionA: %lu\\n\", result);\n    if (result == NO_ERROR) {\n        WNetCancelConnectionA(localName[0] != 0 ? localName : remoteName,\n            TRUE);\n    }\n\n    if (shareStatus == NERR_Success) {\n        NetShareDel(nullptr, shareName, 0);\n    }\n    RemoveDirectoryW(sharePath);\n    return 0;\n}\n",
+        "notes": "The example creates a temporary share and maps a free drive letter to it with WNetAddConnectionA, then disconnects and removes the share. Creating the share requires administrative rights. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {

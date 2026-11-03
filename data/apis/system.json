@@ -357,9 +357,9 @@
       "defensive_notes": "Debugger attachment, output, and driver-enumeration telemetry is reviewed with process lineage and authorization. Legitimate developer and support activity is common.",
       "example": {
         "language": "cpp",
-        "title": "Prepare to detach from a debuggee",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Detaching requires that the caller is already attached as a debugger.\n    // The example only prints the current process id.\n    printf(\"Would detach from PID %lu if attached.\\n\", GetCurrentProcessId());\n    return 0;\n}\n",
-        "notes": "Debugger attach/detach is privileged and stateful; the snippet is setup-only."
+        "title": "Attach to and detach from a child process",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    STARTUPINFOW startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    wchar_t commandLine[] =\n        L\"C:\\\\Windows\\\\System32\\\\cmd.exe /c timeout /t 10 /nobreak > nul\";\n\n    if (!CreateProcessW(nullptr, commandLine, nullptr, nullptr, FALSE,\n            CREATE_NO_WINDOW, nullptr, nullptr, &startup, &process)) {\n        return 1;\n    }\n\n    if (DebugActiveProcess(process.dwProcessId)) {\n        printf(\"Attached to PID %lu\\n\", process.dwProcessId);\n        if (DebugActiveProcessStop(process.dwProcessId)) {\n            printf(\"Detached from PID %lu\\n\", process.dwProcessId);\n        } else {\n            printf(\"DebugActiveProcessStop failed: %lu\\n\", GetLastError());\n        }\n    } else {\n        printf(\"DebugActiveProcess failed: %lu\\n\", GetLastError());\n    }\n\n    TerminateProcess(process.hProcess, 0);\n    WaitForSingleObject(process.hProcess, 1000);\n    CloseHandle(process.hThread);\n    CloseHandle(process.hProcess);\n    return 0;\n}\n",
+        "notes": "The example starts a short-lived child process, attaches as its debugger, and calls DebugActiveProcessStop to detach before terminating it. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {

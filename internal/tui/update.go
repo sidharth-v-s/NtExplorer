@@ -22,6 +22,8 @@ type browseState struct {
 	structureResults []search.StructureResult
 	constants        []catalog.Constant
 	constantResults  []search.ConstantResult
+	statuses         []catalog.NTStatus
+	statusResults    []search.StatusResult
 	listIndex        int
 	tagIndex         int
 }
@@ -236,6 +238,8 @@ func (m *Model) startSearch() {
 			structureResults: append([]search.StructureResult(nil), m.structureResults...),
 			constants:        append([]catalog.Constant(nil), m.constants...),
 			constantResults:  append([]search.ConstantResult(nil), m.constantResults...),
+			statuses:         append([]catalog.NTStatus(nil), m.statuses...),
+			statusResults:    append([]search.StatusResult(nil), m.statusResults...),
 			listIndex:        m.listIndex,
 			tagIndex:         m.tagIndex,
 		}
@@ -243,11 +247,14 @@ func (m *Model) startSearch() {
 	savedMode := m.preSearch.mode
 	m.searchStructures = savedMode == listStructures || savedMode == listStructureSearch
 	m.searchConstants = savedMode == listConstants || savedMode == listConstantSearch
+	m.searchStatuses = savedMode == listStatuses || savedMode == listStatusSearch
 	switch {
 	case m.searchStructures:
 		m.searchInput.Placeholder = "structure name, member, tag, or text"
 	case m.searchConstants:
 		m.searchInput.Placeholder = "constant name, value, tag, or text"
+	case m.searchStatuses:
+		m.searchInput.Placeholder = "status name, value, severity, or text"
 	default:
 		m.searchInput.Placeholder = "name, tag, category, or description"
 	}
@@ -262,6 +269,7 @@ func (m *Model) applySearch() {
 		m.results = nil
 		m.structureResults = nil
 		m.constantResults = nil
+		m.statusResults = nil
 		// Deleting the query restores the list the user was browsing, while
 		// keeping the search field active.
 		m.restoreSnapshot(false)
@@ -270,6 +278,7 @@ func (m *Model) applySearch() {
 	m.results = nil
 	m.structureResults = nil
 	m.constantResults = nil
+	m.statusResults = nil
 	switch {
 	case m.searchStructures:
 		m.mode = listStructureSearch
@@ -280,6 +289,11 @@ func (m *Model) applySearch() {
 		m.mode = listConstantSearch
 		if m.app != nil {
 			m.constantResults = m.app.SearchConstants(m.query)
+		}
+	case m.searchStatuses:
+		m.mode = listStatusSearch
+		if m.app != nil {
+			m.statusResults = m.app.SearchStatuses(m.query)
 		}
 	default:
 		m.mode = listSearch
@@ -295,12 +309,14 @@ func (m *Model) cancelSearch() {
 	m.searching = false
 	m.searchStructures = false
 	m.searchConstants = false
+	m.searchStatuses = false
 	m.searchInput.Blur()
 	m.searchInput.SetValue("")
 	m.query = ""
 	m.results = nil
 	m.structureResults = nil
 	m.constantResults = nil
+	m.statusResults = nil
 	m.restoreSnapshot(true)
 	m.focus = panelList
 	m.status = ""
@@ -322,6 +338,8 @@ func (m *Model) restoreSnapshot(clear bool) {
 	m.structureResults = saved.structureResults
 	m.constants = saved.constants
 	m.constantResults = saved.constantResults
+	m.statuses = saved.statuses
+	m.statusResults = saved.statusResults
 	m.listIndex = saved.listIndex
 	m.tagIndex = saved.tagIndex
 	if clear {
@@ -375,6 +393,10 @@ func (m Model) updateSearch(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) openRelated() {
+	if m.statusActive() {
+		m.status = "Related API links are not recorded for NTSTATUS values."
+		return
+	}
 	if m.constantActive() {
 		if len(m.currentRelatedIDs()) == 0 {
 			m.status = "No related APIs are documented for " + m.currentConstant.Name + "."
@@ -454,6 +476,9 @@ func (m Model) currentRelatedIDs() []string {
 // currentReferences returns the reference list and display name for whichever
 // entry the detail pane is showing.
 func (m Model) currentReferences() (string, []catalog.Reference, bool) {
+	if m.statusActive() {
+		return m.currentStatus.Name, m.currentStatus.References, true
+	}
 	if m.constantActive() {
 		return m.currentConstant.Name, m.currentConstant.References, true
 	}
@@ -477,7 +502,7 @@ func (m *Model) currentEntry() (catalog.API, bool) {
 }
 
 func (m *Model) toggleFavorite() {
-	if m.structureActive() || m.constantActive() {
+	if m.structureActive() || m.constantActive() || m.statusActive() {
 		m.status = "Favorites apply to API entries only."
 		return
 	}
@@ -578,11 +603,11 @@ func (m Model) updateOverlay(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) openExport() {
 	name, ok := m.currentEntryName()
 	if !ok {
-		m.status = "Select an API, structure, or constant to export."
+		m.status = "Select an API, structure, constant, or NTSTATUS value to export."
 		return
 	}
 	m.exportTargets = []exportTarget{exportJSON, exportMarkdown}
-	if !m.structureActive() && !m.constantActive() && m.query != "" && len(m.results) > 0 {
+	if !m.structureActive() && !m.constantActive() && !m.statusActive() && m.query != "" && len(m.results) > 0 {
 		m.exportTargets = append(m.exportTargets, exportSearch)
 	}
 	m.exportIndex = 0
@@ -595,6 +620,9 @@ func (m *Model) openExport() {
 
 // currentEntryName returns the display name of the active detail entry.
 func (m Model) currentEntryName() (string, bool) {
+	if m.statusActive() {
+		return m.currentStatus.Name, true
+	}
 	if m.constantActive() {
 		return m.currentConstant.Name, true
 	}
@@ -673,6 +701,20 @@ func (m *Model) buildExport(target exportTarget) (string, []byte, error) {
 	if m.app != nil && m.app.Catalog != nil {
 		catalogVersion = m.app.Catalog.CatalogVersion
 	}
+	if m.statusActive() {
+		status := m.currentStatus
+		switch target {
+		case exportMarkdown:
+			name := export.StatusFilename(status, "md")
+			return filepath.Join("exports", name), []byte(export.StatusMarkdown(status)), nil
+		case exportJSON:
+			data, err := export.StatusJSON(status, catalogVersion)
+			name := export.StatusFilename(status, "json")
+			return filepath.Join("exports", name), data, err
+		default:
+			return "", nil, errors.New("search results are only exported from API search")
+		}
+	}
 	if m.constantActive() {
 		constant := m.currentConstant
 		switch target {
@@ -721,6 +763,14 @@ func (m *Model) buildExport(target exportTarget) (string, []byte, error) {
 
 // exportName labels a target in the export menu.
 func (m Model) exportName(target exportTarget) string {
+	if m.statusActive() {
+		switch target {
+		case exportMarkdown:
+			return "NTSTATUS reference page (.md)"
+		default:
+			return "NTSTATUS record as JSON (.json)"
+		}
+	}
 	if m.constantActive() {
 		switch target {
 		case exportMarkdown:
@@ -748,6 +798,15 @@ func (m Model) exportName(target exportTarget) string {
 }
 
 func (m Model) exportDestination(target exportTarget) string {
+	if m.statusActive() {
+		status := m.currentStatus
+		switch target {
+		case exportMarkdown:
+			return filepath.Join("exports", export.StatusFilename(status, "md"))
+		default:
+			return filepath.Join("exports", export.StatusFilename(status, "json"))
+		}
+	}
 	if m.constantActive() {
 		constant := m.currentConstant
 		switch target {

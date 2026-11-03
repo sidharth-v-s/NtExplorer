@@ -66,13 +66,13 @@ func (m Model) helpContent(width, maxRows int) (string, []string) {
 	keyLine("Home / End", "first / last item")
 	keyLine("Ctrl+U / Ctrl+D", "half-page detail scroll")
 	keyLine("Tab / Shift+Tab", "move between panels")
-	keyLine("Enter", "open API or apply tag")
+	keyLine("Enter", "open entry or apply tag")
 	keyLine("Esc", "clear search or go back")
 
 	heading("SEARCH")
-	keyLine("/", "search APIs, structures, or constants in the active view")
+	keyLine("/", "search the active view")
 	keyLine("Enter", "open the highlighted result")
-	add("Search is case-insensitive. Results show why each entry matched. In the Structures view, / searches names, members, tags, and notes. In the Constants view, / searches names, numeric values, tags, and descriptions.")
+	add("Search is case-insensitive. Results show why each entry matched. Structures search names, members, tags, and notes. Constants search names, numeric values, tags, and descriptions. NTSTATUS searches names, values, severity, descriptions, and references.")
 
 	heading("ENTRY ACTIONS")
 	keyLine("g", "related APIs, or reverse API links")
@@ -88,11 +88,12 @@ func (m Model) helpContent(width, maxRows int) (string, []string) {
 
 	heading("DATA")
 	if m.app != nil && m.app.Catalog != nil {
-		add(fmt.Sprintf("Catalog %s · %d APIs · %d structures · %d constants · %d categories · %d tags",
+		add(fmt.Sprintf("Catalog %s · %d APIs · %d structures · %d constants · %d NTSTATUS values · %d categories · %d tags",
 			valueOr(m.app.Catalog.CatalogVersion, "unversioned"),
 			len(m.app.Catalog.APIs),
 			len(m.app.Catalog.Structures),
 			len(m.app.Catalog.Constants),
+			len(m.app.Catalog.Statuses),
 			len(m.app.Catalog.Categories),
 			len(m.app.Catalog.Tags)))
 	}

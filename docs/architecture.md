@@ -29,9 +29,9 @@ NtExplorer uses a small layered architecture so catalog data and business rules 
 | Package | Responsibility |
 |---|---|
 | `cmd/ntexplorer` | Flag/subcommand parsing, catalog source selection, program startup. |
-| `internal/app` | Combines the catalog with API/structure/constant search, favorites, recent entries, and startup warnings. The TUI calls only this layer. |
+| `internal/app` | Combines the catalog with API/structure/constant/NTSTATUS search, favorites, recent entries, and startup warnings. The TUI calls only this layer. |
 | `internal/catalog` | JSON models, embedded/external loading, cross-file merging, schema and record validation. |
-| `internal/search` | Case-insensitive, multi-term ranked API, structure, and constant search with match reasons. |
+| `internal/search` | Case-insensitive, multi-term ranked API, structure, constant, and NTSTATUS search with match reasons. |
 | `internal/tui` | Bubble Tea model, update loop, panel layout, overlays, styles, centralized keys. |
 | `internal/config` | Optional `config.json` and `state.json` in the standard user config directory. |
 | `internal/export` | JSON and Markdown rendering, safe file writing. |
@@ -50,11 +50,11 @@ Dependencies point downward only: `tui → app → catalog/search → data/confi
 ## TUI model
 
 - Panels: categories (hidden below 100 columns), list, and a detail viewport. Below 72 columns the list and detail stack vertically.
-- Modes: API browse, API search, tag list, structure browse, structure search, constant browse, constant search, and an NTSTATUS placeholder. Native/RTL routines are ordinary API records in the `Native APIs` category.
+- Modes: API browse, API search, tag list, structure browse, structure search, constant browse, constant search, NTSTATUS browse, and NTSTATUS search. Native/RTL routines are ordinary API records in the `Native APIs` category.
 - Overlays: help, related APIs, references, and export. Overlays own key handling while open.
-- The detail viewport is re-rendered with the current panel width on resize and when the selected entry changes. API, structure, and constant detail state are mutually exclusive.
-- Search is scoped to the active view: `/` searches structures while the structure list is active, constants while the constant list is active, and APIs elsewhere.
-- Related links are computed at runtime in both directions: APIs list their documented structures and constants, and each structure or constant lists the APIs that reference it.
+- The detail viewport is re-rendered with the current panel width on resize and when the selected entry changes. API, structure, constant, and NTSTATUS detail state are mutually exclusive.
+- Search is scoped to the active view: `/` searches structures while the structure list is active, constants while the constant list is active, NTSTATUS values while the NTSTATUS list is active, and APIs elsewhere.
+- Related links are computed at runtime in both directions: APIs list their documented structures and constants, and each structure or constant lists the APIs that reference it. NTSTATUS records are reference-only and do not have related API links.
 - Search input mode routes ordinary characters to the text field; navigation keys still move the result selection.
 
 ## State and writes

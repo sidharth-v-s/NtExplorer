@@ -616,9 +616,9 @@
       "defensive_notes": "Window and message telemetry is useful for understanding interactive software. The API call alone rarely indicates intent.",
       "example": {
         "language": "cpp",
-        "title": "Prepare a logoff or shutdown request",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // ExitWindowsEx logs off or restarts the machine. The example only prints\n    // the flags that would be used and does not perform the operation.\n    printf(\"Would request logoff with EWX_LOGOFF (0x%lx).\\n\", EWX_LOGOFF);\n    return 0;\n}\n",
-        "notes": "System shutdown and logoff are destructive; the snippet is setup-only."
+        "title": "Log off the current user behind an explicit --apply flag",
+        "code": "#include <windows.h>\n#include <stdio.h>\n#include <string.h>\n\nint main(int argc, char** argv) {\n    if (argc < 2 || strcmp(argv[1], \"--apply\") != 0) {\n        printf(\"Dry run. Pass --apply to log off the current user.\\n\");\n        return 0;\n    }\n\n    if (!ExitWindowsEx(EWX_LOGOFF, SHTDN_REASON_MAJOR_OTHER |\n            SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED)) {\n        printf(\"ExitWindowsEx failed: %lu\\n\", GetLastError());\n        return 1;\n    }\n\n    printf(\"Logoff requested.\\n\");\n    return 0;\n}\n",
+        "notes": "The example only calls ExitWindowsEx when --apply is passed; otherwise it performs a dry run. Logging off is disruptive, so the operation is never implicit. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {

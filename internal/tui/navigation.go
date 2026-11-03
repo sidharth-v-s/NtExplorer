@@ -42,16 +42,18 @@ func (m *Model) buildSidebar() {
 	}
 	structureCount := 0
 	constantCount := 0
+	statusCount := 0
 	if m.app != nil && m.app.Catalog != nil {
 		structureCount = len(m.app.Catalog.Structures)
 		constantCount = len(m.app.Catalog.Constants)
+		statusCount = len(m.app.Catalog.Statuses)
 	}
 	items = append(items,
 		sidebarItem{Label: "LIBRARY", Header: true},
 		sidebarItem{Label: "MalDev Tags", Kind: sideTags, Count: tagCount},
 		sidebarItem{Label: "Structures", Kind: sideStructures, Count: structureCount},
 		sidebarItem{Label: "Constants", Kind: sideConstants, Count: constantCount},
-		sidebarItem{Label: "NTSTATUS", Kind: sideSoon, Count: 0},
+		sidebarItem{Label: "NTSTATUS", Kind: sideStatuses, Count: statusCount},
 	)
 	m.sidebar = items
 }
@@ -126,10 +128,11 @@ func (m *Model) reloadSidebarList() {
 	m.structureResults = nil
 	m.constants = nil
 	m.constantResults = nil
+	m.statuses = nil
+	m.statusResults = nil
 	m.listIndex = 0
 	m.tagFilter = ""
 	m.category = ""
-	m.soonLabel = ""
 
 	item := m.sidebarItem()
 	switch item.Kind {
@@ -169,9 +172,11 @@ func (m *Model) reloadSidebarList() {
 		if m.app != nil {
 			m.constants = m.app.BrowseConstants()
 		}
-	case sideSoon:
-		m.mode = listSoon
-		m.soonLabel = item.Label
+	case sideStatuses:
+		m.mode = listStatuses
+		if m.app != nil {
+			m.statuses = m.app.BrowseStatuses()
+		}
 	}
 	m.syncPreview()
 }
@@ -198,9 +203,6 @@ func (m *Model) moveSidebar(delta int) {
 func (m *Model) moveList(delta int) {
 	if m.mode == listTags {
 		m.moveTag(delta)
-		return
-	}
-	if m.mode == listSoon {
 		return
 	}
 	count := m.listLength()
@@ -247,6 +249,10 @@ func (m *Model) listLength() int {
 		return len(m.constants)
 	case listConstantSearch:
 		return len(m.constantResults)
+	case listStatuses:
+		return len(m.statuses)
+	case listStatusSearch:
+		return len(m.statusResults)
 	}
 	return 0
 }
@@ -282,9 +288,6 @@ func (m *Model) openSelected() {
 	case listTags:
 		m.applySelectedTag()
 		return
-	case listSoon:
-		m.status = m.soonMessage()
-		return
 	case listStructures, listStructureSearch:
 		structure, ok := m.selectedStructure()
 		if !ok {
@@ -304,6 +307,16 @@ func (m *Model) openSelected() {
 		m.focus = panelDetail
 		m.setConstantDetail(constant)
 		m.status = "Reading " + constant.Name
+		return
+	case listStatuses, listStatusSearch:
+		status, ok := m.selectedStatus()
+		if !ok {
+			m.status = "Nothing selected."
+			return
+		}
+		m.focus = panelDetail
+		m.setStatusDetail(status)
+		m.status = "Reading " + status.Name
 		return
 	}
 	api, ok := m.selectedAPI()
@@ -335,10 +348,6 @@ func (m *Model) applySelectedTag() {
 	m.status = fmt.Sprintf("%d APIs tagged %q · Esc tags", len(m.apiList), tag)
 }
 
-func (m *Model) soonMessage() string {
-	return "The " + m.soonLabel + " browser is planned for a later release. This release covers APIs, Native APIs, structures, and constants."
-}
-
 // setDetail updates the current API entry. Scroll position resets only when the
 // entry itself changes.
 func (m *Model) setDetail(api catalog.API) {
@@ -351,6 +360,8 @@ func (m *Model) setDetail(api catalog.API) {
 	m.hasStructure = false
 	m.currentConstant = catalog.Constant{}
 	m.hasConstant = false
+	m.hasStatus = false
+	m.currentStatus = catalog.NTStatus{}
 	m.refreshDetail()
 }
 
@@ -365,6 +376,8 @@ func (m *Model) setStructureDetail(structure catalog.Structure) {
 	m.hasCurrent = false
 	m.currentConstant = catalog.Constant{}
 	m.hasConstant = false
+	m.hasStatus = false
+	m.currentStatus = catalog.NTStatus{}
 	m.refreshDetail()
 }
 
@@ -379,6 +392,24 @@ func (m *Model) setConstantDetail(constant catalog.Constant) {
 	m.hasCurrent = false
 	m.currentStructure = catalog.Structure{}
 	m.hasStructure = false
+	m.hasStatus = false
+	m.currentStatus = catalog.NTStatus{}
+	m.refreshDetail()
+}
+
+// setStatusDetail updates the current NTSTATUS entry.
+func (m *Model) setStatusDetail(status catalog.NTStatus) {
+	if !m.hasStatus || m.currentStatus.ID != status.ID {
+		m.detail.GotoTop()
+	}
+	m.currentStatus = status
+	m.hasStatus = true
+	m.current = catalog.API{}
+	m.hasCurrent = false
+	m.currentStructure = catalog.Structure{}
+	m.hasStructure = false
+	m.currentConstant = catalog.Constant{}
+	m.hasConstant = false
 	m.refreshDetail()
 }
 
@@ -399,11 +430,17 @@ func (m *Model) clearDetail() {
 	m.currentStructure = catalog.Structure{}
 	m.hasConstant = false
 	m.currentConstant = catalog.Constant{}
+	m.hasStatus = false
+	m.currentStatus = catalog.NTStatus{}
 	m.detail.SetContent("")
 	m.detail.GotoTop()
 }
 
 func (m *Model) syncPreview() {
+	if status, ok := m.selectedStatus(); ok {
+		m.setStatusDetail(status)
+		return
+	}
 	if constant, ok := m.selectedConstant(); ok {
 		m.setConstantDetail(constant)
 		return
@@ -424,6 +461,8 @@ func (m *Model) refreshDetail() {
 		return
 	}
 	switch {
+	case m.hasStatus:
+		m.detail.SetContent(m.renderStatusDetail(m.currentStatus))
 	case m.hasConstant:
 		m.detail.SetContent(m.renderConstantDetail(m.currentConstant))
 	case m.hasStructure:
@@ -441,7 +480,12 @@ func (m Model) structureActive() bool {
 
 // constantActive reports whether the detail pane is showing a constant.
 func (m Model) constantActive() bool {
-	return m.hasConstant && !m.hasCurrent && !m.hasStructure
+	return m.hasConstant && !m.hasCurrent && !m.hasStructure && !m.hasStatus
+}
+
+// statusActive reports whether the detail pane is showing an NTSTATUS record.
+func (m Model) statusActive() bool {
+	return m.hasStatus && !m.hasCurrent && !m.hasStructure && !m.hasConstant
 }
 
 func (m *Model) logView(id string) {

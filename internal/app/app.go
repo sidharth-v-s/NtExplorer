@@ -147,6 +147,30 @@ func (a *App) ConstantRelatedAPIs(id string) []catalog.API {
 	return out
 }
 
+// BrowseStatuses returns the NTSTATUS catalog in sorted order.
+func (a *App) BrowseStatuses() []catalog.NTStatus {
+	if a == nil || a.Catalog == nil {
+		return nil
+	}
+	return a.Catalog.Statuses
+}
+
+// Status resolves an NTSTATUS record by ID.
+func (a *App) Status(id string) (*catalog.NTStatus, bool) {
+	if a == nil || a.Catalog == nil {
+		return nil, false
+	}
+	return a.Catalog.Status(id)
+}
+
+// SearchStatuses ranks NTSTATUS records for query.
+func (a *App) SearchStatuses(query string) []search.StatusResult {
+	if a == nil || a.Catalog == nil {
+		return nil
+	}
+	return search.QueryStatuses(a.Catalog.Statuses, query, a.Config.MaxResults)
+}
+
 func apiReferencesConstant(api catalog.API, id, name string) bool {
 	for _, related := range api.RelatedConstants {
 		if related == id {

@@ -15,7 +15,7 @@ import (
 )
 
 // Version is displayed in the header, help screen and exports.
-const Version = "0.4.0"
+const Version = "0.5.0"
 
 const (
 	minWideLayout  = 100
@@ -50,11 +50,12 @@ const (
 	listBrowse listMode = iota
 	listSearch
 	listTags
-	listSoon
 	listStructures
 	listStructureSearch
 	listConstants
 	listConstantSearch
+	listStatuses
+	listStatusSearch
 )
 
 type sidebarKind int
@@ -67,7 +68,7 @@ const (
 	sideTags
 	sideStructures
 	sideConstants
-	sideSoon
+	sideStatuses
 )
 
 type sidebarItem struct {
@@ -104,13 +105,14 @@ type Model struct {
 	mode             listMode
 	category         string
 	tagFilter        string
-	soonLabel        string
 	apiList          []catalog.API
 	results          []search.Result
 	structures       []catalog.Structure
 	structureResults []search.StructureResult
 	constants        []catalog.Constant
 	constantResults  []search.ConstantResult
+	statuses         []catalog.NTStatus
+	statusResults    []search.StatusResult
 	listIndex        int
 	tags             []catalog.TagCount
 	tagIndex         int
@@ -118,6 +120,7 @@ type Model struct {
 	searching        bool
 	searchStructures bool
 	searchConstants  bool
+	searchStatuses   bool
 	searchInput      textinput.Model
 	query            string
 	preSearch        *browseState
@@ -128,6 +131,8 @@ type Model struct {
 	hasStructure     bool
 	currentConstant  catalog.Constant
 	hasConstant      bool
+	currentStatus    catalog.NTStatus
+	hasStatus        bool
 	detail           viewport.Model
 
 	overlayIndex  int
@@ -187,8 +192,6 @@ func (m Model) ModeName() string {
 		return "search"
 	case listTags:
 		return "tags"
-	case listSoon:
-		return "soon"
 	case listStructures:
 		return "structures"
 	case listStructureSearch:
@@ -197,6 +200,10 @@ func (m Model) ModeName() string {
 		return "constants"
 	case listConstantSearch:
 		return "constant-search"
+	case listStatuses:
+		return "statuses"
+	case listStatusSearch:
+		return "status-search"
 	default:
 		return "browse"
 	}
@@ -251,6 +258,20 @@ func (m Model) selectedConstant() (catalog.Constant, bool) {
 	return catalog.Constant{}, false
 }
 
+func (m Model) selectedStatus() (catalog.NTStatus, bool) {
+	switch m.mode {
+	case listStatuses:
+		if m.listIndex >= 0 && m.listIndex < len(m.statuses) {
+			return m.statuses[m.listIndex], true
+		}
+	case listStatusSearch:
+		if m.listIndex >= 0 && m.listIndex < len(m.statusResults) {
+			return m.statusResults[m.listIndex].Status, true
+		}
+	}
+	return catalog.NTStatus{}, false
+}
+
 func (m Model) selectedTag() (string, bool) {
 	if m.mode == listTags && m.tagIndex >= 0 && m.tagIndex < len(m.tags) {
 		return m.tags[m.tagIndex].Tag, true
@@ -282,6 +303,10 @@ func (m Model) categoryLabel() string {
 		return "constants"
 	case m.mode == listConstantSearch:
 		return "constant search"
+	case m.mode == listStatuses:
+		return "NTSTATUS"
+	case m.mode == listStatusSearch:
+		return "NTSTATUS search"
 	case m.sidebarItem().Kind == sideFavorites:
 		return "favorites"
 	case m.sidebarItem().Kind == sideRecent:

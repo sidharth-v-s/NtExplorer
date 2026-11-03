@@ -148,8 +148,6 @@ func (m Model) renderSidebarPanel(width, height int) string {
 		count := ""
 		if item.Count > 0 {
 			count = fmt.Sprintf("%d", item.Count)
-		} else if item.Kind == sideSoon {
-			count = "soon"
 		}
 		text := "  " + label
 		if count != "" {
@@ -243,6 +241,25 @@ func (m Model) renderListPanel(width, height int) string {
 		if len(rows) == 0 {
 			rows = wrapText("No constants are bundled in this catalog.", innerW)
 		}
+	case listStatusSearch:
+		title = "NTSTATUS SEARCH"
+		subtitle = fmt.Sprintf("%d for %q", len(m.statusResults), m.query)
+		for i, result := range m.statusResults {
+			line := result.Status.Name + "  " + result.Status.Value + " · " + strings.Join(result.Reasons, ", ")
+			rows = append(rows, m.listRow(line, i == selected, innerW))
+		}
+		if len(rows) == 0 {
+			rows = m.emptyStatusSearchRows(innerW)
+		}
+	case listStatuses:
+		title = "NTSTATUS"
+		subtitle = fmt.Sprintf("%d values", len(m.statuses))
+		for i, status := range m.statuses {
+			rows = append(rows, m.listRow(status.Name+"  "+status.Value, i == selected, innerW))
+		}
+		if len(rows) == 0 {
+			rows = wrapText("No NTSTATUS values are bundled in this catalog.", innerW)
+		}
 	case listTags:
 		title = "MALDEV TAGS"
 		subtitle = fmt.Sprintf("%d tags", len(m.tags))
@@ -253,10 +270,6 @@ func (m Model) renderListPanel(width, height int) string {
 		if len(rows) == 0 {
 			rows = wrapText("No tags are declared in this catalog.", innerW)
 		}
-	case listSoon:
-		title = strings.ToUpper(m.soonLabel)
-		subtitle = "planned"
-		rows = wrapText(m.soonMessage(), innerW)
 	default:
 		switch m.sidebarItem().Kind {
 		case sideFavorites:
@@ -281,6 +294,8 @@ func (m Model) renderListPanel(width, height int) string {
 				title = "STRUCTURE SEARCH"
 			} else if m.searchConstants {
 				title = "CONSTANT SEARCH"
+			} else if m.searchStatuses {
+				title = "NTSTATUS SEARCH"
 			} else {
 				title = "SEARCH"
 			}
@@ -338,6 +353,15 @@ func (m Model) emptyConstantSearchRows(width int) []string {
 	return rows
 }
 
+func (m Model) emptyStatusSearchRows(width int) []string {
+	rows := []string{
+		m.styles.Warning.Render(truncatePlain("No matches.", width)),
+		"",
+	}
+	rows = append(rows, wrapText("Try a status name such as STATUS_ACCESS_DENIED, a value such as 0xC0000022, or a severity such as error.", width)...)
+	return rows
+}
+
 func (m Model) emptyBrowseRows(width int) []string {
 	var text string
 	switch m.sidebarItem().Kind {
@@ -357,6 +381,10 @@ func (m Model) renderDetailPanel(width, height int) string {
 	subtitle := ""
 	content := ""
 	switch {
+	case m.hasStatus:
+		title = "NTSTATUS"
+		subtitle = m.currentStatus.Name
+		content = m.detail.View()
 	case m.hasConstant:
 		title = "CONSTANT"
 		subtitle = m.currentConstant.Name

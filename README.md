@@ -6,28 +6,30 @@ It ships a bundled, versioned JSON catalog inside a single executable. Browsing 
 
 ![screenshot.png](img/screenshot.png)
 
-## Features (Release 0.4)
+## Features (Release 0.5)
 
-- **403 documented APIs**, including all 370 APIs in the bundled MalAPI.io reference, with 51 Native/RTL routines in their own category.
-- **A displayed example for every API**, from short self-contained Win32 snippets to setup-only outlines for privileged, destructive, or kernel-mode routines.
+- **453 documented APIs**, including all 370 APIs in the bundled MalAPI.io reference, with 101 Native/RTL routines in their own category.
+- **A displayed example for every API**, each one calling the documented routine. Privileged or destructive operations act only on resources the example creates itself and cleans up afterward.
 - **18 categories** spanning process, thread, memory, remote-memory, module, file, registry, synchronization, system/debugging, cryptography, networking, network management, services, Windows/UI, clipboard/input, security/privileges, and Native APIs.
 - **10 documented Windows structures** with C definitions, member-by-member descriptions, notes, and source references.
 - **56 documented constants and flags** with exact values, categories, descriptions, tags, and source references.
+- **1,799 NTSTATUS values** covering the Microsoft MS-ERREF table, with 32-bit values, severity, concise descriptions, name/value/severity search, and Microsoft references.
 - Search by exact name, prefix, substring, alias, category, tag, description, and parameter text. Results show **why** each entry matched.
 - Structure search covers names, members, tags, summaries, notes, and definitions.
 - Constant search covers names, numeric values (`0x1000`, `4096`, and `0x00001000` are equivalent), categories, tags, descriptions, and references.
+- NTSTATUS search covers names, values in hexadecimal or decimal (`0xC0000022` or `3221225506`), severity, descriptions, and references.
 - Detail pages with prototype, ordered parameters, return contract, DLL/header, remarks, Unicode notes, MalDev context, defensive context, code example, related APIs, and related structures.
 - Constant detail pages show the value, category, tags, description, related APIs, and references.
 - Cross-links in both directions: an API lists its structures and constants; a structure or constant lists the APIs that reference it.
 - Related-API navigation, reverse structure and constant links, and a references view.
 - Favorites and recently viewed entries, stored locally.
-- JSON and Markdown export for APIs, structures, and constants, with explicit overwrite confirmation.
+- JSON and Markdown export for APIs, structures, constants, and NTSTATUS values, with explicit overwrite confirmation.
 - Panel- and section-aware copy (`y`) through the terminal clipboard, so copied text never includes adjacent panels or borders.
 - Responsive 3-panel layout that adapts down to narrow and stacked terminals.
 - Runtime catalog validation plus a `validate-data` command for CI.
 - Fully offline. No telemetry and no network requests.
 
-Native APIs already appear in the **Native APIs** category. The NTSTATUS **browser** is still marked *soon*; its data module is present as a seed. See the roadmap below.
+Native APIs appear in the **Native APIs** category. NTSTATUS values and names mirror the Microsoft MS-ERREF reference; severity is derived from NTSTATUS bits 30 and 31 and checked during validation. They are presented as reference data only.
 
 ## Install and run
 
@@ -77,7 +79,7 @@ ntexplorer help            Show usage
 | `/`                    | Search                                                         |
 | `Esc`                  | Clear search or go back                                        |
 | `Tab` / `Shift+Tab`    | Move between panels                                            |
-| `Enter`                | Open selected API/structure/constant or apply tag              |
+| `Enter`                | Open selected API/structure/constant/NTSTATUS value or apply tag |
 | `g`                    | Related APIs, or reverse API links for a structure or constant |
 | `r`                    | References                                                     |
 | `f`                    | Toggle favorite (API entries)                                  |
@@ -97,8 +99,8 @@ Terminal-native selection is line-based. In the three-panel layout a dragged lin
 
 Press `y` instead. NtExplorer copies only the focused panel and never includes borders or neighboring columns:
 
-- **Detail panel:** choose the entire entry as Markdown, or one section such as Description, Prototype, Parameters, Return value, Example, Related entries, or References.
-- **List panel:** copy the highlighted API, structure, constant, or tag.
+- **Detail panel:** choose the entire entry as Markdown, or one section such as Description, Prototype, Parameters, Return value, Example, Related entries, or References. NTSTATUS entries offer value, severity, description, and references.
+- **List panel:** copy the highlighted API, structure, constant, NTSTATUS value, or tag.
 - **Categories panel:** copy the highlighted sidebar item.
 
 The copy menu shows a preview and character count before writing. NtExplorer uses the terminal clipboard sequence (OSC 52), which works in most modern terminals, including over SSH, without helper programs or network access. If nothing is pasted, enable clipboard writes in your terminal; in tmux, `set -g set-clipboard on` is usually required. Very large selections are rejected rather than truncated.
@@ -117,7 +119,7 @@ Queries are case-insensitive and split into terms; every term must match. Rankin
 
 Each result row shows its match reasons, for example `VirtualAllocEx · name prefix`.
 
-Search is scoped to the active view: `/` in the Structures view searches structure names, members, tags, summaries, notes, and definitions; `/` in the Constants view searches constant names, numeric values, categories, tags, descriptions, and references; elsewhere it searches the API catalog. Structure ranking prioritizes exact and prefix names, then member names, types, tags, and descriptive text. Constant ranking prioritizes exact names, numeric values, categories, tags, and descriptive text, and compares numeric terms by value so `0x1000`, `4096`, and `0x00001000` all match `MEM_COMMIT`.
+Search is scoped to the active view: `/` in the Structures view searches structure names, members, tags, summaries, notes, and definitions; `/` in the Constants view searches constant names, numeric values, categories, tags, descriptions, and references; `/` in the NTSTATUS view searches status names, numeric values, severity, descriptions, and references; elsewhere it searches the API catalog. Structure ranking prioritizes exact and prefix names, then member names, types, tags, and descriptive text. Constant and NTSTATUS ranking prioritize exact names and numeric values, then categories or severity, tags, and descriptive text. Numeric terms are compared by value, so `0x1000`, `4096`, and `0x00001000` all match `MEM_COMMIT`.
 
 ## Data and configuration
 
@@ -138,7 +140,7 @@ data/
 │   └── cryptography.json
 ├── constants/constants.json     constant values, tags, and references
 ├── structures/structures.json   structure definitions, members, and notes
-└── ntstatus/statuses.json       seed file, populated in a later release
+└── ntstatus/statuses.json       NTSTATUS values, severity, and Microsoft references
 ```
 
 Optional user configuration is read from the standard application config directory (`%AppData%\NtExplorer` on Windows, `$XDG_CONFIG_HOME/NtExplorer` on Linux):
@@ -166,7 +168,7 @@ go run ./scripts/validate-data.go
 go run ./cmd/ntexplorer validate-data
 ```
 
-Validation checks schema versions, unique non-empty IDs, duplicate names, category membership, prototype/return presence, unique parameter names, resolvable related IDs, references, tag conventions, and record-level issues with file/record context. Invalid catalog data produces a readable startup error rather than a panic.
+Validation checks schema versions, unique non-empty IDs, duplicate names, category membership, prototype/return presence, unique parameter names, resolvable related IDs, references, tag conventions, NTSTATUS value/severity consistency, and record-level issues with file/record context. Invalid catalog data produces a readable startup error rather than a panic.
 
 ## Safety and scope
 
@@ -185,8 +187,8 @@ Examples are displayed as plain text, use the current process where possible, an
 - **0.1** — Win32 + MalDev reference TUI.
 - **0.2** — Structures browser and API/structure cross-links.
 - **0.3** — Constants browser and API/constant cross-links.
-- **0.4** — Full 370-API catalog, Native/RTL category, and an example for every API (this release).
-- **0.5** — NTSTATUS browser and documented Win32-to-Native relationships.
+- **0.4** — Full 370-API catalog, Native/RTL category, and an example for every API.
+- **0.5** — NTSTATUS browser, verified status values, search, details, exports, and copy support (this release).
 - **0.6** — Optional read-only PE export inspection using Go's `debug/pe`.
 
 ## Repository layout

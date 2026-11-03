@@ -504,9 +504,9 @@
       "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
       "example": {
         "language": "cpp",
-        "title": "Prepare an input-queue attachment",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // Attaching input queues changes keyboard and mouse routing for both\n    // threads. The example shows the identifiers only and does not attach.\n    printf(\"Current thread: %lu\\n\", GetCurrentThreadId());\n    return 0;\n}\n",
-        "notes": "Input-queue attachment is invasive; the snippet is setup-only."
+        "title": "Attach and detach two input queues",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD g_workerId = 0;\nstatic HANDLE g_ready = nullptr;\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    g_workerId = GetCurrentThreadId();\n    SetEvent(g_ready);\n    Sleep(2000);\n    return 0;\n}\n\nint main() {\n    g_ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    HANDLE worker = CreateThread(nullptr, 0, Worker, nullptr, 0, nullptr);\n    if (g_ready == nullptr || worker == nullptr) {\n        return 1;\n    }\n    WaitForSingleObject(g_ready, 1000);\n\n    DWORD currentId = GetCurrentThreadId();\n    BOOL attached = AttachThreadInput(currentId, g_workerId, TRUE);\n    printf(\"AttachThreadInput(attach): %s\\n\", attached ? \"ok\" : \"failed\");\n\n    if (attached) {\n        BOOL detached = AttachThreadInput(currentId, g_workerId, FALSE);\n        printf(\"AttachThreadInput(detach): %s\\n\",\n            detached ? \"ok\" : \"failed\");\n    }\n\n    WaitForSingleObject(worker, INFINITE);\n    CloseHandle(worker);\n    CloseHandle(g_ready);\n    return 0;\n}\n",
+        "notes": "The example starts a short-lived worker thread, attaches the main thread's input queue to it with AttachThreadInput, and immediately detaches again. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -839,9 +839,9 @@
       "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
       "example": {
         "language": "cpp",
-        "title": "Prepare to terminate a worker thread",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // TerminateThread can leave locks and allocations in an inconsistent\n    // state. The example shows the call form but does not terminate a thread.\n    printf(\"TerminateThread(thread, 0) is intentionally not called.\\n\");\n    return 0;\n}\n",
-        "notes": "Thread termination is unsafe and shown as setup-only."
+        "title": "Terminate a worker thread with TerminateThread",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nstatic DWORD WINAPI Worker(LPVOID) {\n    Sleep(10000);\n    return 0;\n}\n\nint main() {\n    HANDLE thread = CreateThread(nullptr, 0, Worker, nullptr, 0, nullptr);\n    if (thread == nullptr) {\n        return 1;\n    }\n\n    BOOL terminated = TerminateThread(thread, 0);\n    printf(\"TerminateThread: %s (%lu)\\n\", terminated ? \"ok\" : \"failed\",\n        GetLastError());\n\n    WaitForSingleObject(thread, 1000);\n    CloseHandle(thread);\n    return 0;\n}\n",
+        "notes": "The example terminates only a worker thread that it created itself, then waits for it and closes the handle. TerminateThread is unsafe for threads that own locks or resources. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {
@@ -1007,9 +1007,9 @@
       "defensive_notes": "Thread events can be correlated with process creation, image loads, and memory changes. A thread start address outside known image ranges is a useful triage signal.",
       "example": {
         "language": "cpp",
-        "title": "Prepare a WOW64 context update",
-        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main() {\n    // WOW64 context changes apply only to a suspended 32-bit thread on a\n    // 64-bit system. The example shows the structure only.\n    WOW64_CONTEXT context = {};\n    context.ContextFlags = WOW64_CONTEXT_CONTROL;\n    printf(\"WOW64 context flags: 0x%lx\\n\", context.ContextFlags);\n    return 0;\n}\n",
-        "notes": "A WOW64 context update needs a suspended 32-bit thread; the snippet is setup-only."
+        "title": "Read and restore a suspended WOW64 thread context",
+        "code": "#include <windows.h>\n#include <tlhelp32.h>\n#include <stdio.h>\n\nstatic DWORD FindFirstThread(DWORD processId) {\n    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);\n    if (snapshot == INVALID_HANDLE_VALUE) {\n        return 0;\n    }\n\n    THREADENTRY32 entry = { sizeof(entry) };\n    DWORD threadId = 0;\n    if (Thread32First(snapshot, &entry)) {\n        do {\n            if (entry.th32OwnerProcessID == processId) {\n                threadId = entry.th32ThreadID;\n                break;\n            }\n        } while (Thread32Next(snapshot, &entry));\n    }\n\n    CloseHandle(snapshot);\n    return threadId;\n}\n\nint main() {\n    wchar_t wow64Directory[MAX_PATH] = {};\n    if (GetSystemWow64DirectoryW(wow64Directory, MAX_PATH) == 0) {\n        printf(\"WOW64 is not available on this system.\\n\");\n        return 0;\n    }\n\n    wchar_t commandLine[MAX_PATH * 2] = {};\n    swprintf_s(commandLine,\n        L\"\\\"%s\\\\cmd.exe\\\" /c timeout /t 10 /nobreak > nul\", wow64Directory);\n\n    STARTUPINFOW startup = { sizeof(startup) };\n    PROCESS_INFORMATION process = {};\n    if (!CreateProcessW(nullptr, commandLine, nullptr, nullptr, FALSE,\n            CREATE_SUSPENDED | CREATE_NO_WINDOW, nullptr, nullptr, &startup,\n            &process)) {\n        return 1;\n    }\n\n    DWORD threadId = FindFirstThread(process.dwProcessId);\n    HANDLE thread = threadId != 0 ? OpenThread(\n        THREAD_GET_CONTEXT | THREAD_SET_CONTEXT | THREAD_SUSPEND_RESUME,\n        FALSE, threadId) : nullptr;\n\n    if (thread != nullptr) {\n        WOW64_CONTEXT context = {};\n        context.ContextFlags = WOW64_CONTEXT_CONTROL;\n        if (Wow64GetThreadContext(thread, &context)) {\n            BOOL updated = Wow64SetThreadContext(thread, &context);\n            printf(\"Wow64SetThreadContext: %s\\n\",\n                updated ? \"ok\" : \"failed\");\n        } else {\n            printf(\"Wow64GetThreadContext failed: %lu\\n\", GetLastError());\n        }\n        CloseHandle(thread);\n    } else {\n        printf(\"Could not open the WOW64 thread: %lu\\n\", GetLastError());\n    }\n\n    TerminateProcess(process.hProcess, 0);\n    WaitForSingleObject(process.hProcess, 1000);\n    CloseHandle(process.hThread);\n    CloseHandle(process.hProcess);\n    return 0;\n}\n",
+        "notes": "The example starts a suspended 32-bit cmd.exe from SysWOW64, reads the first thread's WOW64 context, and writes the same context back with Wow64SetThreadContext before terminating the process. It requires a 64-bit Windows installation. NtExplorer only displays the snippet; it is not executed."
       },
       "references": [
         {

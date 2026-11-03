@@ -31,6 +31,13 @@ type ConstantResult struct {
 	Reasons  []string
 }
 
+// StatusResult is one ranked NTSTATUS search hit.
+type StatusResult struct {
+	Status  catalog.NTStatus
+	Score   int
+	Reasons []string
+}
+
 // Query ranks APIs against a case-insensitive query. Every whitespace-separated
 // term must match at least one field for an API to be included.
 //
@@ -251,6 +258,74 @@ func QueryConstants(constants []catalog.Constant, query string, limit int) []Con
 	return limitConstants(results, limit)
 }
 
+// QueryStatuses ranks NTSTATUS records against a case-insensitive query. Every
+// whitespace-separated term must match at least one field for a record to be
+// included. Names rank above values, which rank above severity and text.
+//
+// Numeric terms are compared by value, so 0xC0000022, c0000022, and
+// 3221225506 all match STATUS_ACCESS_DENIED.
+func QueryStatuses(statuses []catalog.NTStatus, query string, limit int) []StatusResult {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		results := make([]StatusResult, 0, len(statuses))
+		for _, status := range statuses {
+			results = append(results, StatusResult{Status: status})
+		}
+		return limitStatuses(results, limit)
+	}
+
+	terms := strings.Fields(strings.ToLower(query))
+	full := strings.ToLower(query)
+	results := make([]StatusResult, 0, len(statuses))
+	for _, status := range statuses {
+		total := 0
+		var reasons []string
+		matchedAll := true
+		for _, term := range terms {
+			score, reason := scoreStatusTerm(status, term)
+			if score == 0 {
+				matchedAll = false
+				break
+			}
+			total += score
+			reasons = appendUnique(reasons, reason)
+		}
+		if !matchedAll {
+			continue
+		}
+
+		name := strings.ToLower(status.Name)
+		if name == full {
+			total += 2000
+		} else if strings.HasPrefix(name, full) {
+			total += 1200
+		}
+		if valueMatches(status.Value, full) {
+			total += 1500
+			reasons = appendUnique(reasons, "value")
+		}
+		if strings.EqualFold(status.Severity, full) {
+			total += 900
+			reasons = appendUnique(reasons, "severity "+status.Severity)
+		}
+
+		results = append(results, StatusResult{Status: status, Score: total, Reasons: reasons})
+	}
+
+	sort.SliceStable(results, func(i, j int) bool {
+		if results[i].Score != results[j].Score {
+			return results[i].Score > results[j].Score
+		}
+		a, b := strings.ToLower(results[i].Status.Name), strings.ToLower(results[j].Status.Name)
+		if len(a) != len(b) {
+			return len(a) < len(b)
+		}
+		return a < b
+	})
+
+	return limitStatuses(results, limit)
+}
+
 // Filter returns the APIs that match query without ranking metadata.
 func Filter(apis []catalog.API, query string) []catalog.API {
 	results := Query(apis, query, 0)
@@ -276,6 +351,13 @@ func limitStructures(results []StructureResult, limit int) []StructureResult {
 }
 
 func limitConstants(results []ConstantResult, limit int) []ConstantResult {
+	if limit > 0 && len(results) > limit {
+		return results[:limit]
+	}
+	return results
+}
+
+func limitStatuses(results []StatusResult, limit int) []StatusResult {
 	if limit > 0 && len(results) > limit {
 		return results[:limit]
 	}
@@ -455,6 +537,39 @@ func scoreConstantTerm(constant catalog.Constant, term string) (int, string) {
 		return 260, "description"
 	}
 	for _, ref := range constant.References {
+		if strings.Contains(strings.ToLower(ref.Title), term) {
+			return 100, "reference"
+		}
+	}
+	return 0, ""
+}
+
+func scoreStatusTerm(status catalog.NTStatus, term string) (int, string) {
+	name := strings.ToLower(status.Name)
+	switch {
+	case name == term:
+		return 1000, "name"
+	case strings.HasPrefix(name, term):
+		return 850, "name prefix"
+	case strings.Contains(name, term):
+		return 700, "name"
+	}
+
+	if valueMatches(status.Value, term) {
+		return 900, "value"
+	}
+	if strings.Contains(strings.ToLower(status.Value), term) {
+		return 500, "value"
+	}
+
+	if strings.EqualFold(status.Severity, term) {
+		return 450, "severity " + status.Severity
+	}
+
+	if strings.Contains(strings.ToLower(status.Description), term) {
+		return 260, "description"
+	}
+	for _, ref := range status.References {
 		if strings.Contains(strings.ToLower(ref.Title), term) {
 			return 100, "reference"
 		}

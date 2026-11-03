@@ -10,7 +10,7 @@ data/
 ├── apis/*.json           API records, split by topic
 ├── structures/*.json     structure definitions, members, and notes
 ├── constants/*.json      named constants and flags
-└── ntstatus/*.json       NTSTATUS values (later release)
+└── ntstatus/*.json       NTSTATUS values, severity, and references
 ```
 
 Every file declares a `schema_version`. The current supported version is **1**. A newer version is rejected with an upgrade message rather than being misinterpreted.
@@ -21,7 +21,7 @@ Every file declares a `schema_version`. The current supported version is **1**. 
 {
   "schema_version": 1,
   "name": "NtExplorer bundled catalog",
-  "catalog_version": "0.4.0",
+  "catalog_version": "0.5.0",
   "categories": [
     { "name": "Memory Management", "description": "Virtual memory ..." }
   ],
@@ -106,7 +106,7 @@ Parameter names must be unique within an API. `constants` lists constant *names*
 }
 ```
 
-Examples must be benign, self-contained, demonstrate correct cleanup, and avoid multi-step offensive workflows. Prefer the current process over another process. Privileged, destructive, or kernel-mode operations use a setup-only snippet that describes the inputs and does not perform the operation; the `notes` field says so explicitly.
+Examples must be benign, self-contained, demonstrate correct cleanup, and avoid multi-step offensive workflows. Every example must call the API it documents. Prefer the current process over another process. Privileged or destructive operations must act only on resources the example creates itself and removes afterward, or gate the call behind an explicit opt-in flag; the `notes` field must state what is changed and how it is cleaned up. Kernel-mode-only routines may describe inputs in the code when the call cannot be made from user mode, but the example should still show the call site and explain the constraint in `notes`.
 
 ## Constants
 
@@ -163,32 +163,47 @@ APIs link to structures through `related_structures`. The TUI computes the rever
 
 Native/RTL records use the same API schema and live in `data/apis/native_apis.json` with the `Native APIs` category. Their prototypes come from phnt or the Windows SDK, their behavior is checked against NtDoc and the linked Microsoft DDI page where one exists, and `source_notes` records that the contract is not a stable Win32 guarantee. Native APIs keep functional tags such as `remote-memory` or `kernel-mode` in addition to `native-api`.
 
-## NTSTATUS (later release)
+## NTSTATUS
+
+Each file contains a `schema_version` and a `statuses` array. The bundled catalog mirrors the Microsoft MS-ERREF NTSTATUS table, including `STATUS_*`, `DBG_*`, and `RPC_NT_*` values.
 
 ```json
 {
-  "id": "ntstatus.status_success",
-  "name": "STATUS_SUCCESS",
-  "value": "0x00000000",
-  "description": "The operation completed successfully.",
-  "severity": "success"
+  "id": "ntstatus.status_access_denied",
+  "name": "STATUS_ACCESS_DENIED",
+  "value": "0xC0000022",
+  "description": "The caller does not have the access rights required for the object or operation.",
+  "severity": "error",
+  "references": [
+    {
+      "title": "NTSTATUS Values (MS-ERREF)",
+      "url": "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55",
+      "source_type": "official-documentation"
+    }
+  ]
 }
 ```
+
+- `value` is always an eight-digit hexadecimal NTSTATUS constant.
+- `severity` is `success`, `informational`, `warning`, or `error`, derived from bits 30 and 31 of the value.
+- Descriptions are concise summaries. Curated entries use original wording; values present only in MS-ERREF use the table's short definition.
+- Every bundled record carries at least one Microsoft reference. The shipped catalog uses the MS-ERREF documentation page and its MicrosoftDocs source file.
 
 ## Validation rules
 
 `go run ./scripts/validate-data.go` and `ntexplorer validate-data` check:
 
 1. Every file parses and declares a supported schema version.
-2. API/structure/constant/status IDs are non-empty and unique.
+2. API/structure/constant/NTSTATUS IDs are non-empty and unique.
 3. API names are non-empty, unique, and whitespace-free.
 4. Categories and tags are declared; tags are lowercase kebab-case.
 5. APIs have summary, description, prototype, and return type.
 6. Parameter names are non-empty and unique within an API.
 7. `related_apis`, `related_constants`, and `related_structures` resolve against the bundled catalog.
-8. References include a title and a valid http(s) URL; APIs need at least one, and every bundled structure and constant currently carries one.
+8. References include a title and a valid http(s) URL; APIs need at least one, and every bundled structure, constant, and NTSTATUS record currently carries one.
 9. Examples use `c`/`cpp`, have code, and explain themselves; the bundled catalog test requires an example on every API.
-10. IDs follow the lowercase dotted convention (warning only).
+10. NTSTATUS values use eight-digit hexadecimal form, severity is one of the four documented labels and matches bits 30-31, and descriptions are present.
+11. IDs follow the lowercase dotted convention (warning only).
 
 Issues identify the source file, record ID, and field. A malformed catalog aborts normal startup with a readable error; a malformed individual record is reported rather than crashing.
 
