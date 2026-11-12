@@ -1031,7 +1031,7 @@
         {
           "name": "hInternet",
           "type": "HINTERNET",
-          "description": "Handle to be closed."
+          "description": "The internet handle to close, such as a session, connection, file, or request handle returned by WinINet. Child handles should be closed before their parent."
         }
       ],
       "return": {
@@ -1193,8 +1193,8 @@
       ],
       "return": {
         "type": "HINTERNET",
-        "success": "See the reference for the documented success value.",
-        "failure": "Returns a valid handle that the application passes to subsequent WinINet functions. If InternetOpen fails, it returns NULL. To retrieve a specific error message, call GetLastError."
+        "success": "Returns a valid HINTERNET handle for use with subsequent WinINet calls.",
+        "failure": "Returns NULL if initialization fails. Call GetLastError for extended error information."
       },
       "tags": [
         "networking",
@@ -1711,7 +1711,7 @@
         {
           "name": "flags",
           "type": "int",
-          "description": "A set of flags that influences the behavior of this function. See remarks below. See the Remarks section for details on the possible value for this parameter."
+          "description": "Flags that control how data is received. Common values are MSG_PEEK to copy data without removing it, MSG_OOB to process out-of-band data, and MSG_WAITALL to wait for the full requested byte count. Pass 0 for normal receipt."
         }
       ],
       "return": {
@@ -2294,12 +2294,12 @@
         {
           "name": "dwIoControlCode",
           "type": "DWORD",
-          "description": "The control code of operation to perform. See Winsock IOCTLs."
+          "description": "The control code that selects the operation, such as SIO_GET_INTERFACE_LIST or FIONBIO. The IOC_IN and IOC_OUT bits in the code determine which buffers carry input and output data."
         },
         {
           "name": "lpvInBuffer",
           "type": "LPVOID",
-          "description": "A pointer to the input buffer."
+          "description": "A pointer to the input buffer for the operation. Its layout depends on dwIoControlCode and may be NULL when cbInBuffer is zero."
         },
         {
           "name": "cbInBuffer",
@@ -2309,7 +2309,7 @@
         {
           "name": "lpvOutBuffer",
           "type": "LPVOID",
-          "description": "A pointer to the output buffer."
+          "description": "A pointer to the output buffer for the operation. Its layout depends on dwIoControlCode and may be NULL when no data is returned."
         },
         {
           "name": "cbOutBuffer",
@@ -2319,7 +2319,7 @@
         {
           "name": "lpcbBytesReturned",
           "type": "LPDWORD",
-          "description": "A pointer to actual number of bytes of output."
+          "description": "A pointer that receives the number of bytes stored in lpvOutBuffer. Required for operations that return output data."
         },
         {
           "name": "lpOverlapped",
@@ -2329,7 +2329,7 @@
         {
           "name": "lpCompletionRoutine",
           "type": "LPWSAOVERLAPPED_COMPLETION_ROUTINE",
-          "description": "See Remarks."
+          "description": "An optional completion routine invoked when an overlapped operation finishes. It requires a socket created with WSA_FLAG_OVERLAPPED and is ignored when lpOverlapped is NULL; pass NULL for synchronous completion."
         }
       ],
       "return": {

@@ -17,22 +17,22 @@
         {
           "name": "Apc",
           "type": "PRKAPC",
-          "description": "The Apc parameter for KeInsertQueueApc, as documented by the API reference."
+          "description": "A pointer to an initialized KAPC object. The driver must call KeInitializeApc first, and the APC must not already be queued."
         },
         {
           "name": "SystemArgument1",
           "type": "PVOID",
-          "description": "The SystemArgument1 parameter for KeInsertQueueApc, as documented by the API reference."
+          "description": "The first caller-supplied value stored with the APC and passed to its routine when the APC executes."
         },
         {
           "name": "SystemArgument2",
           "type": "PVOID",
-          "description": "The SystemArgument2 parameter for KeInsertQueueApc, as documented by the API reference."
+          "description": "The second caller-supplied value stored with the APC and passed to its routine when the APC executes."
         },
         {
           "name": "Increment",
           "type": "KPRIORITY",
-          "description": "The Increment parameter for KeInsertQueueApc, as documented by the API reference."
+          "description": "The priority increment applied to the target thread when the APC is queued. A value of zero leaves the thread's priority unchanged."
         }
       ],
       "return": {
@@ -303,7 +303,7 @@
         {
           "name": "Handle",
           "type": "HANDLE",
-          "description": "The handle being closed."
+          "description": "The handle to close. It becomes invalid after a successful call; passing a value that is not a valid handle returns STATUS_INVALID_HANDLE."
         }
       ],
       "return": {
@@ -460,7 +460,7 @@
         {
           "name": "EaLength",
           "type": "ULONG",
-          "description": "Length of the EA buffer."
+          "description": "The size of the extended-attributes buffer pointed to by EaBuffer, in bytes. Pass 0 when EaBuffer is NULL."
         }
       ],
       "return": {
@@ -637,7 +637,7 @@
         {
           "name": "Reserved",
           "type": "ULONG",
-          "description": "The Reserved parameter for NtCreateProcessEx, as documented by the API reference."
+          "description": "Reserved for future use. Callers must pass zero."
         }
       ],
       "return": {
@@ -1119,7 +1119,7 @@
         {
           "name": "KeyHandle",
           "type": "HANDLE",
-          "description": "The KeyHandle parameter for NtDeleteKey, as documented by the API reference."
+          "description": "A handle to the registry key to delete. The key must have been opened with DELETE access, and all of its subkeys must have been removed first."
         }
       ],
       "return": {
@@ -1170,12 +1170,12 @@
         {
           "name": "KeyHandle",
           "type": "HANDLE",
-          "description": "The KeyHandle parameter for NtDeleteValueKey, as documented by the API reference."
+          "description": "A handle to the registry key that contains the value. The key must have been opened with KEY_SET_VALUE access."
         },
         {
           "name": "ValueName",
           "type": "PCUNICODE_STRING",
-          "description": "The ValueName parameter for NtDeleteValueKey, as documented by the API reference."
+          "description": "A pointer to a UNICODE_STRING naming the value to delete. An empty string selects the default value; matching is case-insensitive."
         }
       ],
       "return": {
@@ -1231,7 +1231,7 @@
         {
           "name": "SourceHandle",
           "type": "HANDLE",
-          "description": "The handle to duplicate."
+          "description": "The handle to duplicate. It remains open; the function creates a new handle that refers to the same object."
         },
         {
           "name": "TargetProcessHandle",
@@ -1668,57 +1668,57 @@
         {
           "name": "FileHandle",
           "type": "HANDLE",
-          "description": "The FileHandle parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "A handle to the directory to enumerate, opened with FILE_LIST_DIRECTORY access. The file object must support asynchronous I/O if Event or ApcRoutine is supplied."
         },
         {
           "name": "Event",
           "type": "HANDLE",
-          "description": "The Event parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "An optional event handle that is signaled when the request completes. Pass NULL to wait on the file handle instead."
         },
         {
           "name": "ApcRoutine",
           "type": "PIO_APC_ROUTINE",
-          "description": "The ApcRoutine parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "An optional caller-supplied APC routine invoked when the request completes. Pass NULL if no APC is required."
         },
         {
           "name": "ApcContext",
           "type": "PVOID",
-          "description": "The ApcContext parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "An optional caller-defined context passed to ApcRoutine or included in the I/O completion message. Pass NULL when neither applies."
         },
         {
           "name": "IoStatusBlock",
           "type": "PIO_STATUS_BLOCK",
-          "description": "The IoStatusBlock parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "A pointer to an IO_STATUS_BLOCK that receives the completion status and the number of bytes written to FileInformation."
         },
         {
           "name": "FileInformation",
           "type": "PVOID",
-          "description": "The FileInformation parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "A pointer to a caller-allocated buffer that receives the directory entries in the format selected by FileInformationClass."
         },
         {
           "name": "Length",
           "type": "ULONG",
-          "description": "The Length parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "The size of the FileInformation buffer, in bytes. It should match the layout required by FileInformationClass."
         },
         {
           "name": "FileInformationClass",
           "type": "FILE_INFORMATION_CLASS",
-          "description": "The FileInformationClass parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "The information class that determines the layout of each returned entry, such as FileDirectoryInformation or FileFullDirectoryInformation."
         },
         {
           "name": "ReturnSingleEntry",
           "type": "BOOLEAN",
-          "description": "The ReturnSingleEntry parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "If TRUE, return at most one matching entry. If FALSE, return as many entries as fit in the buffer."
         },
         {
           "name": "FileName",
           "type": "PCUNICODE_STRING",
-          "description": "The FileName parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "An optional UNICODE_STRING search expression, which may contain wildcards. It is captured on the first call for the handle; pass NULL to return all entries."
         },
         {
           "name": "RestartScan",
           "type": "BOOLEAN",
-          "description": "The RestartScan parameter for NtQueryDirectoryFile, as documented by the API reference."
+          "description": "If TRUE, restart enumeration at the first entry. If FALSE, resume after the last entry returned. The first call on a handle always restarts."
         }
       ],
       "return": {
@@ -1867,7 +1867,7 @@
         {
           "name": "Attributes",
           "type": "PULONG",
-          "description": "The Attributes parameter for NtQuerySystemEnvironmentValueEx, as documented by the API reference."
+          "description": "An optional pointer that receives a bitmask of UEFI variable attributes, such as EFI_VARIABLE_NON_VOLATILE, EFI_VARIABLE_BOOTSERVICE_ACCESS, and EFI_VARIABLE_RUNTIME_ACCESS."
         }
       ],
       "return": {
@@ -2472,7 +2472,7 @@
         {
           "name": "ThreadHandle",
           "type": "HANDLE",
-          "description": "A handle to the thread."
+          "description": "A handle to the thread whose context is set. The handle must have THREAD_SET_CONTEXT access."
         },
         {
           "name": "ThreadContext",
@@ -2528,7 +2528,7 @@
         {
           "name": "ProcessHandle",
           "type": "HANDLE",
-          "description": "A handle to the process."
+          "description": "A handle to the process whose information is set. The required access depends on ProcessInformationClass, typically PROCESS_SET_INFORMATION."
         },
         {
           "name": "ProcessInformationClass",
@@ -2594,7 +2594,7 @@
         {
           "name": "ThreadHandle",
           "type": "HANDLE",
-          "description": "A handle to the thread."
+          "description": "A handle to the thread whose information is set. The required access depends on ThreadInformationClass, typically THREAD_SET_INFORMATION."
         },
         {
           "name": "ThreadInformationClass",
@@ -2685,7 +2685,7 @@
         {
           "name": "Attributes",
           "type": "ULONG",
-          "description": "The Attributes parameter for NtSetSystemEnvironmentValueEx, as documented by the API reference."
+          "description": "A bitmask of UEFI variable attributes to assign, such as EFI_VARIABLE_NON_VOLATILE, EFI_VARIABLE_BOOTSERVICE_ACCESS, and EFI_VARIABLE_RUNTIME_ACCESS."
         }
       ],
       "return": {
@@ -2736,32 +2736,32 @@
         {
           "name": "KeyHandle",
           "type": "HANDLE",
-          "description": "The KeyHandle parameter for NtSetValueKey, as documented by the API reference."
+          "description": "A handle to the registry key in which the value is created or replaced. The key must have been opened with KEY_SET_VALUE access."
         },
         {
           "name": "ValueName",
           "type": "PCUNICODE_STRING",
-          "description": "The ValueName parameter for NtSetValueKey, as documented by the API reference."
+          "description": "A pointer to a UNICODE_STRING naming the value. An empty string selects the default value; matching is case-insensitive."
         },
         {
           "name": "TitleIndex",
           "type": "ULONG",
-          "description": "The TitleIndex parameter for NtSetValueKey, as documented by the API reference."
+          "description": "Reserved for future use. Callers must pass zero."
         },
         {
           "name": "Type",
           "type": "ULONG",
-          "description": "The Type parameter for NtSetValueKey, as documented by the API reference."
+          "description": "The registry data type stored in the value, such as REG_SZ, REG_DWORD, REG_BINARY, or REG_MULTI_SZ."
         },
         {
           "name": "Data",
           "type": "PVOID",
-          "description": "The Data parameter for NtSetValueKey, as documented by the API reference."
+          "description": "A pointer to the value data. The caller is responsible for matching the layout to Type. NULL is valid when DataSize is zero."
         },
         {
           "name": "DataSize",
           "type": "ULONG",
-          "description": "The DataSize parameter for NtSetValueKey, as documented by the API reference."
+          "description": "The size of the Data buffer, in bytes. For string types, include the terminating null character or characters."
         }
       ],
       "return": {
@@ -3087,7 +3087,7 @@
         {
           "name": "Handles[]",
           "type": "HANDLE",
-          "description": "The Handles[] parameter for NtWaitForMultipleObjects, as documented by the API reference."
+          "description": "An array of Count object handles to wait on. The array must contain exactly Count entries."
         },
         {
           "name": "WaitType",
@@ -3285,17 +3285,17 @@
         {
           "name": "Destination",
           "type": "void*",
-          "description": "The Destination parameter for RtlCopyMemory, as documented by the API reference."
+          "description": "A pointer to the destination buffer that receives Length bytes. The buffer must be writable and large enough for the copy."
         },
         {
           "name": "Source",
           "type": "const void*",
-          "description": "The Source parameter for RtlCopyMemory, as documented by the API reference."
+          "description": "A pointer to the source buffer. The source and destination ranges must not overlap; use RtlMoveMemory when they do."
         },
         {
           "name": "Length",
           "type": "size_t",
-          "description": "The Length parameter for RtlCopyMemory, as documented by the API reference."
+          "description": "The number of bytes to copy."
         }
       ],
       "return": {
@@ -3482,17 +3482,17 @@
         {
           "name": "Destination",
           "type": "void*",
-          "description": "The Destination parameter for RtlMoveMemory, as documented by the API reference."
+          "description": "A pointer to the destination buffer that receives Length bytes. The buffer must be writable and large enough for the copy."
         },
         {
           "name": "Source",
           "type": "const void*",
-          "description": "The Source parameter for RtlMoveMemory, as documented by the API reference."
+          "description": "A pointer to the source buffer. The ranges may overlap; the function preserves the source bytes as if they were copied through a temporary buffer."
         },
         {
           "name": "Length",
           "type": "size_t",
-          "description": "The Length parameter for RtlMoveMemory, as documented by the API reference."
+          "description": "The number of bytes to copy."
         }
       ],
       "return": {
@@ -4156,7 +4156,7 @@
         {
           "name": "Length",
           "type": "ULONG",
-          "description": "Number of bytes to read."
+          "description": "The number of bytes to read and the size of the Buffer, in bytes. The actual number transferred is returned in IoStatusBlock."
         },
         {
           "name": "ByteOffset",

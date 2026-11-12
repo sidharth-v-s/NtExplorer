@@ -457,7 +457,7 @@
       ],
       "return": {
         "type": "VOID",
-        "success": "See the reference for the documented success value.",
+        "success": "This function does not return a value.",
         "failure": ""
       },
       "tags": [
@@ -883,7 +883,7 @@
       ],
       "return": {
         "type": "VOID",
-        "success": "See the reference for the documented success value.",
+        "success": "This function does not return a value.",
         "failure": ""
       },
       "tags": [
@@ -934,7 +934,7 @@
       ],
       "return": {
         "type": "VOID",
-        "success": "See the reference for the documented success value.",
+        "success": "This function does not return a value.",
         "failure": ""
       },
       "tags": [

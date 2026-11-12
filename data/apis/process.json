@@ -1126,13 +1126,13 @@
         {
           "name": "pExecInfo",
           "type": "SHELLEXECUTEINFOA*",
-          "description": "The pExecInfo parameter for ShellExecuteExA, as documented by the API reference."
+          "description": "A pointer to a SHELLEXECUTEINFOA structure that specifies the operation, target file, parameters, and display settings. Set its cbSize member to sizeof(SHELLEXECUTEINFOA) before calling."
         }
       ],
       "return": {
         "type": "BOOL",
-        "success": "See the reference for the documented success value.",
-        "failure": "Returns TRUE if successful; otherwise, FALSE. Call GetLastError for extended error information."
+        "success": "Returns TRUE if the operation was initiated successfully.",
+        "failure": "Returns FALSE. Call GetLastError for extended error information, and check the hInstApp member of SHELLEXECUTEINFOA for a SE_ERR_* code."
       },
       "tags": [
         "process-management",

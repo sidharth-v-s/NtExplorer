@@ -320,6 +320,9 @@ func validateAPI(c *Catalog, api API, seenIDs map[string]bool, seenNames map[str
 	if strings.TrimSpace(api.Return.Type) == "" {
 		add(SeverityError, "return.type", "API has no return type")
 	}
+	if strings.Contains(strings.ToLower(api.Return.Success), "see the reference for the documented success value") {
+		add(SeverityError, "return.success", "return success uses a placeholder description")
+	}
 	if api.Parameters == nil {
 		add(SeverityWarning, "parameters", "parameters field is missing; use [] for documented zero-parameter functions")
 	}
@@ -338,6 +341,8 @@ func validateAPI(c *Catalog, api API, seenIDs map[string]bool, seenNames map[str
 		}
 		if strings.TrimSpace(p.Description) == "" {
 			add(SeverityWarning, "parameters", fmt.Sprintf("parameter %q has no description", p.Name))
+		} else if strings.Contains(strings.ToLower(p.Description), "as documented by the api reference") {
+			add(SeverityError, "parameters", fmt.Sprintf("parameter %q uses a placeholder description", p.Name))
 		}
 	}
 

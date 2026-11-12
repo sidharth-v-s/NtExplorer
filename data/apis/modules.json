@@ -380,7 +380,7 @@
         {
           "name": "hProcess",
           "type": "HANDLE",
-          "description": "A handle to the process."
+          "description": "A handle to the target process. The handle must have PROCESS_QUERY_INFORMATION and PROCESS_VM_READ access rights."
         },
         {
           "name": "lphModule",
@@ -446,7 +446,7 @@
         {
           "name": "hProcess",
           "type": "HANDLE",
-          "description": "A handle to the process."
+          "description": "A handle to the target process. The handle must have PROCESS_QUERY_INFORMATION and PROCESS_VM_READ access rights."
         },
         {
           "name": "lphModule",
@@ -527,13 +527,13 @@
         {
           "name": "lParam",
           "type": "LONG_PTR",
-          "description": "The lParam parameter for EnumResourceTypesA, as documented by the API reference."
+          "description": "An application-defined value passed unchanged to the callback function. It can hold a pointer or an integer context."
         }
       ],
       "return": {
         "type": "BOOL",
-        "success": "See the reference for the documented success value.",
-        "failure": "Returns TRUE if successful or FALSE if the function does not find a resource, if the enumeration has been stopped, or if the function fails for another reason. To get extended error information, call GetLastError."
+        "success": "Returns TRUE if the enumeration completed and the callback did not stop it.",
+        "failure": "Returns FALSE if no matching resource is found, the callback stopped enumeration, or the function failed. Call GetLastError for extended error information."
       },
       "tags": [
         "resource-management",
@@ -588,7 +588,7 @@
         {
           "name": "lParam",
           "type": "LONG_PTR",
-          "description": "The lParam parameter for EnumResourceTypesExA, as documented by the API reference."
+          "description": "An application-defined value passed unchanged to the callback function. It can hold a pointer or an integer context."
         },
         {
           "name": "dwFlags",
@@ -603,8 +603,8 @@
       ],
       "return": {
         "type": "BOOL",
-        "success": "See the reference for the documented success value.",
-        "failure": "Returns TRUE if successful or FALSE if the function does not find a resource, if the enumeration has been stopped, or if the function fails for another reason. To get extended error information, call GetLastError."
+        "success": "Returns TRUE if the enumeration completed and the callback did not stop it.",
+        "failure": "Returns FALSE if no matching resource is found, the callback stopped enumeration, or the function failed. Call GetLastError for extended error information."
       },
       "tags": [
         "resource-management",
@@ -1189,8 +1189,8 @@
       ],
       "return": {
         "type": "LPVOID",
-        "success": "See the reference for the documented success value.",
-        "failure": "If the loaded resource is available, the return value is a pointer to the first byte of the resource; otherwise, it is NULL."
+        "success": "Returns a pointer to the first byte of the resource data.",
+        "failure": "Returns NULL if the resource is not available or cannot be loaded. Call GetLastError for extended error information."
       },
       "tags": [
         "resource-management",

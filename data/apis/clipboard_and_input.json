@@ -63,7 +63,7 @@
         {
           "name": "vKey",
           "type": "int",
-          "description": "For more information, see Virtual Key Codes. You can use left- and right-distinguishing constants to specify certain keys. See the Remarks section for further information."
+          "description": "The virtual-key code to test, such as VK_SHIFT or the code for 'A'. The high-order bit of the return value indicates whether the key is currently down; the low-order bit indicates whether it was pressed since the previous call."
         }
       ],
       "return": {
@@ -166,7 +166,7 @@
         {
           "name": "lpKeyState",
           "type": "PBYTE",
-          "description": "The lpKeyState parameter for GetKeyboardState, as documented by the API reference."
+          "description": "A pointer to a 256-byte array that receives the status of each virtual key for the calling thread. A high bit set in a byte means the key is down; the low bit is set when the key is toggled."
         }
       ],
       "return": {
@@ -222,7 +222,7 @@
         {
           "name": "lpString",
           "type": "LPSTR",
-          "description": "The lpString parameter for GetKeynameTextA, as documented by the API reference."
+          "description": "A pointer to a caller-allocated buffer that receives the null-terminated, localized key name. The buffer must be large enough for the name and terminator, as limited by cchSize."
         },
         {
           "name": "cchSize",
@@ -344,12 +344,12 @@
         {
           "name": "pcbSize",
           "type": "PUINT",
-          "description": "The pcbSize parameter for GetRawInputData, as documented by the API reference."
+          "description": "On input, the size of the buffer pointed to by pData, in bytes. On output, the number of bytes copied. If pData is NULL, the function stores the required buffer size here."
         },
         {
           "name": "cbSizeHeader",
           "type": "UINT",
-          "description": "The cbSizeHeader parameter for GetRawInputData, as documented by the API reference."
+          "description": "The size of a RAWINPUTHEADER structure, in bytes. Pass sizeof(RAWINPUTHEADER) to identify the expected header layout."
         }
       ],
       "return": {
@@ -410,8 +410,8 @@
       ],
       "return": {
         "type": "UINT",
-        "success": "See the reference for the documented success value.",
-        "failure": "The return value is either a scan code, a virtual-key code, or a character value, depending on the value of *uCode* and *uMapType*. If there is no translation, the return value is zero."
+        "success": "Returns the translated scan code, virtual-key code, or character, depending on uCode and uMapType.",
+        "failure": "Returns zero when no translation is available."
       },
       "tags": [
         "input",
@@ -471,8 +471,8 @@
       ],
       "return": {
         "type": "UINT",
-        "success": "See the reference for the documented success value.",
-        "failure": "The return value is either a scan code, a virtual-key code, or a character value, depending on the value of *uCode* and *uMapType*. If there is no translation, the return value is zero."
+        "success": "Returns the translated scan code, virtual-key code, or character, depending on uCode, uMapType, and the keyboard layout.",
+        "failure": "Returns zero when no translation is available."
       },
       "tags": [
         "input",
@@ -584,7 +584,7 @@
         {
           "name": "vk",
           "type": "UINT",
-          "description": "See Virtual Key Codes."
+          "description": "The virtual-key code of the hot key, such as 'A' or VK_F5. Modifier keys are specified separately in fsModifiers; the value must not already be combined with MOD_* flags."
         }
       ],
       "return": {
@@ -640,18 +640,18 @@
         {
           "name": "uiNumDevices",
           "type": "UINT",
-          "description": "The uiNumDevices parameter for RegisterRawInputDevices, as documented by the API reference."
+          "description": "The number of RAWINPUTDEVICE structures in the array pointed to by pRawInputDevices."
         },
         {
           "name": "cbSize",
           "type": "UINT",
-          "description": "The cbSize parameter for RegisterRawInputDevices, as documented by the API reference."
+          "description": "The size of a single RAWINPUTDEVICE structure, in bytes. Pass sizeof(RAWINPUTDEVICE)."
         }
       ],
       "return": {
         "type": "BOOL",
-        "success": "See the reference for the documented success value.",
-        "failure": "TRUE if the function succeeds; otherwise, FALSE. If the function fails, call GetLastError for more information."
+        "success": "Returns TRUE if the devices were registered or removed successfully.",
+        "failure": "Returns FALSE if the function fails. Call GetLastError for extended error information."
       },
       "tags": [
         "input",

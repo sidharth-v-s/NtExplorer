@@ -588,12 +588,12 @@
         {
           "name": "hThread",
           "type": "HANDLE",
-          "description": "A handle to the thread."
+          "description": "A handle to the thread whose context is retrieved. The handle must have THREAD_GET_CONTEXT access."
         },
         {
           "name": "lpContext",
           "type": "LPCONTEXT",
-          "description": "The thread context."
+          "description": "A pointer to a CONTEXT structure whose ContextFlags member selects the registers to retrieve. The structure must be properly aligned for the architecture."
         }
       ],
       "return": {
@@ -708,12 +708,12 @@
         {
           "name": "hThread",
           "type": "HANDLE",
-          "description": "A handle to the thread."
+          "description": "A handle to the thread whose context is set. The handle must have THREAD_SET_CONTEXT access."
         },
         {
           "name": "lpContext",
           "type": "CONST CONTEXT*",
-          "description": "The thread context."
+          "description": "A pointer to a CONTEXT structure containing the new register values. Set ContextFlags to the same set of registers that was retrieved with GetThreadContext."
         }
       ],
       "return": {

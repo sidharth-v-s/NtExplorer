@@ -1807,7 +1807,7 @@
         {
           "name": "pszDirectory",
           "type": "LPCSTR",
-          "description": "The directory path."
+          "description": "An optional null-terminated directory path used to resolve the message string. Pass NULL to use the default search behavior."
         }
       ],
       "return": {

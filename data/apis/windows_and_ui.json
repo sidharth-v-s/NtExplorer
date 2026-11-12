@@ -108,7 +108,7 @@
         {
           "name": "hWnd",
           "type": "HWND",
-          "description": "The hWnd parameter for BringWindowToTop, as documented by the API reference."
+          "description": "A handle to the window to bring to the top of the Z order. For a top-level window, the function also activates it."
         }
       ],
       "return": {
@@ -159,7 +159,7 @@
         {
           "name": "hhk",
           "type": "HHOOK",
-          "description": "The hhk parameter for CallNextHookEx, as documented by the API reference."
+          "description": "A handle to the current hook. This parameter is ignored by the function and can be NULL."
         },
         {
           "name": "nCode",
@@ -179,8 +179,8 @@
       ],
       "return": {
         "type": "LRESULT",
-        "success": "See the reference for the documented success value.",
-        "failure": "This value is returned by the next hook procedure in the chain. The current hook procedure must also return this value. The meaning of the return value depends on the hook type. For more information, see the descriptions of the individual hook procedures."
+        "success": "Returns the result of the next hook procedure in the chain.",
+        "failure": "The meaning of the return value depends on the hook type; a hook procedure must return this value to the system. See the documentation for the individual hook procedure."
       },
       "tags": [
         "windows-ui",
@@ -230,12 +230,12 @@
         {
           "name": "hWnd",
           "type": "HWND",
-          "description": "The hWnd parameter for CallWindowProcA, as documented by the API reference."
+          "description": "A handle to the window that received the message being forwarded to the previous window procedure."
         },
         {
           "name": "Msg",
           "type": "UINT",
-          "description": "The Msg parameter for CallWindowProcA, as documented by the API reference."
+          "description": "The message identifier to pass to the previous window procedure."
         },
         {
           "name": "wParam",
@@ -250,8 +250,8 @@
       ],
       "return": {
         "type": "LRESULT",
-        "success": "See the reference for the documented success value.",
-        "failure": "The return value specifies the result of the message processing and depends on the message sent."
+        "success": "Returns the result of the message processing, as produced by the previous window procedure.",
+        "failure": "The meaning of the return value depends on the message; it is not an error code."
       },
       "tags": [
         "windows-ui",
@@ -346,7 +346,7 @@
         {
           "name": "hInstance",
           "type": "HINSTANCE",
-          "description": "The hInstance parameter for CreateWindowExA, as documented by the API reference."
+          "description": "A handle to the instance of the module to be associated with the window. Pass GetModuleHandle(NULL) for the current executable."
         },
         {
           "name": "lpParam",
@@ -544,7 +544,7 @@
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for EnumWindows, as documented by the API reference."
+          "description": "An application-defined value passed unchanged to the callback function for each window."
         }
       ],
       "return": {
@@ -883,8 +883,8 @@
       "parameters": [],
       "return": {
         "type": "HWND",
-        "success": "See the reference for the documented success value.",
-        "failure": "The return value is a handle to the desktop window."
+        "success": "Returns a handle to the desktop window. The function does not fail.",
+        "failure": ""
       },
       "tags": [
         "windows-ui",
@@ -928,8 +928,8 @@
       "parameters": [],
       "return": {
         "type": "HWND",
-        "success": "See the reference for the documented success value.",
-        "failure": "The return value is a handle to the foreground window. The foreground window can be NULL in certain circumstances, such as when a window is losing activation."
+        "success": "Returns a handle to the foreground window.",
+        "failure": "Returns NULL if no window is in the foreground or the foreground window is losing activation."
       },
       "tags": [
         "windows-ui",
@@ -974,7 +974,7 @@
         {
           "name": "lpMsg",
           "type": "LPMSG",
-          "description": "The lpMsg parameter for GetMessageA, as documented by the API reference."
+          "description": "A pointer to a MSG structure that receives the retrieved message."
         },
         {
           "name": "hWnd",
@@ -1096,7 +1096,7 @@
         {
           "name": "lpString2",
           "type": "LPCSTR",
-          "description": "The lpString2 parameter for lstrcatA, as documented by the API reference."
+          "description": "A pointer to the null-terminated string to append to lpString1. The buffer at lpString1 must have room for both strings and the terminator."
         }
       ],
       "return": {
@@ -1146,13 +1146,13 @@
         {
           "name": "pszPath",
           "type": "LPCSTR",
-          "description": "The pszPath parameter for PathFileExistsA, as documented by the API reference."
+          "description": "A null-terminated string containing the full path of the file or folder to test. UNC paths are allowed."
         }
       ],
       "return": {
         "type": "BOOL",
-        "success": "See the reference for the documented success value.",
-        "failure": "TRUE if the file exists; otherwise, FALSE. Call GetLastError for extended error information."
+        "success": "Returns TRUE if the path exists.",
+        "failure": "Returns FALSE if the path does not exist or cannot be accessed. Call GetLastError for extended error information."
       },
       "tags": [
         "shell-integration",
@@ -1197,7 +1197,7 @@
         {
           "name": "lpMsg",
           "type": "LPMSG",
-          "description": "The lpMsg parameter for PeekMessageA, as documented by the API reference."
+          "description": "A pointer to a MSG structure that receives the message, if one is available."
         },
         {
           "name": "hWnd",
@@ -1278,12 +1278,12 @@
         {
           "name": "wParam",
           "type": "WPARAM",
-          "description": "The wParam parameter for PostMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for PostMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         }
       ],
       "return": {
@@ -1339,17 +1339,17 @@
         {
           "name": "Msg",
           "type": "UINT",
-          "description": "The Msg parameter for PostThreadMessageA, as documented by the API reference."
+          "description": "The message identifier to post to the target thread's message queue."
         },
         {
           "name": "wParam",
           "type": "WPARAM",
-          "description": "The wParam parameter for PostThreadMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for PostThreadMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         }
       ],
       "return": {
@@ -1410,18 +1410,18 @@
         {
           "name": "wParam",
           "type": "WPARAM",
-          "description": "The wParam parameter for SendMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for SendMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         }
       ],
       "return": {
         "type": "LRESULT",
-        "success": "See the reference for the documented success value.",
-        "failure": "The return value specifies the result of the message processing; it depends on the message sent."
+        "success": "Returns the result of the message processing, as produced by the window procedure.",
+        "failure": "The meaning of the return value depends on the message; it is not an error code."
       },
       "tags": [
         "windows-ui",
@@ -1476,12 +1476,12 @@
         {
           "name": "wParam",
           "type": "WPARAM",
-          "description": "The wParam parameter for SendMessageCallbackA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for SendMessageCallbackA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lpResultCallBack",
@@ -1491,7 +1491,7 @@
         {
           "name": "dwData",
           "type": "ULONG_PTR",
-          "description": "The dwData parameter for SendMessageCallbackA, as documented by the API reference."
+          "description": "An application-defined value passed unchanged to the callback function."
         }
       ],
       "return": {
@@ -1552,12 +1552,12 @@
         {
           "name": "wParam",
           "type": "WPARAM",
-          "description": "The wParam parameter for SendMessageTimeoutA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for SendMessageTimeoutA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "fuFlags",
@@ -1633,12 +1633,12 @@
         {
           "name": "wParam",
           "type": "WPARAM",
-          "description": "The wParam parameter for SendNotifyMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         },
         {
           "name": "lParam",
           "type": "LPARAM",
-          "description": "The lParam parameter for SendNotifyMessageA, as documented by the API reference."
+          "description": "Additional message-specific information. Its meaning depends on the value of Msg."
         }
       ],
       "return": {
@@ -1796,7 +1796,7 @@
         {
           "name": "hWnd",
           "type": "HWND",
-          "description": "The hWnd parameter for SetForegroundWindow, as documented by the API reference."
+          "description": "A handle to the window to bring to the foreground and activate."
         }
       ],
       "return": {
@@ -1897,7 +1897,7 @@
         {
           "name": "hWnd",
           "type": "HWND",
-          "description": "The hWnd parameter for SetPropA, as documented by the API reference."
+          "description": "A handle to the window to which the property is added or whose property value is changed."
         },
         {
           "name": "lpString",
@@ -1912,8 +1912,8 @@
       ],
       "return": {
         "type": "BOOL",
-        "success": "See the reference for the documented success value.",
-        "failure": "If the data handle and string are added to the property list, the return value is nonzero. If the function fails, the return value is zero. To get extended error information, call GetLastError."
+        "success": "Returns TRUE if the property was added or changed.",
+        "failure": "Returns FALSE if the function fails. Call GetLastError for extended error information."
       },
       "tags": [
         "windows-ui",
@@ -2024,7 +2024,7 @@
         {
           "name": "hWnd",
           "type": "HWND",
-          "description": "The hWnd parameter for SetWindowLongA, as documented by the API reference."
+          "description": "A handle to the window whose attribute is being changed. The window must belong to the calling process."
         },
         {
           "name": "nIndex",
@@ -2034,7 +2034,7 @@
         {
           "name": "dwNewLong",
           "type": "LONG",
-          "description": "The dwNewLong parameter for SetWindowLongA, as documented by the API reference."
+          "description": "The replacement value for the attribute selected by nIndex."
         }
       ],
       "return": {
@@ -2095,7 +2095,7 @@
         {
           "name": "dwNewLong",
           "type": "LONG_PTR",
-          "description": "The dwNewLong parameter for SetWindowLongPtrA, as documented by the API reference."
+          "description": "The replacement value for the attribute selected by nIndex."
         }
       ],
       "return": {
@@ -2293,7 +2293,7 @@
         {
           "name": "hWnd",
           "type": "HWND",
-          "description": "The hWnd parameter for ShowWindow, as documented by the API reference."
+          "description": "A handle to the window whose show state is being changed."
         },
         {
           "name": "nCmdShow",

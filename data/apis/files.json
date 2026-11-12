@@ -1069,7 +1069,7 @@
         {
           "name": "hFindFile",
           "type": "HANDLE",
-          "description": "The file search handle."
+          "description": "A search handle returned by FindFirstFile, FindFirstFileEx, FindFirstStreamW, or FindFirstFileNameW. The handle is invalid after this call."
         }
       ],
       "return": {

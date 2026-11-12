@@ -1419,8 +1419,8 @@
       ],
       "return": {
         "type": "PVOID",
-        "success": "See the reference for the documented success value.",
-        "failure": "Returns the base address of the mapped view, if successful. Otherwise, returns NULL and extended error status is available using GetLastError."
+        "success": "Returns the base address of the mapped view.",
+        "failure": "Returns NULL. Call GetLastError for extended error information."
       },
       "tags": [
         "file-mapping",
@@ -1510,8 +1510,8 @@
       ],
       "return": {
         "type": "PVOID",
-        "success": "See the reference for the documented success value.",
-        "failure": "Returns the base address of the mapped view, if successful. Otherwise, returns NULL and extended error status is available using GetLastError."
+        "success": "Returns the base address of the mapped view.",
+        "failure": "Returns NULL. Call GetLastError for extended error information."
       },
       "tags": [
         "file-mapping",
