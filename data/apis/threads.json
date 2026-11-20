@@ -803,6 +803,66 @@
       "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (processthreadsapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
     },
     {
+      "id": "win32.setthreaddescription",
+      "name": "SetThreadDescription",
+      "aliases": [],
+      "category": "Thread Management",
+      "dll": "Kernel32.dll; KernelBase.dll for runtime dynamic linking on Windows 10 1607",
+      "library": "Kernel32.lib",
+      "header": "processthreadsapi.h",
+      "minimum_windows": "Windows 10, version 1607; Windows Server 2016",
+      "summary": "Assigns a description (name) to a thread.",
+      "description": "SetThreadDescription stores a Unicode description on a thread so that debuggers, profilers, and tracing tools can display a meaningful name instead of only a thread ID or start address. The value can be replaced at any time, and the most recently set description is the one that GetThreadDescription returns. The Win32 function is a thin wrapper over NtSetInformationThread with ThreadNameInformation, which passes the string as a counted UNICODE_STRING.",
+      "prototype": "HRESULT SetThreadDescription(HANDLE hThread, PCWSTR lpThreadDescription);",
+      "parameters": [
+        {
+          "name": "hThread",
+          "type": "HANDLE",
+          "description": "A handle to the thread whose description is set. The handle must grant THREAD_SET_LIMITED_INFORMATION (0x0400) access. The pseudo-handle returned by GetCurrentThread can be used for the calling thread and carries that access implicitly. A handle returned by OpenThread must request THREAD_SET_LIMITED_INFORMATION; THREAD_SET_INFORMATION (0x0020) alone does not grant this operation."
+        },
+        {
+          "name": "lpThreadDescription",
+          "type": "PCWSTR",
+          "description": "A pointer to a NUL-terminated Unicode string that becomes the thread description. The kernel copies the string into the thread object, so the caller's buffer may be released after the call returns. Calling the function again replaces the previous description. The counted representation stores the length in a USHORT, so the UTF-16 byte length cannot exceed 65,534 bytes (32,767 characters); longer strings fail."
+        }
+      ],
+      "return": {
+        "type": "HRESULT",
+        "success": "Returns S_OK (0) when the description was assigned.",
+        "failure": "Returns a failing HRESULT, which can be inspected with the FAILED macro. Access failures surface as HRESULT_FROM_NT(STATUS_ACCESS_DENIED) (0xC0000022); invalid handles and over-long descriptions also fail. Do not test for a specific HRESULT value because the underlying NTSTATUS is passed through."
+      },
+      "tags": [
+        "thread-management"
+      ],
+      "remarks": "Descriptions are display metadata only: they do not affect scheduling, security, or object naming, and they are not persisted outside the live thread object. Debuggers and some tracing tools read the description and show it in their thread lists. Windows 10 version 1607, Windows 10 LTSB 2016, and Windows Server 2016 expose SetThreadDescription only through runtime dynamic linking in KernelBase.dll; later releases also export it from Kernel32.dll, so use GetProcAddress when the binary must run on 1607. Use GetThreadDescription to read the current value and LocalFree the returned buffer.",
+      "maldev_notes": "Thread descriptions are attacker-controlled strings that appear in debuggers and some endpoint tools. Malware and packers may set plausible names to blend in with runtime or browser threads, but the description has no effect on execution.",
+      "defensive_notes": "Treat thread descriptions as untrusted metadata, never as identity. A description that imitates a system component is not evidence that the thread belongs to it; correlate the owning process, start address, and image on disk instead.",
+      "example": {
+        "language": "cpp",
+        "title": "Set and read back the current thread description",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\ntypedef HRESULT (WINAPI *SetThreadDescriptionFn)(HANDLE, PCWSTR);\ntypedef HRESULT (WINAPI *GetThreadDescriptionFn)(HANDLE, PWSTR *);\n\nint main(void) {\n    // Windows 10 1607 exposes these only through KernelBase.dll.\n    HMODULE kernelbase = LoadLibraryW(L\"KernelBase.dll\");\n    if (kernelbase == nullptr) {\n        return 1;\n    }\n\n    auto setDescription = reinterpret_cast<SetThreadDescriptionFn>(\n        GetProcAddress(kernelbase, \"SetThreadDescription\"));\n    auto getDescription = reinterpret_cast<GetThreadDescriptionFn>(\n        GetProcAddress(kernelbase, \"GetThreadDescription\"));\n    if (setDescription == nullptr || getDescription == nullptr) {\n        FreeLibrary(kernelbase);\n        return 1;\n    }\n\n    HANDLE thread = GetCurrentThread();\n    HRESULT hr = setDescription(thread, L\"simulation_thread\");\n    PWSTR description = nullptr;\n    if (SUCCEEDED(hr)) {\n        hr = getDescription(thread, &description);\n    }\n\n    if (SUCCEEDED(hr) && description != nullptr) {\n        wprintf(L\"thread description: %ls\\n\", description);\n        LocalFree(description); // GetThreadDescription allocates with LocalAlloc.\n    } else {\n        printf(\"thread description failed: 0x%08lX\\n\", (unsigned long)hr);\n    }\n\n    FreeLibrary(kernelbase);\n    return SUCCEEDED(hr) ? 0 : 1;\n}\n",
+        "notes": "The example resolves both functions from KernelBase.dll so it also works on Windows 10 1607, sets the current thread's description to \"simulation_thread\", reads it back with GetThreadDescription, and frees the returned string with LocalFree. NtExplorer only displays the snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "SetThreadDescription function (processthreadsapi.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "GetThreadDescription function (processthreadsapi.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getthreaddescription",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "Wine KernelBase SetThreadDescription implementation",
+          "url": "https://gitlab.winehq.org/wine/wine/-/blob/master/dlls/kernelbase/thread.c",
+          "source_type": "source-code"
+        }
+      ],
+      "source_notes": "Summary, parameters, remarks, and return values taken from the Microsoft SetThreadDescription and GetThreadDescription references (processthreadsapi.h, Kernel32.lib, Windows 10 1607). The KernelBase wrapper behavior was checked against the Wine implementation, which calls NtSetInformationThread with ThreadNameInformation and converts the NTSTATUS with HRESULT_FROM_NT."
+    },
+    {
       "id": "win32.terminatethread",
       "name": "TerminateThread",
       "aliases": [],

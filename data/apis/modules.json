@@ -1169,6 +1169,151 @@
       "source_notes": "Summary, parameters and return values extracted from the Microsoft sdk-api Markdown source (libloaderapi.h); prototype checked against the Windows SDK 10.0.16299 headers."
     },
     {
+      "id": "win32.loadstringw",
+      "name": "LoadStringW",
+      "aliases": [
+        "LoadString"
+      ],
+      "category": "DLL and Module Management",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Loads a string resource from a module into a buffer or returns a read-only pointer to it.",
+      "description": "LoadStringW reads one entry from a module's RT_STRING resource table. With a nonzero buffer size it copies up to cchBufferMax - 1 characters, adds a terminating null, and returns the number of characters copied; a longer resource is truncated. With a buffer size of zero it returns the length of the stored string and writes a read-only pointer to the resource data into lpBuffer instead of copying. String tables hold 16 entries per block, and unused slots inside a block are zero-length strings, so an identifier can return 0 without an error.",
+      "prototype": "int LoadStringW(HINSTANCE hInstance, UINT uID, LPWSTR lpBuffer, int cchBufferMax);",
+      "parameters": [
+        {
+          "name": "hInstance",
+          "type": "HINSTANCE",
+          "description": "A handle to the module whose executable file contains the string table. The handle is marked optional in the header: passing NULL makes the lookup use the module that created the current process, which is the same handle GetModuleHandleW(NULL) returns. The module must already be loaded; LoadStringW does not load it and does not increment its reference count."
+        },
+        {
+          "name": "uID",
+          "type": "UINT",
+          "description": "The identifier of the string to load. Only the low-order 16 bits participate: the value selects a block of 16 strings and a slot within that block. An identifier that falls outside the module's string tables yields a zero-length result rather than an exception."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "LPWSTR",
+          "description": "The output buffer. When cchBufferMax is nonzero, it receives the copied string and must have room for cchBufferMax wide characters. When cchBufferMax is zero, it is treated as a pointer to a pointer: the function stores the address of the read-only string resource there, so the pointed-to storage must be at least sizeof(LPWSTR) bytes. That pointer stays valid only while the module remains loaded and must not be modified or freed."
+        },
+        {
+          "name": "cchBufferMax",
+          "type": "int",
+          "description": "The size of the destination buffer in wide characters, including the space for the terminating null. If the resource is longer than cchBufferMax - 1 characters, it is truncated and still null-terminated. Pass 0 to request the read-only pointer mode instead of a copy. Compute this value with ARRAYSIZE(buffer) or sizeof(buffer)/sizeof(buffer[0]); passing sizeof(buffer) overstates the capacity and can overflow the buffer."
+        }
+      ],
+      "return": {
+        "type": "int",
+        "success": "When cchBufferMax is nonzero, returns the number of characters copied, excluding the terminating null. When cchBufferMax is zero, returns the number of characters in the resource string, which is not guaranteed to be null-terminated in the resource table.",
+        "failure": "Returns 0 when the string resource does not exist, and also returns 0 for a zero-length slot or an empty string. Call GetLastError when the two cases must be distinguished. A truncated copy still returns the number of characters actually copied, so a short return does not by itself indicate failure."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "related_apis": [
+        "win32.loadstringa",
+        "win32.getmodulehandlew",
+        "win32.findresourcea"
+      ],
+      "unicode_notes": "LoadStringW is the Unicode implementation of the LoadString macro and reads the stored UTF-16 string directly. LoadStringA converts the same entry to the ANSI code page and does not support the zero-size pointer mode.",
+      "remarks": "String tables are stored in blocks of 16 entries and are part of the module's read-only resource section. No cleanup is required: LoadStringW does not allocate the string when copying, and the pointer returned in zero-size mode points into the mapped resource. Use FormatMessage instead when the resource is a message-table entry rather than an RT_STRING entry. The buffer size is expressed in characters, not bytes, which is the most common source of overflow bugs in this API.",
+      "maldev_notes": "String tables are ordinary PE resources used by benign software for localization, error text, and UI labels. Because they are static and are not part of the import table, they are also a convenient place to keep configuration text or other strings. Analysts extract and decode RT_STRING entries instead of treating a LoadStringW call as suspicious by itself.",
+      "defensive_notes": "Review the extracted strings together with the module path, table identifier, and neighboring entries. LoadStringW only reads from the specified module's resource section; the call itself is not a code-injection or network primitive.",
+      "example": {
+        "language": "cpp",
+        "title": "Read a string resource by copy and by direct pointer",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main(void) {\n    HMODULE module = GetModuleHandleW(nullptr);\n    wchar_t buffer[128];\n\n    SetLastError(ERROR_SUCCESS);\n    int copied = LoadStringW(module, 1, buffer, ARRAYSIZE(buffer));\n    if (copied > 0) {\n        wprintf(L\"copied %d characters: %ls\\n\", copied, buffer);\n    } else {\n        printf(\"string 1 unavailable (GetLastError=%lu)\\n\", GetLastError());\n    }\n\n    // cchBufferMax == 0 returns a pointer into the read-only resource\n    // and reports the length, which is not necessarily null-terminated.\n    const wchar_t *direct = nullptr;\n    int length = LoadStringW(module, 1,\n        reinterpret_cast<LPWSTR>(&direct), 0);\n    if (length > 0 && direct != nullptr) {\n        wprintf(L\"resource view: %.*ls\\n\", length, direct);\n    }\n\n    return 0;\n}\n",
+        "notes": "The example looks up string ID 1 in the current executable with both supported modes, prints the text when the image has such a resource, and reports the missing case without treating it as fatal. NtExplorer only displays the snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "LoadStringW function (winuser.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadstringw",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LoadStringA function (winuser.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadstringa",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters, return values, and the zero-size pointer mode taken from the Microsoft LoadStringW reference (winuser.h, User32.lib); block layout, truncation, and the NULL-instance lookup were checked against the Wine User32 implementation."
+    },
+    {
+      "id": "win32.loadstringa",
+      "name": "LoadStringA",
+      "aliases": [],
+      "category": "DLL and Module Management",
+      "dll": "User32.dll",
+      "library": "User32.lib",
+      "header": "winuser.h",
+      "minimum_windows": "Windows 2000 Professional [desktop apps only]",
+      "summary": "Loads a string resource into an ANSI buffer after converting it from the stored Unicode text.",
+      "description": "LoadStringA reads one entry from a module's RT_STRING resource table, converts the stored UTF-16 text to the system ANSI code page, copies at most cchBufferMax - 1 characters into the caller's buffer, and appends a terminating null. A longer resource is truncated. Unlike LoadStringW, the A variant has no zero-size pointer mode: cchBufferMax must be at least 1, and passing 0 corrupts memory.",
+      "prototype": "int LoadStringA(HINSTANCE hInstance, UINT uID, LPSTR lpBuffer, int cchBufferMax);",
+      "parameters": [
+        {
+          "name": "hInstance",
+          "type": "HINSTANCE",
+          "description": "A handle to the module whose executable file contains the string table. Passing NULL makes the lookup use the module that created the current process, equivalent to GetModuleHandleA(NULL). The module must already be loaded; LoadStringA does not load it or increment its reference count."
+        },
+        {
+          "name": "uID",
+          "type": "UINT",
+          "description": "The identifier of the string to load. Only the low-order 16 bits participate: the value selects a block of 16 strings and a slot within that block. An identifier outside the module's string tables yields a zero-length result."
+        },
+        {
+          "name": "lpBuffer",
+          "type": "LPSTR",
+          "description": "The destination buffer, at least cchBufferMax bytes long. It receives the converted ANSI string. Characters that cannot be represented in the active code page are replaced or lost during the conversion, so the result can differ from the stored Unicode text."
+        },
+        {
+          "name": "cchBufferMax",
+          "type": "int",
+          "description": "The size of the destination buffer in characters (bytes for this ANSI variant), including room for the terminating null. Must be at least 1. The value 0 is not supported: it does not select a pointer mode as it does in LoadStringW, and Microsoft documents that passing it corrupts memory. Use ARRAYSIZE(buffer) or sizeof(buffer)/sizeof(buffer[0]) rather than sizeof(buffer)."
+        }
+      ],
+      "return": {
+        "type": "int",
+        "success": "Returns the number of characters copied into the buffer, excluding the terminating null. A truncated copy returns the smaller number of characters actually copied.",
+        "failure": "Returns 0 when the string resource does not exist. A zero-length slot or an empty string also returns 0, so call GetLastError when the cases must be distinguished. There is no pointer-return mode to report a length without copying."
+      },
+      "tags": [
+        "resource-management",
+        "module-management"
+      ],
+      "related_apis": [
+        "win32.loadstringw",
+        "win32.getmodulehandlea"
+      ],
+      "unicode_notes": "LoadStringA is the ANSI variant selected by the LoadString macro when UNICODE is not defined. It converts the stored UTF-16 entry to the ANSI code page, which can lose characters. Prefer LoadStringW, and remember that the A variant rejects a zero cchBufferMax instead of returning a direct pointer.",
+      "remarks": "String tables are stored in blocks of 16 entries and live in the module's read-only resource section. No cleanup is required after a successful call. The buffer size is expressed in characters, not bytes; the ANSI variant happens to have one byte per character, but computing the size with sizeof(buffer) is still wrong and is the usual cause of overflow defects. Use FormatMessage for message-table entries instead of RT_STRING resources.",
+      "maldev_notes": "String tables are ordinary PE resources used for localization and UI text. Their contents are static data, so analysts decode the RT_STRING entries themselves rather than inferring intent from a LoadStringA call.",
+      "defensive_notes": "Review the extracted strings in context with the module path and table identifier. LoadStringA only reads from the specified module's resource section and does not write to another process or access the network.",
+      "example": {
+        "language": "cpp",
+        "title": "Read a string resource into an ANSI buffer",
+        "code": "#include <windows.h>\n#include <stdio.h>\n\nint main(void) {\n    HMODULE module = GetModuleHandleA(nullptr);\n    char buffer[256];\n\n    SetLastError(ERROR_SUCCESS);\n    int copied = LoadStringA(module, 1, buffer, ARRAYSIZE(buffer));\n    if (copied > 0) {\n        printf(\"string 1 (%d characters): %s\\n\", copied, buffer);\n    } else {\n        printf(\"string 1 unavailable (GetLastError=%lu)\\n\", GetLastError());\n    }\n\n    return 0;\n}\n",
+        "notes": "The example reads string ID 1 from the current executable into a 256-byte buffer and prints it, treating a missing resource as a normal result. It never passes 0 for cchBufferMax, which LoadStringA does not support. NtExplorer only displays the snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "LoadStringA function (winuser.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadstringa",
+          "source_type": "official-documentation"
+        },
+        {
+          "title": "LoadStringW function (winuser.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-loadstringw",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "Summary, parameters, return values, and the prohibition on a zero cchBufferMax taken from the Microsoft LoadStringA reference (winuser.h, User32.lib); truncation and NULL-instance lookup checked against the Wine User32 implementation."
+    },
+    {
       "id": "win32.lockresource",
       "name": "LockResource",
       "aliases": [],

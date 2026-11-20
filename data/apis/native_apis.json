@@ -206,6 +206,57 @@
       "source_notes": "Prototype and parameter documentation extracted from NtDoc (phnt headers and NTinternals notes); behavior checked against the linked Microsoft DDI page where available. This is a Native API, not a stable Win32 contract."
     },
     {
+      "id": "native.ntalertthread",
+      "name": "NtAlertThread",
+      "aliases": [],
+      "category": "Native APIs",
+      "dll": "Ntdll.dll",
+      "library": "Ntdll.lib",
+      "header": "ntpsapi.h",
+      "minimum_windows": "Windows 2000 and later",
+      "summary": "Alerts a thread so its next alertable wait returns STATUS_ALERTED.",
+      "description": "NtAlertThread sets the alert state of the target thread for the caller's processor mode. A thread blocked in an alertable wait (NtWaitForSingleObject, NtWaitForMultipleObjects, NtDelayExecution, or NtRemoveIoCompletion) is woken and the wait returns STATUS_ALERTED. The routine does not queue an APC and does not suspend the thread.",
+      "prototype": "NTSTATUS NtAlertThread(HANDLE ThreadHandle);",
+      "parameters": [
+        {
+          "name": "ThreadHandle",
+          "type": "HANDLE",
+          "description": "A handle to the thread to alert. The handle must grant THREAD_ALERT (0x0004) access. The caller can alert its own thread or another thread it can open with that access."
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "Returns STATUS_SUCCESS when the alert was recorded.",
+        "failure": "Returns STATUS_INVALID_HANDLE if ThreadHandle is not a valid thread handle, or STATUS_ACCESS_DENIED if the handle lacks THREAD_ALERT access."
+      },
+      "tags": [
+        "thread-management",
+        "native-api"
+      ],
+      "remarks": "An alert is persistent: if the target is not currently in an alertable wait, its next alertable wait returns STATUS_ALERTED. Success confirms only that the alert state was set, not that the target already processed it. This routine is distinct from NtAlertThreadByThreadId and from APC queuing through NtQueueApcThread.",
+      "maldev_notes": "Native APIs are the documented or semi-documented NT layer used by runtimes, security software, and system tools. Analysts compare native calls with the equivalent Win32 operation and note the object, access mask, and status.",
+      "defensive_notes": "Native API telemetry can be valuable because it exposes operations below Win32. Analysts correlate object handles, access masks, and NTSTATUS results with the calling process and loaded modules.",
+      "example": {
+        "language": "cpp",
+        "title": "Alert the current thread and observe the alertable wait",
+        "code": "#include <windows.h>\n#include <winternl.h>\n#include <stdio.h>\n\ntypedef NTSTATUS (NTAPI *NtAlertThreadFn)(HANDLE);\ntypedef NTSTATUS (NTAPI *NtWaitForSingleObjectFn)(HANDLE, BOOLEAN, PLARGE_INTEGER);\n\nint main(void) {\n    HMODULE ntdll = GetModuleHandleW(L\"ntdll.dll\");\n    auto NtAlertThread = reinterpret_cast<NtAlertThreadFn>(\n        GetProcAddress(ntdll, \"NtAlertThread\"));\n    auto NtWaitForSingleObject = reinterpret_cast<NtWaitForSingleObjectFn>(\n        GetProcAddress(ntdll, \"NtWaitForSingleObject\"));\n    if (NtAlertThread == nullptr || NtWaitForSingleObject == nullptr) {\n        return 1;\n    }\n\n    HANDLE event = CreateEventW(nullptr, TRUE, FALSE, nullptr);\n    HANDLE thread = OpenThread(THREAD_ALERT, FALSE, GetCurrentThreadId());\n    if (event == nullptr || thread == nullptr) {\n        if (event != nullptr) CloseHandle(event);\n        if (thread != nullptr) CloseHandle(thread);\n        return 1;\n    }\n\n    NTSTATUS status = NtAlertThread(thread);\n    LARGE_INTEGER timeout;\n    timeout.QuadPart = -10000000LL; // 1 second\n    NTSTATUS waitStatus = NtWaitForSingleObject(event, TRUE, &timeout);\n\n    printf(\"NtAlertThread status = 0x%08lX, wait = 0x%08lX\\n\",\n        (unsigned long)status, (unsigned long)waitStatus);\n\n    CloseHandle(thread);\n    CloseHandle(event);\n    return status == 0 ? 0 : 1;\n}\n",
+        "notes": "The example opens the current thread with THREAD_ALERT, alerts it, then enters a one-second alertable wait on an event. The wait returns STATUS_ALERTED (0x00000101) instead of STATUS_TIMEOUT, and both handles are closed."
+      },
+      "references": [
+        {
+          "title": "NtAlertThread - NtDoc",
+          "url": "https://ntdoc.m417z.com/ntalertthread",
+          "source_type": "community-documentation"
+        },
+        {
+          "title": "phnt ntpsapi.h",
+          "url": "https://github.com/winsiderss/phnt/blob/master/ntpsapi.h",
+          "source_type": "source-code"
+        }
+      ],
+      "source_notes": "Prototype and parameter documentation extracted from NtDoc (phnt headers and NTinternals notes); behavior checked against the linked phnt header. This is a Native API, not a stable Win32 contract."
+    },
+    {
       "id": "native.ntallocatevirtualmemory",
       "name": "NtAllocateVirtualMemory",
       "aliases": [],
@@ -2648,6 +2699,153 @@
         }
       ],
       "source_notes": "Prototype and parameter documentation extracted from NtDoc (phnt headers and NTinternals notes); behavior checked against the linked Microsoft DDI page where available. This is a Native API, not a stable Win32 contract."
+    },
+    {
+      "id": "native.ntsetthreaddescription",
+      "name": "NtSetThreadDescription",
+      "aliases": [],
+      "category": "Native APIs",
+      "dll": "Ntdll.dll (no dedicated export; via NtSetInformationThread)",
+      "library": "Ntdll.lib",
+      "header": "ntpsapi.h",
+      "minimum_windows": "Windows 10, version 1607 and later",
+      "summary": "Sets a thread description through NtSetInformationThread; no exported NtSetThreadDescription routine exists.",
+      "description": "NtSetThreadDescription is not an exported Ntdll.dll routine and has no public prototype: the name is absent from the phnt headers, the Wine ntdll export list, and published NTDLL export indexes. The operation it names is performed by calling NtSetInformationThread with ThreadInformationClass set to ThreadNameInformation (38) and a THREAD_NAME_INFORMATION structure that wraps a counted UNICODE_STRING. The Win32 SetThreadDescription function is a wrapper around that call. This entry documents the real mechanism rather than inventing an export.",
+      "prototype": "// NtSetThreadDescription is not an exported Ntdll.dll routine; the equivalent call is:\nNTSTATUS NtSetInformationThread(HANDLE ThreadHandle, THREADINFOCLASS ThreadInformationClass, PVOID ThreadInformation, ULONG ThreadInformationLength);",
+      "parameters": [
+        {
+          "name": "ThreadHandle",
+          "type": "HANDLE",
+          "description": "A handle to the thread whose description is set. It must grant THREAD_SET_LIMITED_INFORMATION (0x0400). The GetCurrentThread pseudo-handle can be used for the calling thread."
+        },
+        {
+          "name": "ThreadInformationClass",
+          "type": "THREADINFOCLASS",
+          "description": "Set to ThreadNameInformation (38) for a thread description. Any other value selects a different NtSetInformationThread operation with its own buffer layout and access requirements."
+        },
+        {
+          "name": "ThreadInformation",
+          "type": "PVOID",
+          "description": "A pointer to a THREAD_NAME_INFORMATION structure containing one UNICODE_STRING ThreadName member. Set Length and MaximumLength to the description length in bytes, excluding the terminating NUL, and set Buffer to the string. The kernel copies the counted string, so the buffer only needs to be valid during the call."
+        },
+        {
+          "name": "ThreadInformationLength",
+          "type": "ULONG",
+          "description": "The size of the THREAD_NAME_INFORMATION structure, not the string length. It is sizeof(THREAD_NAME_INFORMATION): 16 bytes on 64-bit Windows and 8 bytes on 32-bit Windows. A different length is rejected with STATUS_INFO_LENGTH_MISMATCH."
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "Returns STATUS_SUCCESS when the description was stored on the thread.",
+        "failure": "Returns STATUS_ACCESS_DENIED when the handle lacks THREAD_SET_LIMITED_INFORMATION, STATUS_INVALID_HANDLE for a bad handle, STATUS_INFO_LENGTH_MISMATCH when ThreadInformationLength is not the structure size, or STATUS_INVALID_PARAMETER for an invalid counted string such as a USHRT-overflowing length. SetThreadDescription converts the same status with HRESULT_FROM_NT."
+      },
+      "tags": [
+        "thread-management",
+        "native-api"
+      ],
+      "remarks": "There is no NtSetThreadDescription export to resolve with GetProcAddress, so code that targets the native layer must call NtSetInformationThread with ThreadNameInformation (38). The description replaces any previous value and can be read back with NtQueryInformationThread using the same class or with the Win32 GetThreadDescription function. Thread names are display metadata; they do not affect scheduling or security.",
+      "maldev_notes": "Because the operation is reached through NtSetInformationThread, telemetry records the information class rather than a distinct NtSetThreadDescription call. Analysts should check for ThreadNameInformation (38) with a THREAD_SET_LIMITED_INFORMATION handle when thread names are relevant.",
+      "defensive_notes": "Thread descriptions set through the native path are the same attacker-controlled metadata that SetThreadDescription writes. Treat them as untrusted labels and correlate the thread start address, owning process, and image instead.",
+      "example": {
+        "language": "cpp",
+        "title": "Set a thread description with NtSetInformationThread",
+        "code": "#include <windows.h>\n#include <winternl.h>\n#include <stdio.h>\n\n#pragma comment(lib, \"ntdll.lib\")\n\nextern \"C\" NTSTATUS NTAPI NtSetInformationThread(HANDLE,\n    THREADINFOCLASS, PVOID, ULONG);\n\ntypedef struct _THREAD_NAME_INFORMATION {\n    UNICODE_STRING ThreadName;\n} THREAD_NAME_INFORMATION;\n\ntypedef HRESULT (WINAPI *GetThreadDescriptionFn)(HANDLE, PWSTR *);\n\nint main(void) {\n    const wchar_t *name = L\"native-desc-thread\";\n    THREAD_NAME_INFORMATION info;\n    info.ThreadName.Length = (USHORT)(wcslen(name) * sizeof(wchar_t));\n    info.ThreadName.MaximumLength = info.ThreadName.Length;\n    info.ThreadName.Buffer = const_cast<PWSTR>(name);\n\n    constexpr THREADINFOCLASS kThreadNameInformation =\n        static_cast<THREADINFOCLASS>(38); // ThreadNameInformation.\n\n    NTSTATUS status = NtSetInformationThread(GetCurrentThread(),\n        kThreadNameInformation, &info, sizeof(info));\n    printf(\"NtSetInformationThread(ThreadNameInformation) = 0x%08lX\\n\",\n        (unsigned long)status);\n\n    if (status >= 0) {\n        HMODULE kernelbase = LoadLibraryW(L\"KernelBase.dll\");\n        auto getDescription = kernelbase == nullptr ? nullptr :\n            reinterpret_cast<GetThreadDescriptionFn>(\n                GetProcAddress(kernelbase, \"GetThreadDescription\"));\n        PWSTR description = nullptr;\n        if (getDescription != nullptr &&\n            SUCCEEDED(getDescription(GetCurrentThread(), &description))) {\n            wprintf(L\"description read back: %ls\\n\", description);\n            LocalFree(description);\n        }\n        if (kernelbase != nullptr) {\n            FreeLibrary(kernelbase);\n        }\n    }\n\n    return status >= 0 ? 0 : 1;\n}\n",
+        "notes": "The example performs the operation that the non-existent NtSetThreadDescription name refers to: it fills THREAD_NAME_INFORMATION with a counted string, calls NtSetInformationThread with ThreadNameInformation (38), then reads the value back through GetThreadDescription. NtExplorer only displays the snippet; it is not executed."
+      },
+      "references": [
+        {
+          "title": "NtSetInformationThread - NtDoc",
+          "url": "https://ntdoc.m417z.com/ntsetinformationthread",
+          "source_type": "community-documentation"
+        },
+        {
+          "title": "phnt ntpsapi.h (THREADINFOCLASS, THREAD_NAME_INFORMATION)",
+          "url": "https://github.com/winsiderss/phnt/blob/master/ntpsapi.h",
+          "source_type": "source-code"
+        },
+        {
+          "title": "Wine KernelBase SetThreadDescription implementation",
+          "url": "https://gitlab.winehq.org/wine/wine/-/blob/master/dlls/kernelbase/thread.c",
+          "source_type": "source-code"
+        },
+        {
+          "title": "SetThreadDescription function (processthreadsapi.h) - Microsoft Learn",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreaddescription",
+          "source_type": "official-documentation"
+        }
+      ],
+      "source_notes": "No Ntdll export named NtSetThreadDescription exists in the phnt headers, the Wine ntdll.spec export list, or the Geoff Chappell NTDLL function index. The documented operation is NtSetInformationThread with ThreadNameInformation (38); the prototype field names that real call, and the Wine KernelBase implementation confirms that SetThreadDescription uses it."
+    },
+    {
+      "id": "native.ntsetiocompletion",
+      "name": "NtSetIoCompletion",
+      "aliases": [],
+      "category": "Native APIs",
+      "dll": "Ntdll.dll",
+      "library": "Ntdll.lib",
+      "header": "ntioapi.h",
+      "minimum_windows": "Windows 2000 and later",
+      "summary": "Posts a caller-defined completion packet to an I/O completion port.",
+      "description": "NtSetIoCompletion queues a packet to an I/O completion port without performing file I/O. The packet carries the caller-supplied key and APC context, the IoStatus value to report to the consumer, and pointer-sized status information, typically a byte count. A waiting thread dequeues it with NtRemoveIoCompletion or GetQueuedCompletionStatus as if an overlapped I/O operation had completed.",
+      "prototype": "NTSTATUS NtSetIoCompletion(HANDLE IoCompletionHandle, PVOID KeyContext, PVOID ApcContext, NTSTATUS IoStatus, ULONG_PTR IoStatusInformation);",
+      "parameters": [
+        {
+          "name": "IoCompletionHandle",
+          "type": "HANDLE",
+          "description": "A handle to the I/O completion port. The handle must grant IO_COMPLETION_MODIFY_STATE (0x0002) access."
+        },
+        {
+          "name": "KeyContext",
+          "type": "PVOID",
+          "description": "An optional pointer-sized value stored as the completion key and returned to the consumer. The kernel does not dereference it."
+        },
+        {
+          "name": "ApcContext",
+          "type": "PVOID",
+          "description": "An optional pointer-sized value stored as the APC context and returned to the consumer. It is not an APC routine and no callback is dispatched."
+        },
+        {
+          "name": "IoStatus",
+          "type": "NTSTATUS",
+          "description": "The NTSTATUS value stored in the packet and reported as the completion status. It is independent of the status returned by NtSetIoCompletion, so a failure status can be posted successfully."
+        },
+        {
+          "name": "IoStatusInformation",
+          "type": "ULONG_PTR",
+          "description": "A pointer-sized value stored in the packet, commonly the number of bytes transferred for the simulated operation."
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "Returns STATUS_SUCCESS when the packet was queued. The caller-supplied IoStatus is not the return value of this call.",
+        "failure": "Returns STATUS_INVALID_HANDLE if the port handle is invalid, or STATUS_ACCESS_DENIED if it lacks IO_COMPLETION_MODIFY_STATE access."
+      },
+      "tags": [
+        "native-api",
+        "synchronization"
+      ],
+      "remarks": "The call does not require the port to be associated with a file and does not issue I/O. Consumers dequeue the packet with NtRemoveIoCompletion or GetQueuedCompletionStatus; the dequeued status and information are the values supplied here, not the result of NtSetIoCompletion.",
+      "maldev_notes": "Native APIs are the documented or semi-documented NT layer used by runtimes, security software, and system tools. Analysts compare native calls with the equivalent Win32 operation and note the object, access mask, and status.",
+      "defensive_notes": "Native API telemetry can be valuable because it exposes operations below Win32. Analysts correlate object handles, access masks, and NTSTATUS results with the calling process and loaded modules.",
+      "example": {
+        "language": "cpp",
+        "title": "Post and dequeue a private completion packet",
+        "code": "#include <windows.h>\n#include <winternl.h>\n#include <stdio.h>\n\ntypedef NTSTATUS (NTAPI *NtSetIoCompletionFn)(HANDLE, PVOID, PVOID,\n    NTSTATUS, ULONG_PTR);\n\nint main(void) {\n    HMODULE ntdll = GetModuleHandleW(L\"ntdll.dll\");\n    auto NtSetIoCompletion = reinterpret_cast<NtSetIoCompletionFn>(\n        GetProcAddress(ntdll, \"NtSetIoCompletion\"));\n    if (NtSetIoCompletion == nullptr) {\n        return 1;\n    }\n\n    HANDLE port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);\n    if (port == nullptr) {\n        return 1;\n    }\n\n    PVOID keyContext = reinterpret_cast<PVOID>(static_cast<ULONG_PTR>(42));\n    NTSTATUS status = NtSetIoCompletion(port, keyContext, nullptr, 0, 0);\n    if (status >= 0) {\n        DWORD bytes = 0;\n        ULONG_PTR key = 0;\n        LPOVERLAPPED overlapped = nullptr;\n        if (GetQueuedCompletionStatus(port, &bytes, &key, &overlapped, 1000)) {\n            printf(\"dequeued key=%llu bytes=%lu\\n\",\n                (unsigned long long)key, (unsigned long)bytes);\n        }\n    }\n    printf(\"NtSetIoCompletion status = 0x%08lX\\n\", (unsigned long)status);\n\n    CloseHandle(port);\n    return status >= 0 ? 0 : 1;\n}\n",
+        "notes": "The example creates a private I/O completion port, posts one packet with key 42 and STATUS_SUCCESS, dequeues it with GetQueuedCompletionStatus, prints the key, and closes the port."
+      },
+      "references": [
+        {
+          "title": "NtSetIoCompletion - NtDoc",
+          "url": "https://ntdoc.m417z.com/ntsetiocompletion",
+          "source_type": "community-documentation"
+        },
+        {
+          "title": "phnt ntioapi.h",
+          "url": "https://github.com/winsiderss/phnt/blob/master/ntioapi.h",
+          "source_type": "source-code"
+        }
+      ],
+      "source_notes": "Prototype and parameter documentation extracted from NtDoc (phnt headers and NTinternals notes); behavior checked against the linked phnt header. This is a Native API, not a stable Win32 contract."
     },
     {
       "id": "native.ntsetsystemenvironmentvalueex",
@@ -5516,6 +5714,77 @@
         }
       ],
       "source_notes": "Prototype and parameter documentation extracted from NtDoc (phnt headers and NTinternals notes); behavior checked against the linked Microsoft DDI page where available. This is a Native API, not a stable Win32 contract."
+    },
+    {
+      "id": "native.ntqueryinformationworkerfactory",
+      "name": "NtQueryInformationWorkerFactory",
+      "aliases": [],
+      "category": "Native APIs",
+      "dll": "Ntdll.dll",
+      "library": "Ntdll.lib",
+      "header": "ntexapi.h",
+      "minimum_windows": "Windows 8 and later",
+      "summary": "Retrieves basic configuration and worker counts for a worker factory.",
+      "description": "NtQueryInformationWorkerFactory returns information about a worker factory, the kernel object that creates and manages thread-pool worker threads. The supported query class is WorkerFactoryBasicInformation (7), which fills a WORKER_FACTORY_BASIC_INFORMATION record with timeouts, thread minimum and maximum, pending and waiting worker counts, the start routine, target process, and stack sizes.",
+      "prototype": "NTSTATUS NtQueryInformationWorkerFactory(HANDLE WorkerFactoryHandle, WORKERFACTORYINFOCLASS WorkerFactoryInformationClass, PVOID WorkerFactoryInformation, ULONG WorkerFactoryInformationLength, PULONG ReturnLength);",
+      "parameters": [
+        {
+          "name": "WorkerFactoryHandle",
+          "type": "HANDLE",
+          "description": "A handle to the worker factory. The handle must grant WORKER_FACTORY_QUERY_INFORMATION (0x0008) access."
+        },
+        {
+          "name": "WorkerFactoryInformationClass",
+          "type": "WORKERFACTORYINFOCLASS",
+          "description": "The information class to query. Only WorkerFactoryBasicInformation (7) is accepted; other WORKERFACTORYINFOCLASS selectors are used with NtSetInformationWorkerFactory."
+        },
+        {
+          "name": "WorkerFactoryInformation",
+          "type": "PVOID",
+          "description": "A pointer to a caller-allocated buffer that receives a WORKER_FACTORY_BASIC_INFORMATION record. The native record is 120 bytes on 64-bit Windows and 96 bytes when converted through WoW64."
+        },
+        {
+          "name": "WorkerFactoryInformationLength",
+          "type": "ULONG",
+          "description": "The size of the WorkerFactoryInformation buffer, in bytes. The basic query requires the exact native record size: 120 bytes on x64 and 96 bytes in a WoW64 caller."
+        },
+        {
+          "name": "ReturnLength",
+          "type": "PULONG",
+          "description": "An optional pointer that receives the number of bytes written to WorkerFactoryInformation. Pass NULL when the value is not needed."
+        }
+      ],
+      "return": {
+        "type": "NTSTATUS",
+        "success": "Returns STATUS_SUCCESS when the requested record was written.",
+        "failure": "Returns STATUS_INVALID_HANDLE if the handle is not a worker factory, STATUS_ACCESS_DENIED if it lacks query access, STATUS_INVALID_INFO_CLASS for an unsupported class, or STATUS_INFO_LENGTH_MISMATCH when the buffer size is not the exact native record size."
+      },
+      "tags": [
+        "thread-management",
+        "native-api"
+      ],
+      "remarks": "Only WorkerFactoryBasicInformation (7) is supported by the query path. The record exposes the worker start routine, start parameter, target process, thread minimum and maximum, pending, waiting, and total worker counts, stack reserve and commit sizes, and the last thread creation status. In current builds Timeout, RetryTimeout, Paused, TimerSet, and InfiniteWaitGoal are returned as zero, while IdleTimeout holds the active relative timeout.",
+      "maldev_notes": "Native APIs are the documented or semi-documented NT layer used by runtimes, security software, and system tools. Analysts compare native calls with the equivalent Win32 operation and note the object, access mask, and status.",
+      "defensive_notes": "Native API telemetry can be valuable because it exposes operations below Win32. Analysts correlate object handles, access masks, and NTSTATUS results with the calling process and loaded modules.",
+      "example": {
+        "language": "cpp",
+        "title": "Create a worker factory and query its basic information",
+        "code": "#include <windows.h>\n#include <winternl.h>\n#include <stdio.h>\n\n#define WORKER_FACTORY_QUERY_INFORMATION 0x0008\n#define WorkerFactoryBasicInformation 7\n\ntypedef NTSTATUS (NTAPI *NtCreateWorkerFactoryFn)(PHANDLE, ACCESS_MASK,\n    POBJECT_ATTRIBUTES, HANDLE, HANDLE, PVOID, PVOID, ULONG, SIZE_T, SIZE_T);\ntypedef NTSTATUS (NTAPI *NtQueryInformationWorkerFactoryFn)(HANDLE, ULONG,\n    PVOID, ULONG, PULONG);\n\ntypedef struct _WORKER_FACTORY_BASIC_INFORMATION {\n    LARGE_INTEGER Timeout;\n    LARGE_INTEGER RetryTimeout;\n    LARGE_INTEGER IdleTimeout;\n    BOOLEAN Paused;\n    BOOLEAN TimerSet;\n    BOOLEAN QueuedToExWorker;\n    BOOLEAN MayCreate;\n    BOOLEAN CreateInProgress;\n    BOOLEAN InsertedIntoQueue;\n    BOOLEAN Shutdown;\n    ULONG BindingCount;\n    ULONG ThreadMinimum;\n    ULONG ThreadMaximum;\n    ULONG PendingWorkerCount;\n    ULONG WaitingWorkerCount;\n    ULONG TotalWorkerCount;\n    ULONG ReleaseCount;\n    LONGLONG InfiniteWaitGoal;\n    PVOID StartRoutine;\n    PVOID StartParameter;\n    HANDLE ProcessId;\n    SIZE_T StackReserve;\n    SIZE_T StackCommit;\n    NTSTATUS LastThreadCreationStatus;\n} WORKER_FACTORY_BASIC_INFORMATION;\n\nstatic VOID NTAPI WorkerStart(PVOID) {\n}\n\nint main(void) {\n    HMODULE ntdll = GetModuleHandleW(L\"ntdll.dll\");\n    auto createFactory = reinterpret_cast<NtCreateWorkerFactoryFn>(\n        GetProcAddress(ntdll, \"NtCreateWorkerFactory\"));\n    auto queryFactory = reinterpret_cast<NtQueryInformationWorkerFactoryFn>(\n        GetProcAddress(ntdll, \"NtQueryInformationWorkerFactory\"));\n    if (createFactory == nullptr || queryFactory == nullptr) {\n        return 1;\n    }\n\n    HANDLE port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);\n    if (port == nullptr) {\n        return 1;\n    }\n\n    HANDLE factory = nullptr;\n    NTSTATUS status = createFactory(&factory, WORKER_FACTORY_QUERY_INFORMATION,\n        nullptr, port, GetCurrentProcess(), reinterpret_cast<PVOID>(WorkerStart),\n        nullptr, 1, 0, 0);\n    if (status >= 0 && factory != nullptr) {\n        WORKER_FACTORY_BASIC_INFORMATION info = {};\n        ULONG returned = 0;\n        status = queryFactory(factory, WorkerFactoryBasicInformation,\n            &info, sizeof(info), &returned);\n        if (status >= 0) {\n            printf(\"workers=%lu start=%p pid=%llu\\n\", info.TotalWorkerCount,\n                info.StartRoutine,\n                (unsigned long long)(ULONG_PTR)info.ProcessId);\n        }\n        CloseHandle(factory);\n    }\n    printf(\"NtQueryInformationWorkerFactory status = 0x%08lX\\n\",\n        (unsigned long)status);\n\n    CloseHandle(port);\n    return status >= 0 ? 0 : 1;\n}\n",
+        "notes": "The example creates a worker factory for the current process, queries its basic information, and closes the factory and completion-port handles. No work packets are posted, so the factory is queried only and then torn down."
+      },
+      "references": [
+        {
+          "title": "NtQueryInformationWorkerFactory - NtDoc",
+          "url": "https://ntdoc.m417z.com/ntqueryinformationworkerfactory",
+          "source_type": "community-documentation"
+        },
+        {
+          "title": "phnt ntexapi.h",
+          "url": "https://github.com/winsiderss/phnt/blob/master/ntexapi.h",
+          "source_type": "source-code"
+        }
+      ],
+      "source_notes": "Prototype and parameter documentation extracted from NtDoc (phnt headers and NTinternals notes); behavior checked against the linked phnt header. This is a Native API, not a stable Win32 contract."
     },
     {
       "id": "native.ntgetnextprocess",

@@ -8,7 +8,7 @@ It ships a bundled, versioned JSON catalog inside a single executable. Browsing 
 
 ## Features (Release 0.5)
 
-- **453 documented APIs**, including all 370 APIs in the bundled MalAPI.io reference, with 101 Native/RTL routines in their own category.
+- **460 documented APIs**, including all 370 APIs in the bundled MalAPI.io reference, with 105 Native/RTL routines in their own category.
 - **A displayed example for every API**, each one calling the documented routine. Privileged or destructive operations act only on resources the example creates itself and cleans up afterward.
 - **18 categories** spanning process, thread, memory, remote-memory, module, file, registry, synchronization, system/debugging, cryptography, networking, network management, services, Windows/UI, clipboard/input, security/privileges, and Native APIs.
 - **10 documented Windows structures** with C definitions, member-by-member descriptions, notes, and source references.
